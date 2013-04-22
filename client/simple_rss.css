@@ -1,0 +1,21 @@
+/* CSS declarations go here */
+
+@baseFontSize=10px;
+
+.feed {
+  cursor:pointer;
+}
+
+.carousel-inner {
+max-height: 800px;
+overflow-y: scroll;
+}
+
+.right {
+ float:right;
+}
+
+#modal_button {
+position: absolute;
+top: 3px;
+}
