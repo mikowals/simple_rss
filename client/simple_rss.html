@@ -37,14 +37,16 @@
     {{>feed_modal}}
    
     <div id="stream">
-      <!--{{#unless loaded}}
-        <div class="text-center loader" />
-      {{/unless}}
-      -->
+     
       
       {{#each articles}}
       {{>article}}
       {{/each}}
+      
+      {{#unless loaded}}
+      <div class="text-center loader" />
+      {{/unless}}
+       
     </div>
   </div>
   <footer id="footer">
