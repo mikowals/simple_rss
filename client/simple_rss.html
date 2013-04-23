@@ -34,28 +34,8 @@
 <template name="articleList">
   <div class="container-fluid ">
     
-  
-  
-    <div id="feeds_modal" class="modal hide fade" aria-labelledby="myModalLabel" aria-hidden="true">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-        
-        <h3 id="myModalLabel">Feeds</h3>
-        
-      </div>
-      <div class="modal-body">
-        {{>feedList}}
-      </div>
-      <div class="modal-footer">
-            <span class="form-inline pull-right">
-              <input type="url" class="input-large" placeholder="Feed url to add" id="feedUrl" />
-              <button id="addFeed" class="btn btn-primary btn-mini">Add</button>
-            </span>
-      </div>
-    
-    </div>
-  
-    
+    {{>feed_modal}}
+   
     <div id="stream">
       <!--{{#unless loaded}}
         <div class="text-center loader" />
@@ -83,5 +63,26 @@
       <div class="description">{{summary}}</div>
       <div class="footer hidden-desktop"><time class="timeago">{{ timeago date }}<time></div>
     </div>
+  </div>
+</template>
+
+<template name="feed_modal">
+  <div id="feeds_modal" class="modal hide fade" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+      
+      <h3 id="myModalLabel">Feeds</h3>
+      
+    </div>
+    <div class="modal-body">
+      {{>feedList}}
+    </div>
+    <div class="modal-footer">
+      <span class="form-inline pull-right">
+        <input type="url" class="input-large" placeholder="Feed url to add" id="feedUrl" />
+        <button id="addFeed" class="btn btn-primary btn-mini">Add</button>
+      </span>
+    </div>
+    
   </div>
 </template>

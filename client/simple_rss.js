@@ -2,15 +2,20 @@
 var DAY = 1000 * 60 * 60 * 24;
 var articlesOnLoad = 10;
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
+Session.setDefault("loaded", false);
+Session.setDefault("active", 1);
 
 Meteor.subscribe("feeds" );
 var Feeds = new Meteor.Collection("feeds");
 
-var articles_sub = Meteor.subscribe("articles");
+var articles_sub = Meteor.subscribe("articles", function(){
+                                    Session.set("loaded", true);
+                                    });
+
 var Articles = new Meteor.Collection("articles");
 
-Session.setDefault("active", 1);
-Session.setDefault("loaded", false);
+
+
 
 Deps.autorun( function(){
             
@@ -27,6 +32,7 @@ Deps.autorun( function(){
              amplify.store("quickArticles", articlesToStore);
              
              });
+ 
 
   //need to use dom to remove html tags from articles when added - would be better on server where articles are added to collection.
 Deps.autorun( function(){
@@ -104,11 +110,9 @@ Template.articleList.events({
                             });
 
 Template.articleList.articles = function() {
-  var articlesDisplayed = Articles.find({}, {sort: {date: -1}});
-  
-  if ( articlesDisplayed.count() ) { 
-    Session.set( "loaded", true) ;
-    return articlesDisplayed;
+  var articlesDisplayed = Articles.find({proofed: 1},{sort: {date: -1}, limit: 300});
+   if ( Session.equals("loaded", true) ) { 
+            return articlesDisplayed;
   }
   else{
     console.log("articles from QuickArticles");

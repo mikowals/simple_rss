@@ -6,6 +6,7 @@ var intervalProcesses = {};
 
 var Feeds = new Meteor.Collection("feeds");
 var Articles = new Meteor.Collection("articles");
+Articles._ensureIndex( {"date": 1} );
  
 
 Meteor.publish("feeds", function () {
