@@ -1,8 +1,7 @@
 
 var DAY = 1000 * 60 * 60 * 24;
+var articlesOnLoad = 10;
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
-
-var Anonymous = new Meteor.Collection("anonymous");
 
 Meteor.subscribe("feeds" );
 var Feeds = new Meteor.Collection("feeds");
@@ -11,46 +10,23 @@ var articles_sub = Meteor.subscribe("articles", amplify.store("oldId"));
 var Articles = new Meteor.Collection("articles");
 
 Session.setDefault("active", 1);
-Session.setDefault("myId", "");
+Session.setDefault("loaded", false);
 
 Deps.autorun( function(){
-             var anonResult = Anonymous.findOne();
-             if ( anonResult ){
-             
-             Session.set( "myId", anonResult._id);
-             Anonymous.update( Session.get("myId"), {$set: {active: Session.get("active") }});                 
-             
-             if ( (amplify.store( "oldId" ) !== Session.get( "myId" ) ) )  Anonymous.remove( amplify.store("oldId") );
-             amplify.store("oldId", Session.get("myId"));
-             this.stop();
+             var articlesToStore = [];
+             if ( amplify.store("quickArticles") !== null && amplify.store("quickArticles") !== undefined){
+             articlesToStore = amplify.store("quickArticles");
              }
+             Articles.find({},{limit: 10, sort: {date: -1}}).forEach (function (article){
+                                             
+                                                                      
+                                                                      articlesToStore.push(article);
+                                                                      while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
+                                                                      });
              
-             });
-
-
-
-var onFocus = function(){
-  Session.set("active", 1);
-  Anonymous.update( Session.get("myId"), {$set: {active: Session.get("active") }});
-};
-
-var onBlur = function(){
-  Session.set("active", 0);
-  Anonymous.update( Session.get("myId"), {$set: {active: Session.get("active")}});
-};
-
-if (/*@cc_on!@*/false) { // check for Internet Explorer
-  document.onfocusin = onFocus;
-  document.onfocusout = onBlur;
-} else {
-  window.onfocus = onFocus;
-  window.onblur = onBlur;
-}
-
-window.onbeforeunload = function(){
-  Session.set("active", 0);
-  Anonymous.update( Session.get("myId"), {$set: {active: Session.get("active")}});
-};
+                                                                      console.log("new article stored ");
+                                                                      amplify.store("quickArticles", articlesToStore);
+                                             });
 
   //need to use dom to remove html tags from articles when added - would be better on server where articles are added to collection.
 Deps.autorun( function(){
@@ -128,17 +104,22 @@ Template.articleList.events({
                             });
 
 Template.articleList.articles = function() {
-  return Articles.find({}, {sort: {date: -1}});
+  var articlesDisplayed = Articles.find({}, {sort: {date: -1}});
+  
+  if ( articlesDisplayed.count() ) { 
+    Session.set( "loaded", true) ;
+    return articlesDisplayed;
+  }
+  else{
+    console.log("articles from QuickArticles");
+    return amplify.store("quickArticles");
+  }
 };
 
 Template.articleList.loaded = function(){
-  return !(Session.equals("myId","") );
+  return Session.equals( "loaded", true );
 };
 
-Template.menubar.status = function(){ 
-  var q = Anonymous.findOne({});
-  return q && Anonymous.findOne({}).users + " : " + Meteor.status().status;
-};
 
 Template.feed.selected = function () {
   return Session.equals("selected_feed", this._id) ? "selected" : '';

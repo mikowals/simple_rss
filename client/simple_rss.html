@@ -11,7 +11,7 @@
 
 <template name="menubar">
   <a id="modal_button" class="pull-left" href="#feeds_modal" data-toggle="modal" role="button"><i class="icon-chevron-down" /></a>
-  <span class="pull-right" > {{status}}</span>
+  
 </template>
 
 <template name="feedList">
@@ -32,7 +32,7 @@
 </template>
 
 <template name="articleList">
-  <div class="container-fluid">
+  <div class="container-fluid ">
     
   
   
@@ -57,9 +57,10 @@
   
     
     <div id="stream">
-      {{#unless loaded}}
+      <!--{{#unless loaded}}
         <div class="text-center loader" />
       {{/unless}}
+      -->
       
       {{#each articles}}
       {{>article}}

@@ -1,13 +1,12 @@
 
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
-var updateInterval = 1000 * 60 * 1.5;
+var updateInterval = 1000 * 60 * 1;
 var intervalProcesses = {};
 var numUsers = 0;
 
 var Feeds = new Meteor.Collection("feeds");
 var Articles = new Meteor.Collection("articles");
-var Anonymous = new Meteor.Collection("anonymous");
  
 
 Meteor.publish("feeds", function () {
@@ -15,23 +14,8 @@ Meteor.publish("feeds", function () {
                });
 
 Meteor.publish( "articles", function(oldId){
-               var self = this;
-               var newId = oldId;
-               if ( Anonymous.find( oldId ).count() === 1){
-               Anonymous.update( oldId, {$set: {active: 0, users: numUsers}}); 
-               console.log(oldId + " : " + EJSON.stringify(Anonymous.find( oldId ).fetch()));
-               }
-               else{
-               newId = Anonymous.insert({active: 0, users: numUsers}, function(error,result){
-                            console.log("Anonymous insert finished with error : " + error + " and result : " + result);
-                            });
-               }
-               self.ready();
-
-               return [
-                       Articles.find({}),
-                       Anonymous.find({_id: newId}, {fields: {_id: 1, users: 1}})
-                       ];
+               return  Articles.find({});
+                       
                });
 
 Articles.allow({
@@ -76,24 +60,6 @@ Feeds.deny({
            
 });
 
-Anonymous.allow({
-                update: function(userId, doc, fieldNames, modifier){
-                return true;
-                },
-                
-                remove: function(){
-                return true;
-                }
-        
-                });
-Anonymous.deny({
-               
-               update: function(userId, doc, fieldNames, modifier){
-               doc.updatedAt = new Date();
-               return false;
-               }
-               });
-
 
 Meteor.startup( function(){
                var process = Meteor.setInterval(function (){
@@ -103,41 +69,17 @@ Meteor.startup( function(){
                                   DAY);
                intervalProcesses["removeOldArticles"] = process;
                
-               Anonymous.remove({});
-               // remove all user data --> this should leave updating off until triggerd by subscription.
+               if ( !intervalProcesses[ "findArticles"] ){
+               var process = Meteor.setInterval( function(){
+                                                console.log( Meteor.call('findArticles') + " added to db" );
+                                                }, 
+                                                updateInterval);
+               intervalProcesses[ "findArticles"] = process;
+               console.log("updating on");
+               }
+
 
                });
-
-var handle = Anonymous.find({active: 1}).observe({
-                                                 added: function(document){
-                                                 numUsers++;
-                                                 if ( !intervalProcesses[ "findArticles"] ){
-                                                 var process = Meteor.setInterval( function(){
-                                                                                  console.log( Meteor.call('findArticles') + " added to db" );
-                                                                                  }, 
-                                                                                  updateInterval);
-                                                 intervalProcesses[ "findArticles"] = process;
-                                                 console.log("updating on");
-                                                 }
-                                                 Anonymous.update({}, {$set: { users: numUsers}}, {multi: true} );
-                                                 console.log("numUsers is " + numUsers);
-                                                 console.log( EJSON.stringify( Anonymous.findOne({active:1} ) ) );
-                                                 },
-                                                 
-                                                 removed: function( document ) {
-                                                 numUsers--;
-                                                 if (numUsers === 0 && intervalProcesses[ "findArticles"]){
-                                                 Meteor.clearInterval(intervalProcesses[ "findArticles"]);
-                                                 intervalProcesses[ "findArticles"] = null;
-                                                 console.log("updating off");
-                                                 
-                                                 }
-                                                 Anonymous.update({}, { $set: { users: numUsers}}, {multi: true} );
-                                                 console.log("numUsers is " + numUsers);
-                                                 console.log( EJSON.stringify( Anonymous.findOne({active:1} ) ) );
-
-                                                 }
-                                                 });                            
 
 var newArticlesToDb = function(articlesFromWeb, meta){
   var existingArticles={};
