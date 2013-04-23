@@ -6,27 +6,27 @@ var intervalProcesses = []; //hold interval process id to start and stop with di
 Meteor.subscribe("feeds" );
 var Feeds = new Meteor.Collection("feeds");
 
-var articles_sub = Meteor.subscribe("articles", amplify.store("oldId"));
+var articles_sub = Meteor.subscribe("articles");
 var Articles = new Meteor.Collection("articles");
 
 Session.setDefault("active", 1);
 Session.setDefault("loaded", false);
 
 Deps.autorun( function(){
+            
              var articlesToStore = [];
              if ( amplify.store("quickArticles") !== null && amplify.store("quickArticles") !== undefined){
              articlesToStore = amplify.store("quickArticles");
              }
-             Articles.find({},{limit: 10, sort: {date: -1}}).forEach (function (article){
-                                             
-                                                                      
-                                                                      articlesToStore.push(article);
-                                                                      while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
-                                                                      });
+             Articles.find({proofed: 1},{sort: {date: -1}, limit: articlesOnLoad}).forEach (function (article){   
+                                                                                  articlesToStore.push(article);
+                                                                                  console.log("new article stored ");
+                                                                                  while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
+                                                                                  
+                                                                                  });
+             amplify.store("quickArticles", articlesToStore);
              
-                                                                      console.log("new article stored ");
-                                                                      amplify.store("quickArticles", articlesToStore);
-                                             });
+             });
 
   //need to use dom to remove html tags from articles when added - would be better on server where articles are added to collection.
 Deps.autorun( function(){

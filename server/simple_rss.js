@@ -3,7 +3,6 @@ var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
-var numUsers = 0;
 
 var Feeds = new Meteor.Collection("feeds");
 var Articles = new Meteor.Collection("articles");
@@ -13,8 +12,8 @@ Meteor.publish("feeds", function () {
                return Feeds.find({});
                });
 
-Meteor.publish( "articles", function(oldId){
-               return  Articles.find({});
+Meteor.publish( "articles", function(){
+               return  Articles.find({}, {fields: {_id: 1, title: 1, source:1, date:1, summary:1, link:1, proofed:1}});
                        
                });
 
@@ -94,7 +93,8 @@ var newArticlesToDb = function(articlesFromWeb, meta){
   articlesFromWeb.forEach(function (article) {
                           
                           
-                          var date = new Date(article.date);
+                          var date = article.date || new Date();
+                          date = new Date(date);
                           maxDate = (date > maxDate) ? date : maxDate;
                           if ( (new Date() - date) / DAY <= daysStoreArticles ){
                           var new_article = {
@@ -172,7 +172,7 @@ Meteor.methods({
                findArticles: function() {
           
                
-               console.log(numUsers + " users found. looking for new articles");
+               console.log("looking for new articles");
                var article_count = 0;
                var urls = [];
                Feeds.find({}).forEach( function(feed){
