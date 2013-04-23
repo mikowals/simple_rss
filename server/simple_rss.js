@@ -1,7 +1,7 @@
 
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
-var updateInterval = 1000 * 60 * 1;
+var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var numUsers = 0;
 
