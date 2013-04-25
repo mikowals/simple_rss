@@ -63,9 +63,7 @@ Feeds.deny({
 
 Meteor.startup( function(){
                var process = Meteor.setInterval(function (){
-                                  Meteor.call('removeOldArticles');
-                                  Meteor.call('removeOldUsers');
-                                                },
+                                  Meteor.call('removeOldArticles'); },
                                   DAY);
                intervalProcesses["removeOldArticles"] = process;
                
@@ -127,7 +125,6 @@ var newArticlesToDb = function(articlesFromWeb, meta){
 
 
 var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
-
                                                      _suppress_initial: true,
                                                      
                                                      added: function(doc){

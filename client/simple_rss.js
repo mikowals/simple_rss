@@ -110,9 +110,9 @@ Template.articleList.events({
                             });
 
 Template.articleList.articles = function() {
-  var articlesDisplayed = Articles.find({proofed: 1},{sort: {date: -1}, limit: 300});
+  
    if ( Session.equals("loaded", true) ) { 
-            return articlesDisplayed;
+            return Articles.find({proofed: 1},{sort: {date: -1}, limit: 300});;
   }
   else{
     console.log("articles from QuickArticles");
