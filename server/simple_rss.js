@@ -10,12 +10,30 @@ Articles._ensureIndex( {"date": 1} );
  
 
 Meteor.publish("feeds", function () {
-               return Feeds.find({});
+               var self = this;
+               return Feeds.find({subscribers: self.userId }, {title: 1, url:1, last_date:1});
                });
 
 Meteor.publish( "articles", function(){
-               return  Articles.find({}, {fields: {_id: 1, title: 1, source:1, date:1, summary:1, link:1, proofed:1}});
-                       
+               var self= this;
+               var feed_ids = [];              
+               Feeds.find({subscribers: self.userId }, {_id: 1}).observeChanges({
+                                                                                added: function (id){
+                                                                                feed_ids.push(id);                                       
+                                                                                },
+                                        
+                                                                                removed: function (id){
+                                                                                var ax;
+                                                                                while (( ax = feed_ids.indexOf(id)) !== -1) {
+                                                                                feed_ids.splice(ax, 1);
+                                                                                }
+                                        
+                                                                                }
+
+                                        });
+               
+               return Articles.find({feed_id: {$in: feed_ids}}, {fields: {_id: 1, title: 1, source:1, date:1, summary:1, link:1, proofed:1}} );
+               
                });
 
 Articles.allow({
@@ -51,11 +69,39 @@ Feeds.allow({
 
 Feeds.deny({
            insert: function(userId, doc){
-           var rssResult = syncFP(doc.url);
-           doc.title = rssResult.meta.title;
+           var existingFeed = Feeds.findOne({url: doc.url});
+           if( existingFeed ){
+            Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
+            return true;
+           }
+           
+           var rssResult = syncFP( doc.url);
+           if (rssResult.meta.xmlurl && doc.url !== rssResult.meta.xmlurl ) { doc.url = rssResult.meta.xmlurl; }
+           existingFeed = Feeds.findOne( {url: doc.url} );
+           if( existingFeed ){
+           Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
+           return true;
+           } 
+           else {
+           console.log(doc.url + " not in db - adding");
+           doc.title = rssResult.meta.title;  
            doc.last_date = rssResult.meta.date;
            doc.articles = rssResult.articles;
+           doc.subscribers = [];
+           doc.subscribers.push(userId);
            return false;
+           }
+                     
+           },
+           
+           remove: function(userId, doc){
+           if(doc.subscribers.length > 1){
+             Feeds.update(doc._id, {$pull: {subscribers: userId}} );
+             return true;
+           }
+           else{
+             return false;
+           }
            }
            
 });
@@ -79,10 +125,11 @@ Meteor.startup( function(){
 
                });
 
-var newArticlesToDb = function(articlesFromWeb, meta){
+var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather than feed from database -> feed should be up to date and passed if needed
   var existingArticles={};
   var last_dates = {};
   var article_count=0;
+  var feed = Feeds.findOne({title: meta.title}); // see comment above
   Articles.find({source: meta.title},{guid:1, date:1}).forEach(function(article){
                                                                existingArticles[article.guid]=1;
                                                                
@@ -103,7 +150,8 @@ var newArticlesToDb = function(articlesFromWeb, meta){
                           date: date,
                           author: article.author,
                           link: article.link,
-                          source: meta.title
+                          source: meta.title,
+                          feed_id: feed._id
                           };
                           if(existingArticles[new_article.guid] != 1){
                           Articles.insert(new_article);
@@ -149,27 +197,8 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
 
 
 Meteor.methods({
-               "addFeed": function( url) {
-               var rssResult = syncFP(url);
-        
-               console.log("running feedparse in addfeed for " + url + " : " + rssResult.meta.title)
                
-               if (Feeds.find( {title: rssResult.meta.title} ).count() === 0){
-               Feeds.insert({url: url, title: rssResult.meta.title, last_date: rssResult.meta.date});
-               var added = newArticlesToDb(rssResult.articles, rssResult.meta);
-               var message = added + "new articles with feed";
-               }
-               else{
-               
-               var message = "Feed already exists";
-               }
-               
-               return message;
-               },
-               
-               findArticles: function() {
-          
-               
+               findArticles: function() {         
                console.log("looking for new articles");
                var article_count = 0;
                var urls = [];
@@ -199,6 +228,32 @@ Meteor.methods({
                  var error = Articles.remove({date:  {$lt: dateLimit} }, function(error){ return error;});
                
                  return error || 'success';
+               },
+               
+               addSubscriberToFeeds: function(){
+               var self = this;
+               Feeds.find({}).forEach( function (feed){
+                                      console.log("adding subscriber " + self.userId);
+                                       Feeds.update( feed._id,{ $addToSet: { subscribers: self.userId }});
+                                       });
+               },
+               
+               addFeed_idToArticles: function(){
+               Articles.find({}).forEach( function (article){
+                                         var feed_id = Feeds.findOne({title: article.source})._id;
+                                         Articles.update(article._id,{$set: {feed_id: feed_id}});
+                                         });
+               
+               },
+               
+               cleanUrls: function(){
+               Feeds.find({}).forEach( function(feed){
+                                      var result = syncFP(feed.url);
+                                      if (result.meta.xmlurl && feed.url !== result.meta.xmlurl ){
+                                      console.log("changing url " + feed.url + " to " + result.meta.xmlurl);
+                                      Feeds.update(feed._id, {$set: {url: result.meta.xmlurl }});
+                                      }
+                                      });
                }
                
                

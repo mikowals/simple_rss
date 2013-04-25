@@ -4,13 +4,18 @@ var articlesOnLoad = 10;
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
 Session.setDefault("loaded", false);
 Session.setDefault("active", 1);
-
+Session.setDefault("anonyous_id", amplify.store("anonymous_id"));
+                   
 Meteor.subscribe("feeds" );
 var Feeds = new Meteor.Collection("feeds");
 
-var articles_sub = Meteor.subscribe("articles", function(){
-                                    Session.set("loaded", true);
-                                    });
+Deps.autorun( function(){
+var article_sub = Meteor.subscribe("articles", function(){
+                                   Session.set("loaded", true);
+                                   });
+             });     
+                                            
+                                      
 
 var Articles = new Meteor.Collection("articles");
 
@@ -23,12 +28,16 @@ Deps.autorun( function(){
              if ( amplify.store("quickArticles") !== null && amplify.store("quickArticles") !== undefined){
              articlesToStore = amplify.store("quickArticles");
              }
+             maxStore = 0;
              Articles.find({proofed: 1},{sort: {date: -1}, limit: articlesOnLoad}).forEach (function (article){   
-                                                                                  articlesToStore.push(article);
-                                                                                  console.log("new article stored ");
-                                                                                  while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
+                                                                                            articlesToStore.push(article);
+                                                                                            maxStore++;
+                                                                                            console.log("new article stored ");
+                                                                                            while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
                                                                                   
-                                                                                  });
+                                                                                            });
+             while (articlesToStore.length > maxStore) { articlesToStore.shift(); }
+             
              amplify.store("quickArticles", articlesToStore);
              
              });
@@ -78,11 +87,15 @@ Template.feedList.flash = function(){
   return Session.get("feedListFlash");
 };
 
-Template.feedList.events({
-                         'click #addFeed': function() {
-                         
-                         },
-                         
+Template.feedModal.events({
+                          'click #addFeed': function() {
+                          
+                          Feeds.insert( { url: $("#feedUrl").val() } );http://feeds.bbci.co.uk/news/system/latest_published_content/rss.xml
+                          $("#feedUrl").val("");
+                          }
+                          });
+
+Template.feedList.events({                                                   
                          'click #removeFeed': function(){
                          Feeds.remove(Session.get("selected_feed"));
                          }
@@ -90,22 +103,6 @@ Template.feedList.events({
                          });
 
 Template.articleList.events({
-                            'click #addFeed': function() {
-                            var new_url = $("#feedUrl").val();
-                            if (Feeds.find({url: new_url}).count() === 0){
-                            $("#feedUrl").val("");
-                            Feeds.insert({url: new_url});
-                            }
-                            else{
-                            Session.set("feedListFlash", "flash");
-                            alert("feed already exists");
-                            }
-                            
-                            },
-                            
-                            'onFocus' : function(){
-                            console.log("onFocus event in articleList");
-                            }
                          
                             });
 
@@ -139,6 +136,9 @@ Template.feed.events({
                      }
                      });
 
+Template.newriver.user = function(){
+  return Meteor.user() || Session.get("anonymous_id");
+};
 
 
 
