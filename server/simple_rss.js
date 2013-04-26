@@ -146,7 +146,7 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                           var new_article = {
                           title: article.title,
                           guid: article.guid,
-                          summary: EJSON.parse( EJSON.stringify(article.summary) ) || "",
+                          summary: cleanSummary( article.summary ),
                           date: date,
                           author: article.author,
                           link: article.link,
@@ -170,6 +170,22 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
   return article_count;
 }
 
+var cleanSummary = function (text){
+  
+  var $ = cheerio.load(text);
+  text = $('p').first().text();
+  
+  if (text === "") { 
+
+    $('img').remove(); 
+    $('a').remove();
+    text = $.html();
+  }
+
+  console.log(text);
+  
+  return text ;
+}
 
 
 var handle = Feeds.find({}, {sort:{_id: 1}}).observe({

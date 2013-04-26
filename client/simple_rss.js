@@ -9,60 +9,34 @@ Session.setDefault("anonyous_id", amplify.store("anonymous_id"));
 Meteor.subscribe("feeds" );
 var Feeds = new Meteor.Collection("feeds");
 
-Deps.autorun( function(){
+
 var article_sub = Meteor.subscribe("articles", function(){
                                    Session.set("loaded", true);
                                    });
-             });     
+             
                                             
-                                      
-
 var Articles = new Meteor.Collection("articles");
 
 
-
-
 Deps.autorun( function(){
-            
-             var articlesToStore = [];
-             if ( amplify.store("quickArticles") !== null && amplify.store("quickArticles") !== undefined){
-             articlesToStore = amplify.store("quickArticles");
-             }
-             maxStore = 0;
-             Articles.find({proofed: 1},{sort: {date: -1}, limit: articlesOnLoad}).forEach (function (article){   
-                                                                                            articlesToStore.push(article);
-                                                                                            maxStore++;
-                                                                                            console.log("new article stored ");
-                                                                                            while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
-                                                                                  
-                                                                                            });
-             while (articlesToStore.length > maxStore) { articlesToStore.shift(); }
-             
-             amplify.store("quickArticles", articlesToStore);
-             
-             });
- 
-
-  //need to use dom to remove html tags from articles when added - would be better on server where articles are added to collection.
-Deps.autorun( function(){
-             Articles.find({ proofed:{ $nin: [1] }}).forEach( function(doc) {
-                                                             
-                                                             var tmp = document.createElement("DIV");
-                                                             tmp.innerHTML = doc.summary;
-                                                             var newSummary =  tmp.textContent || tmp.innerText;
-                                                             newSummary = newSummary.substring(0,500);
-                                                             if (newSummary != doc.summary){
-                                                             console.log("shortened summary of " + doc.title);
-                                                             Articles.update( {_id: doc._id}, {$set: {summary: newSummary, proofed: 1}} );
-                                                             }
-                                                             else{
-                                                             console.log("marked " + doc.title + " as proofed with no change");
-                                                             Articles.update( {_id: doc._id}, {$set: {proofed: 1}} );
-                                                             }
-                                                             } );
-             
-             
-             });
+             if ( Session.equals( "loaded", true ) ){
+                 var articlesToStore = [];
+                 if ( amplify.store("quickArticles") !== null && amplify.store("quickArticles") !== undefined){
+                 articlesToStore = amplify.store("quickArticles");
+                 }
+                 maxStore = 0;
+                 Articles.find({},{sort: {date: -1}, limit: articlesOnLoad}).forEach (function (article){   
+                                                                                                articlesToStore.push(article);
+                                                                                                maxStore++;
+                                                                                                console.log("new article stored ");
+                                                                                                while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
+                                                                                                
+                                                                                                });
+                 while (articlesToStore.length > maxStore) { articlesToStore.shift(); }
+                 
+                 amplify.store("quickArticles", articlesToStore);
+                 }
+                 });
 
 var timeago = function(some_date){
   var timeago = (new Date() - new Date(some_date)) / DAY;
@@ -109,7 +83,7 @@ Template.articleList.events({
 Template.articleList.articles = function() {
   
    if ( Session.equals("loaded", true) ) { 
-            return Articles.find({proofed: 1},{sort: {date: -1}, limit: 300});;
+            return Articles.find({},{sort: {date: -1}, limit: 300});;
   }
   else{
     console.log("articles from QuickArticles");
