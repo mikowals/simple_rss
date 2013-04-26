@@ -177,7 +177,7 @@ var cleanSummary = function (text){
   var $ = cheerio.load(text);
   text = $('p').first().text();
   
-  if (text === "") { 
+  if (text === "" || text === null || text === undefined) { 
 
     $('img').remove(); 
     $('a').remove();
