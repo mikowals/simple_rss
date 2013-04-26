@@ -181,9 +181,6 @@ var cleanSummary = function (text){
     $('a').remove();
     text = $.html();
   }
-
-  console.log(text);
-  
   return text ;
 }
 
