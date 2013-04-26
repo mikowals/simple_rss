@@ -4,6 +4,8 @@ var daysStoreArticles = 2;
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 
+Accounts.config({sendVerificationEmail: true});
+
 var Feeds = new Meteor.Collection("feeds");
 var Articles = new Meteor.Collection("articles");
 Articles._ensureIndex( {"date": 1} );
