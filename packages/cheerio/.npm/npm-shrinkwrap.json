@@ -1,0 +1,62 @@
+{
+  "dependencies": {
+    "cheerio": {
+      "version": "0.11.0",
+      "from": "cheerio@0.11.0",
+      "resolved": "https://registry.npmjs.org/cheerio/-/cheerio-0.11.0.tgz",
+      "dependencies": {
+        "cheerio-select": {
+          "version": "0.0.3",
+          "from": "cheerio-select@*",
+          "resolved": "https://registry.npmjs.org/cheerio-select/-/cheerio-select-0.0.3.tgz",
+          "dependencies": {
+            "CSSselect": {
+              "version": "0.3.1",
+              "from": "CSSselect@0.x",
+              "resolved": "https://registry.npmjs.org/CSSselect/-/CSSselect-0.3.1.tgz",
+              "dependencies": {
+                "CSSwhat": {
+                  "version": "0.1.1",
+                  "from": "CSSwhat@>= 0.1",
+                  "resolved": "https://registry.npmjs.org/CSSwhat/-/CSSwhat-0.1.1.tgz"
+                }
+              }
+            }
+          }
+        },
+        "htmlparser2": {
+          "version": "2.6.0",
+          "from": "htmlparser2@2.x",
+          "resolved": "https://registry.npmjs.org/htmlparser2/-/htmlparser2-2.6.0.tgz",
+          "dependencies": {
+            "domhandler": {
+              "version": "2.0.3",
+              "from": "domhandler@2.0",
+              "resolved": "https://registry.npmjs.org/domhandler/-/domhandler-2.0.3.tgz"
+            },
+            "domutils": {
+              "version": "1.0.1",
+              "from": "domutils@1.0",
+              "resolved": "https://registry.npmjs.org/domutils/-/domutils-1.0.1.tgz"
+            },
+            "domelementtype": {
+              "version": "1.1.1",
+              "from": "domelementtype@1",
+              "resolved": "https://registry.npmjs.org/domelementtype/-/domelementtype-1.1.1.tgz"
+            }
+          }
+        },
+        "underscore": {
+          "version": "1.4.4",
+          "from": "underscore@~1.4",
+          "resolved": "https://registry.npmjs.org/underscore/-/underscore-1.4.4.tgz"
+        },
+        "entities": {
+          "version": "0.2.2",
+          "from": "entities@0.x",
+          "resolved": "https://registry.npmjs.org/entities/-/entities-0.2.2.tgz"
+        }
+      }
+    }
+  }
+}
