@@ -6,8 +6,9 @@ syncFP = function(url){
   var future = new Future();
   var articles = [];
   var future = new Future();
+  console.log(url);
   var futures = request(url).pipe(new feedParser())
-  .on('err', function(err){
+  .on('error', function(err){
       console.log(err);
       })
   .on('complete', function(meta,articles){
@@ -28,8 +29,8 @@ multipleSyncFP = function(urls){
                       var onComplete = future.resolver();
                       
                       request(url).pipe(new feedParser())
-                      .on('err', function(err){
-                          console.log(err);
+                      .on('error', function(error){
+                          console.log( JSON.stringify( error ) );
                           })
                       
                       .on('complete', function(meta,articles){

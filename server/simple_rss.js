@@ -1,3 +1,4 @@
+var Future = Npm.require('fibers/future');
 
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
@@ -55,8 +56,8 @@ Articles.allow({
                });
 
 Feeds.allow({
-            insert: function (doc) {
-            return true //(userId && doc.owner === userId);
+            insert: function (userId, doc) {
+            return doc.subscribers[0] === userId;
             },
             
             update: function (doc, fields, modifier) {
@@ -71,7 +72,7 @@ Feeds.allow({
             return false;
             }
             else{
-            return true;
+            return doc.subscribers[0] === userId;
             }
             }
             
@@ -210,15 +211,62 @@ var eachRecursive = function (obj, resultArr) {
     }
 }
 
+/** a first effort at parsing rss.  probably not much need for it if feedParser works
+ 
+var rssUrlHandler = function(urls){
+  var futures = _.map(urls, function(url){
+                      var future = new Future();
+                      var onComplete = future.resolver();
+                      
+                      if ( url.indexOf('http://') === -1 && url.indexOf('https://') === -1 ) {
+                      console.log(url);
+                      url = 'http://' + url; 
+                      }
+                      
+                      Meteor.http.get(url, function (error, result) {
+                                      if( error){
+                                      console.log( error ); 
+                                      }
+                                      if ( result.statusCode === 200 ){
+                                      var $ = cheerio.load (result.content);
+                                      console.log( $('channel').find('title').text() );
+                                      var meta = {};
+                                      
+                                      meta['title'] = $('channel').title;
+                                      meta['date'] = $('channel').pubDate || $('channel').PubDate;
+                                      meta['xmlUrl'] = $('channel').xmlUrl || url;
+                                  
+                                      var articles = $('item');
+                                      var object = {};
+                                      console.log(url + " : " + meta.title); 
+                                      object["meta"] = meta;
+                                      object["articles"] = articles;
+                                      
+                                      onComplete( object );
+                                      }
+                                      
+                          });    
+                      return future;
+                      });
+  Future.wait(futures);
+  
+  console.log('finished reading feeds');
+  return _.invoke(futures,'get');
+}
+ **/
 
 var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
                                                      _suppress_initial: true,
                                                      
                                                      added: function(doc){
-                                                     
+                                                     if (doc.articles) {
                                                      console.log( "found " + newArticlesToDb(doc.articles, doc) + " for new feed - " + doc.title);
                                                      Feeds.update(doc._id, {$unset: {articles: 1}});
-                                              
+                                                     }
+                                                     else{
+                                                     result = syncFP(doc.url);
+                                                     console.log( "found " + newArticlesToDb(result.articles, doc) + " for new feed - " + doc.title);
+                                                     }
                                                      
                                                      },
                                                      
@@ -242,14 +290,19 @@ Meteor.methods({
                var article_count = 0;
                var urls = [];
                Feeds.find({}).forEach( function(feed){
-                                urls.push( feed.url);
-                                });
+                                      if (feed.url){
+                                      urls.push( feed.url);
+                                      }
+                                      else{
+                                      console.log( "feed with no URL - removing : " + JSON.stringify (feed));
+                                           Feeds.remove( feed._id );
+                                      }
+                                      });
                try{
-                 var rssResults = multipleSyncFP(urls);
+                 var rssResults = multipleSyncFP (urls);
                }
                catch (e){
                  console.log(e.message );
-               throw Meteor.Error(500, "trouble parsing feeds", "feedparser is having an error with one of the URLs passed");
                }
                rssResults.forEach(function(rssResult){
                                   
@@ -303,12 +356,20 @@ Meteor.methods({
                var fpResults = [];
                
                xmlToAdd.forEach( function(url){
+                                try{
                                 fpResults.push( syncFP(url) );
+                                }
+                                catch(e){
+                                console.log( e + " parsing url " + url);
+                                }
                                 });
+               console.log( "finished with feedparser");
+               if ( fpResults ){
                fpResults.forEach( function (rssResult){
+                                 console.log( "looping to add " + rssResult.meta.title);
                                  var doc = {url: rssResult.meta.xmlurl, title: rssResult.meta.title, last_date: rssResult.meta.date, subscribers: [] };
                                  doc.subscribers.push(self.userId);
-                                 
+   
                                  var existingFeed = Feeds.findOne( {url: doc.url} );
                                  if( existingFeed ){
                                  Feeds.update(existingFeed._id, {$addToSet: {subscribers: self.userId} } );
@@ -316,16 +377,14 @@ Meteor.methods({
                                 
                                 else {
                                  console.log(doc.url + " not in db - adding");
+                                 doc.articles = rssResult.articles;
                                  Feeds.insert(doc);
                                  }
-
+                                 
                                  
                                 });
                }
-               
-               
-               
-               
+               }
                
                });
 
