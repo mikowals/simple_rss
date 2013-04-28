@@ -46,6 +46,10 @@
 </template>
 
 <template name="articleList"> 
+  
+  
+  
+  
     {{>feedModal}}
    
     <div id="stream">  
@@ -89,12 +93,29 @@
     <div class="modal-body">
       {{>feedList}}
     </div>
+    
     <div class="modal-footer">
-      <span class="form-inline pull-right">
-        <input type="url" class="input-large" placeholder="Feed url to add" id="feedUrl" />
-        <button id="addFeed" class="btn btn-primary btn-mini">Add</button>
-      </span>
+      {{>modalButtons}}
     </div>
     
   </div>
+</template>
+
+<template name="modalButtons">
+  <span class="form-inline">
+    {{#if importOPML}}
+    <a id="importCancel" class="btn btn-link btn-mini pull-left">Cancel</a>
+    <span class="pull-right">
+      <small> Upload OPML:</small>
+      <input id="opmlFile" type="file" class="fileUploader" multiple="multiple" />
+      <a id="opmlUpload" class="btn"><i class="icon-upload"></i></a>
+    </span> 
+    {{else}}
+    <a id="importToggle" class="btn btn-link btn-mini pull-left">Import</a>
+    <span class="pull-right">
+      <input type="url" class="input-large" placeholder="Feed url to add" id="feedUrl" />
+      <a id="addFeed" class="btn btn-primary btn-mini">Add</a>
+    </span>
+    {{/if}}
+  </span>
 </template>

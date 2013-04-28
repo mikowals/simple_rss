@@ -5,19 +5,24 @@ var intervalProcesses = []; //hold interval process id to start and stop with di
 Session.setDefault("loaded", false);
 Session.setDefault("active", 1);
 Session.setDefault("anonyous_id", amplify.store("anonymous_id"));
+Session.setDefault("import", false);
                    
 Meteor.subscribe("feeds" );
 var Feeds = new Meteor.Collection("feeds");
 
 
-var article_sub = Meteor.subscribe("articles", function(){
+Deps.autorun( function(){
+             
+             var article_sub = Meteor.subscribe("articles", function(){
                                    Session.set("loaded", true);
                                    });
+             });
              
                                             
 var Articles = new Meteor.Collection("articles");
 
-
+  //always keep localStorage up to date with most recent articles
+  //not too efficient currently - every change rewrites all articles in localStorage
 Deps.autorun( function(){
              if ( Session.equals( "loaded", true ) ){
                  var articlesToStore = [];
@@ -61,13 +66,42 @@ Template.feedList.flash = function(){
   return Session.get("feedListFlash");
 };
 
-Template.feedModal.events({
-                          'click #addFeed': function() {
+Template.modalButtons.importOPML = function(){
+  return Session.equals("importOPML", true);
+};
+
+Template.modalButtons.events({
+                             'click #addFeed': function() {
+                             
+                             Feeds.insert( { url: $("#feedUrl").val() } );http://feeds.bbci.co.uk/news/system/latest_published_content/rss.xml
+                             $("#feedUrl").val("");
+                             },
+                             
+                             'click #importToggle': function(){
+                             Session.set("importOPML", true);
+                             console.log(Session.equals("importOPML", true));
+                             },
+                             
+                             'click #opmlUpload' : function(){
+                             Session.set("importOPML", false);
+                             
+                             var opmlFile = $("#opmlFile")[0].files[0];
+                             console.log(JSON.stringify(opmlFile));
+                             var fr = new FileReader();
+                             fr.readAsText(opmlFile);
+                             fr.onloadend = function(evt) {
+                             if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+                             Meteor.call('importOPML', evt.target.result);
+                             }
+                             }
+                             },
                           
-                          Feeds.insert( { url: $("#feedUrl").val() } );http://feeds.bbci.co.uk/news/system/latest_published_content/rss.xml
-                          $("#feedUrl").val("");
-                          }
-                          });
+                             'click #importCancel' : function(){
+                             Session.set("importOPML", false);
+                             }
+                          
+                         
+                             });
 
 Template.feedList.events({                                                   
                          'click #removeFeed': function(){
@@ -75,15 +109,12 @@ Template.feedList.events({
                          }
                          
                          });
-
-Template.articleList.events({
-                         
-                            });
+                           
 
 Template.articleList.articles = function() {
   
    if ( Session.equals("loaded", true) ) { 
-            return Articles.find({},{sort: {date: -1}, limit: 300});;
+            return Articles.find({},{sort: {date: -1}});;
   }
   else{
     console.log("articles from QuickArticles");
@@ -113,7 +144,5 @@ Template.feed.events({
 Template.newriver.user = function(){
   return Meteor.user() || Session.get("anonymous_id");
 };
-
-
 
 

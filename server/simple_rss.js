@@ -3,6 +3,7 @@ var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
+var articlePubLimit = 300;
 
 Accounts.config({sendVerificationEmail: true});
 
@@ -13,7 +14,7 @@ Articles._ensureIndex( {"date": 1} );
 
 Meteor.publish("feeds", function () {
                var self = this;
-               return Feeds.find({subscribers: self.userId }, {title: 1, url:1, last_date:1});
+               return Feeds.find({subscribers: self.userId }, {_id: 1, title: 1, url:1, last_date:1});
                });
 
 Meteor.publish( "articles", function(){
@@ -34,7 +35,7 @@ Meteor.publish( "articles", function(){
 
                                         });
                
-               return Articles.find({feed_id: {$in: feed_ids}}, {fields: {_id: 1, title: 1, source:1, date:1, summary:1, link:1, proofed:1}} );
+               return Articles.find({feed_id: {$in: feed_ids}}, {sort: {date: -1}, limit: articlePubLimit, fields: {title: 1, source:1, date:1, summary:1, link:1}} );
                
                });
 
@@ -43,30 +44,38 @@ Articles.allow({
                return false //(userId && doc.owner === userId);
                },
                update: function (userId, doc, fieldNames, modifier ) {
-               return ( '$set' in modifier );
+               return false;
                },
                
                remove: function ( doc ) {
                // can only remove your own documents
                return false //doc.owner === userId;
-               },
-               fetch: ['owner']
+               }
+               //fetch: ['owner']
                });
 
 Feeds.allow({
             insert: function (doc) {
-            
             return true //(userId && doc.owner === userId);
             },
+            
             update: function (doc, fields, modifier) {
             // can only change your own documents
             return false //doc.owner === userId;
             },
-            remove: function (doc) {
-            // can only remove your own documents
-            return true //doc.owner === userId;
-            },
-            fetch: ['owner']
+            
+            remove: function(userId, doc){
+            if(doc.subscribers.length > 1){
+            console.log(JSON.stringify (doc) );
+            Feeds.update(doc._id, {$pull: {subscribers: userId}} );
+            return false;
+            }
+            else{
+            return true;
+            }
+            }
+            
+            //fetch: ['owner']
             });
 
 Feeds.deny({
@@ -94,26 +103,21 @@ Feeds.deny({
            return false;
            }
                      
-           },
+           }
            
-           remove: function(userId, doc){
-           if(doc.subscribers.length > 1){
-             Feeds.update(doc._id, {$pull: {subscribers: userId}} );
-             return true;
-           }
-           else{
-             return false;
-           }
-           }
+           
            
 });
 
 
 Meteor.startup( function(){
+               
+               if ( !intervalProcesses[ "removeOldArticles"] ){
                var process = Meteor.setInterval(function (){
-                                  Meteor.call('removeOldArticles'); },
-                                  DAY);
+                                                Meteor.call('removeOldArticles'); },
+                                                DAY);
                intervalProcesses["removeOldArticles"] = process;
+               }
                
                if ( !intervalProcesses[ "findArticles"] ){
                var process = Meteor.setInterval( function(){
@@ -177,13 +181,33 @@ var cleanSummary = function (text){
   var $ = cheerio.load(text);
   text = $('p').first().text();
   
-  if (text === "" || text === null || text === undefined) { 
+  if (text === "" || text === "null" || text === null || text === undefined) { 
 
     $('img').remove(); 
     $('a').remove();
     text = $.html();
   }
-  return text ;
+  if (text === null || text === undefined || text === "null") {
+    text = '';
+  }
+  
+  return text;
+}
+
+  //recursively read javascript object tree looking for urls of rss feeds
+var eachRecursive = function (obj, resultArr) {
+  for (var k in obj)
+    {
+
+    if (typeof obj[k] === "object"){
+      eachRecursive(obj[k], resultArr);
+    }
+    else{
+      if (k === 'xmlUrl'){
+        resultArr.push( obj['xmlUrl'] );
+      }
+    }
+    }
 }
 
 
@@ -269,7 +293,38 @@ Meteor.methods({
                                       Feeds.update(feed._id, {$set: {url: result.meta.xmlurl }});
                                       }
                                       });
+               },
+               
+               importOPML: function(upload){
+               var self = this;
+               var opml = XML2JS.parse(upload);
+               var xmlToAdd = [];
+               eachRecursive(opml, xmlToAdd); 
+               var fpResults = [];
+               
+               xmlToAdd.forEach( function(url){
+                                fpResults.push( syncFP(url) );
+                                });
+               fpResults.forEach( function (rssResult){
+                                 var doc = {url: rssResult.meta.xmlurl, title: rssResult.meta.title, last_date: rssResult.meta.date, subscribers: [] };
+                                 doc.subscribers.push(self.userId);
+                                 
+                                 var existingFeed = Feeds.findOne( {url: doc.url} );
+                                 if( existingFeed ){
+                                 Feeds.update(existingFeed._id, {$addToSet: {subscribers: self.userId} } );
+                                 }
+                                
+                                else {
+                                 console.log(doc.url + " not in db - adding");
+                                 Feeds.insert(doc);
+                                 }
+
+                                 
+                                });
                }
+               
+               
+               
                
                
                });

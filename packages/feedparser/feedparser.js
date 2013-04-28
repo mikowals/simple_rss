@@ -6,8 +6,12 @@ syncFP = function(url){
   var future = new Future();
   var articles = [];
   var future = new Future();
-  var futures = request(url).pipe(new feedParser()).on('complete', function(meta,articles){
-                                                       
+  var futures = request(url).pipe(new feedParser())
+  .on('err', function(err){
+      console.log(err);
+      })
+  .on('complete', function(meta,articles){
+                                                       console.log(url + " : " + meta.title);
                                                        var object = {};
                                                        object["meta"] = meta;
                                                        object["articles"] = articles;
@@ -19,27 +23,31 @@ syncFP = function(url){
 
 multipleSyncFP = function(urls){
   console.log("got feeds preparing to use feedparser");
-  
   var futures = _.map(urls, function(url){
                       var future = new Future();
                       var onComplete = future.resolver();
-                      request(url).pipe(new feedParser()).on('err', function(err){
-                                                            console.log("feedparser error. Feed: " + url);
-                                                            var object = null;
-                                                            onComplete( err, object);
-                                                             })
+                      
+                      request(url).pipe(new feedParser())
+                      .on('err', function(err){
+                          console.log(err);
+                          })
                       
                       .on('complete', function(meta,articles){
                           var object = {};
+                          console.log(url + " : " + meta.title); 
                           object["meta"] = meta;
                           object["articles"] = articles;
                           var error = null;
                           onComplete( error, object);
                           });
+                      
+                      
                       return future;
                       });
   Future.wait(futures);
+ 
   console.log('finished reading feeds');
   return _.invoke(futures,'get');
+  
   
 }
