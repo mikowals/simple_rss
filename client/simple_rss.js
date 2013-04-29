@@ -10,14 +10,12 @@ Session.setDefault("import", false);
 Meteor.subscribe("feeds" );
 var Feeds = new Meteor.Collection("feeds");
 
-
-Deps.autorun( function(){
-             
-             var article_sub = Meteor.subscribe("articles", function(){
+  //Deps.autorun( function(){             
+var article_sub = Meteor.subscribe("articles", function(){
                                    Session.set("loaded", true);
                                    });
-             });
-             
+            
+  //      });
                                             
 var Articles = new Meteor.Collection("articles");
 
@@ -71,10 +69,14 @@ Template.modalButtons.importOPML = function(){
 };
 
 Template.modalButtons.events({
-                             'click #addFeed': function() {
                              
-                             Feeds.insert( { url: $("#feedUrl").val() } );http://feeds.bbci.co.uk/news/system/latest_published_content/rss.xml
+                             //could modify this to verify feed and populate fields for insertion
+                             'click #addFeed': function() {
+                             var url = $("#feedUrl").val();
+                             
+                             Feeds.insert( { url: url } );
                              $("#feedUrl").val("");
+                                       
                              },
                              
                              'click #importToggle': function(){

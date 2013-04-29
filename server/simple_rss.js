@@ -1,4 +1,3 @@
-var Future = Npm.require('fibers/future');
 
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
@@ -179,7 +178,7 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
 
 var cleanSummary = function (text){
   
-  var $ = cheerio.load(text);
+  var $ = cheerio.load(text);  //relies on cheerio package
   text = $('p').first().text();
   
   if (text === "" || text === "null" || text === null || text === undefined) { 
@@ -357,7 +356,9 @@ Meteor.methods({
                
                xmlToAdd.forEach( function(url){
                                 try{
+                                if (url !== null && url !== undefined){
                                 fpResults.push( syncFP(url) );
+                                }
                                 }
                                 catch(e){
                                 console.log( e + " parsing url " + url);
@@ -366,13 +367,14 @@ Meteor.methods({
                console.log( "finished with feedparser");
                if ( fpResults ){
                fpResults.forEach( function (rssResult){
-                                 console.log( "looping to add " + rssResult.meta.title);
+                                 
                                  var doc = {url: rssResult.meta.xmlurl, title: rssResult.meta.title, last_date: rssResult.meta.date, subscribers: [] };
                                  doc.subscribers.push(self.userId);
    
                                  var existingFeed = Feeds.findOne( {url: doc.url} );
                                  if( existingFeed ){
                                  Feeds.update(existingFeed._id, {$addToSet: {subscribers: self.userId} } );
+                                 console.log( rssResult.meta.title +" in db - subscribing user");
                                  }
                                 
                                 else {
@@ -383,6 +385,18 @@ Meteor.methods({
                                  
                                  
                                 });
+               }
+               },
+               
+               clientSyncFP : function(url){
+               try{
+               
+               return syncFP(url);
+               
+               }
+               catch(e){
+      
+               return e;
                }
                }
                

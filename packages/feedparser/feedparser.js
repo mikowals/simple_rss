@@ -8,11 +8,11 @@ syncFP = function(url){
   var future = new Future();
   console.log(url);
   var futures = request(url).pipe(new feedParser())
-  .on('error', function(err){
-      console.log(err);
+  .on('error', function(error){
+      console.log(error);
       })
   .on('complete', function(meta,articles){
-                                                       console.log(url + " : " + meta.title);
+                                                       
                                                        var object = {};
                                                        object["meta"] = meta;
                                                        object["articles"] = articles;
@@ -27,22 +27,20 @@ multipleSyncFP = function(urls){
   var futures = _.map(urls, function(url){
                       var future = new Future();
                       var onComplete = future.resolver();
+                      request(url).pipe( new feedParser() )
+                                      .on('error', function(error){
+                                          console.log( JSON.stringify( error ) );
+                                          })
                       
-                      request(url).pipe(new feedParser())
-                      .on('error', function(error){
-                          console.log( JSON.stringify( error ) );
-                          })
-                      
-                      .on('complete', function(meta,articles){
-                          var object = {};
-                          console.log(url + " : " + meta.title); 
-                          object["meta"] = meta;
-                          object["articles"] = articles;
-                          var error = null;
-                          onComplete( error, object);
-                          });
-                      
-                      
+                                      .on('complete', function(meta,articles){
+                                          var object = {};
+                                          object["meta"] = meta;
+                                          object["articles"] = articles;
+                                          var error = null;
+                                          onComplete( error, object);
+                                          });
+                                     
+                                      
                       return future;
                       });
   Future.wait(futures);
