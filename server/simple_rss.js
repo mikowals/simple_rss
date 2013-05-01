@@ -181,30 +181,43 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
 }
 
 var cleanSummary = function (text){
-  
+  console.log(text);
   var $ = cheerio.load(text);  //relies on cheerio package
-  text = $('p').first().text();
-  if ( text === "" || text === "null" || text === null || text === undefined){
+  
+  $('img').remove();
+  $('table').remove();
+  $('.feedflare').remove();
+  
+  if( $('p').length ) 
+    {
+    console.log("has paragraphs");
+    text = $('p').eq(0).html() + ( $('p').eq(1).html() || ''); 
+    }
+  else if( $('li').length ){
     text = '<ul>';
-    $('ul li').slice(0,4).each( function(){
-                               text += "<li>" + $(this).text() + "</li>";
+    $('ul li').slice(0,6).each( function(){
+                               text += "<li>" + $(this).html() + "</li>";
                                });
     text += "</ul>";
   }
   
-  
-  if (text === "" || text === "null" || text === null || text === undefined) { 
-
-    $('img').remove(); 
-    text = $.html();
+  else{
+    console.log("no paragraphs");
+    if ( $('a').length ){
+      
+      $('a').remove();
+        text = $.html();
+      
+    }
+    else if ( text.indexOf('<br') !== -1 ){
+      text = text.substring(0, text.indexOf('<br'));
+    }
   }
-  
+
   if (text === null || text === undefined || text === "null") {
     text = '';
   }
-  if (text.indexOf('<br>') !== -1){
-    text = text.substring(0, text.indexOf('<br>'));
-  }
+  
   return text;
 }
 
