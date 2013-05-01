@@ -87,13 +87,18 @@ Feeds.deny({
            }
            
            var rssResult = syncFP( doc.url);
-           if (rssResult.meta.url && doc.url !== rssResult.meta.url ) { doc.url = rssResult.meta.url; }
+           if (rssResult.meta === null || rssResult.meta === undefined){
+           console.log(doc.url + " has no data to insert");
+           return true;
+           }
+           else if (rssResult.meta.url && doc.url !== rssResult.meta.url ) { doc.url = rssResult.meta.url; }
            existingFeed = Feeds.findOne( {url: doc.url} );
+           
            if( existingFeed ){
            Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
            return true;
            } 
-           else {
+           else{
            console.log(doc.url + " not in db - adding");
            doc.title = rssResult.meta.title;  
            doc.last_date = rssResult.meta.date;
@@ -135,13 +140,11 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
   var existingArticles={};
   var last_dates = {};
   var article_count=0;
-  
   var feed = Feeds.findOne({url: meta.url}); // see comment above
-  Articles.find({source: meta.title},{guid:1, date:1}).forEach(function(article){
+  Articles.find({feed_id: feed._id},{guid:1, date:1}).forEach(function(article){
                                                                existingArticles[article.guid]=1;
                                                                
                                                               });
-  
   maxDate = meta.date || 0;
   articlesFromWeb.forEach(function (article) {
                           
@@ -169,9 +172,9 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                           }
                           });
   if (article_count > 0){
-    var feed_date = Feeds.findOne({title: meta.title}, {last_date:1}).last_date;
+    var feed_date = feed.last_date;
     if (feed_date === null || maxDate > feed_date){
-      Feeds.update({title: meta.title}, {$set:{last_date: maxDate}});
+      Feeds.update(feed._id, {$set:{last_date: maxDate}});
     }
   }
   return article_count;
@@ -288,7 +291,7 @@ Meteor.methods({
                findArticles: function() {         
                console.log("looking for new articles");
                var article_count = 0;
-               
+               /**
                Feeds.find({}).forEach( function(feed){
                                       if ( feed.url !== null && feed.url !== undefined && feed.url !== "null" ){
                             
@@ -306,8 +309,8 @@ Meteor.methods({
                                       Feeds.remove( feed._id );
                                       }
                                       });
-                
-               /**
+               **/ 
+               
                
                var urls = [];
                Feeds.find({}).forEach( function(feed){
@@ -330,7 +333,7 @@ Meteor.methods({
                                   console.log( "a feed returned no data");
                                   }
                                   }); 
-               **/
+               
                
                console.log("finished find articles");
                return article_count; 
