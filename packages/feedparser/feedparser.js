@@ -4,7 +4,7 @@ var Future = Npm.require('fibers/future');
 
 syncFP = function(url){
   var future = new Future();
-  request(url, {timeout: 3000}, function(error){
+  request(url, {timeout: 5000}, function(error){
           if (error){
           console.log(url + " : " + error);
           future.ret(  );
@@ -33,7 +33,7 @@ multipleSyncFP = function(urls){
                       var future = new Future();
                       var onComplete = future.resolver();
                       
-                      request(url, {timeout: 3000}, function(error){
+                      request(url, {timeout: 5000}, function(error){
                               if (error){
                               console.log(url + " : " + error);
                               onComplete();

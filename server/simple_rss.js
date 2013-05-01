@@ -194,8 +194,9 @@ var cleanSummary = function (text){
   if (text === null || text === undefined || text === "null") {
     text = '';
   }
-  
-  text = text.substring(0, text.indexOf('<br>'));
+  if (text.indexOf('<br>') !== -1){
+    text = text.substring(0, text.indexOf('<br>'));
+  }
   return text;
 }
 
