@@ -184,13 +184,21 @@ var cleanSummary = function (text){
   
   var $ = cheerio.load(text);  //relies on cheerio package
   text = $('p').first().text();
+  if ( text === "" || text === "null" || text === null || text === undefined){
+    text = '<ul>';
+    $('ul li').slice(0,4).each( function(){
+                               text += "<li>" + $(this).text() + "</li>";
+                               });
+    text += "</ul>";
+  }
+  
   
   if (text === "" || text === "null" || text === null || text === undefined) { 
 
     $('img').remove(); 
-    $('a').remove();
     text = $.html();
   }
+  
   if (text === null || text === undefined || text === "null") {
     text = '';
   }

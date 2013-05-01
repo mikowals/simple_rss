@@ -41,7 +41,7 @@ multipleSyncFP = function(urls){
                               }).pipe(new feedParser())
                       .on('error', function(error){
                           console.log( url + " : " + error  );
-                          onComplete( error, null);
+                          onComplete( );
                           })
                       
                       .on('complete', function(meta,articles){
