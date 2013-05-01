@@ -181,7 +181,6 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
 }
 
 var cleanSummary = function (text){
-  console.log(text);
   var $ = cheerio.load(text);  //relies on cheerio package
   
   $('img').remove();
@@ -190,7 +189,6 @@ var cleanSummary = function (text){
   
   if( $('p').length ) 
     {
-    console.log("has paragraphs");
     text = $('p').eq(0).html() + ( $('p').eq(1).html() || ''); 
     }
   else if( $('li').length ){
@@ -202,22 +200,19 @@ var cleanSummary = function (text){
   }
   
   else{
-    console.log("no paragraphs");
-    if ( $('a').length ){
-      
-      $('a').remove();
+    if ( $.html() ){
         text = $.html();
-      
     }
-    else if ( text.indexOf('<br') !== -1 ){
+    if ( text.indexOf('<br') !== -1 ){
       text = text.substring(0, text.indexOf('<br'));
     }
+    
+    text = text.substring(0, 500);
   }
 
   if (text === null || text === undefined || text === "null") {
     text = '';
   }
-  
   return text;
 }
 
