@@ -156,7 +156,7 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                           var new_article = {
                           title: article.title,
                           guid: article.guid,
-                          summary: cleanSummary( article.summary ),
+                          summary: cleanSummary( article.description ),
                           date: date,
                           author: article.author,
                           link: article.link,
@@ -195,6 +195,7 @@ var cleanSummary = function (text){
     text = '';
   }
   
+  text = text.substring(0, text.indexOf('<br>'));
   return text;
 }
 

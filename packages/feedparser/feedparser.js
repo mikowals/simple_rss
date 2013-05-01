@@ -4,15 +4,15 @@ var Future = Npm.require('fibers/future');
 
 syncFP = function(url){
   var future = new Future();
-  request(url, {timeout: 5000}, function(error){
+  request(url, {timeout: 3000}, function(error){
           if (error){
           console.log(url + " : " + error);
-          future.ret( error );
+          future.ret(  );
           }
           }).pipe(new feedParser())
   .on('error', function(err){
       console.log(url + " : " + err);
-      future.ret( err);
+      future.ret( );
       })
   
   .on('complete', function(meta,articles){
@@ -33,14 +33,14 @@ multipleSyncFP = function(urls){
                       var future = new Future();
                       var onComplete = future.resolver();
                       
-                      request(url, {timeout: 5000}, function(error){
+                      request(url, {timeout: 3000}, function(error){
                               if (error){
                               console.log(url + " : " + error);
-                              future.ret( error );
+                              onComplete();
                               }
                               }).pipe(new feedParser())
                       .on('error', function(error){
-                          console.log( url + " : " + err  );
+                          console.log( url + " : " + error  );
                           onComplete( error, null);
                           })
                       
@@ -49,7 +49,7 @@ multipleSyncFP = function(urls){
                           meta.url = meta.xmlurl || url;
                           object["meta"] = meta;
                           object["articles"] = articles;
-                          onComplete( null, object);
+                          onComplete(null, object);
                           });
                       
                       
@@ -57,8 +57,7 @@ multipleSyncFP = function(urls){
                       });
   Future.wait(futures);
   
-  console.log('finished reading feeds');
-  return _.invoke(futures,'get');
+    return _.invoke(futures,'get');
   
   
 }
