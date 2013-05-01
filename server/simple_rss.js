@@ -87,7 +87,7 @@ Feeds.deny({
            }
            
            var rssResult = syncFP( doc.url);
-           if (rssResult.meta.xmlurl && doc.url !== rssResult.meta.xmlurl ) { doc.url = rssResult.meta.xmlurl; }
+           if (rssResult.meta.url && doc.url !== rssResult.meta.url ) { doc.url = rssResult.meta.url; }
            existingFeed = Feeds.findOne( {url: doc.url} );
            if( existingFeed ){
            Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
@@ -135,7 +135,8 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
   var existingArticles={};
   var last_dates = {};
   var article_count=0;
-  var feed = Feeds.findOne({title: meta.title}); // see comment above
+  
+  var feed = Feeds.findOne({url: meta.url}); // see comment above
   Articles.find({source: meta.title},{guid:1, date:1}).forEach(function(article){
                                                                existingArticles[article.guid]=1;
                                                                
@@ -287,9 +288,30 @@ Meteor.methods({
                findArticles: function() {         
                console.log("looking for new articles");
                var article_count = 0;
+               
+               Feeds.find({}).forEach( function(feed){
+                                      if ( feed.url !== null && feed.url !== undefined && feed.url !== "null" ){
+                            
+                                      var rssResult = syncFP( feed.url);
+                                      if (rssResult && rssResult.articles && rssResult.meta){
+                                      article_count += newArticlesToDb (rssResult.articles, rssResult.meta);
+                                      }
+                                      else{
+                                      console.log( "feed returned no data : " + feed.url);
+                                      }
+                                      
+                                      }
+                                      else{
+                                      console.log( "feed with no URL - removing : " + JSON.stringify (feed));
+                                      Feeds.remove( feed._id );
+                                      }
+                                      });
+                
+               /**
+               
                var urls = [];
                Feeds.find({}).forEach( function(feed){
-                                      if (feed.url){
+                                      if ( feed.url !== null && feed.url !== undefined && feed.url !== "null" ){
                                       urls.push( feed.url);
                                       }
                                       else{
@@ -297,18 +319,20 @@ Meteor.methods({
                                            Feeds.remove( feed._id );
                                       }
                                       });
-               try{
-                 var rssResults = multipleSyncFP (urls);
-               }
-               catch (e){
-                 console.log(e.message );
-               }
-               rssResults.forEach(function(rssResult){
-                                  
-                                  article_count += newArticlesToDb (rssResult.articles, rssResult.meta);
-                                  
-                                  });            
                
+               var rssResults = multipleSyncFP (urls);
+               
+               rssResults.forEach(function(rssResult){
+                                  if (rssResult && rssResult.articles && rssResult.meta){
+                                  article_count += newArticlesToDb (rssResult.articles, rssResult.meta);
+                                  }
+                                  else{
+                                  console.log( "a feed returned no data");
+                                  }
+                                  }); 
+               **/
+               
+               console.log("finished find articles");
                return article_count; 
                },
                
@@ -340,9 +364,9 @@ Meteor.methods({
                cleanUrls: function(){
                Feeds.find({}).forEach( function(feed){
                                       var result = syncFP(feed.url);
-                                      if (result.meta.xmlurl && feed.url !== result.meta.xmlurl ){
-                                      console.log("changing url " + feed.url + " to " + result.meta.xmlurl);
-                                      Feeds.update(feed._id, {$set: {url: result.meta.xmlurl }});
+                                      if (result.meta.url && feed.url !== result.meta.url ){
+                                      console.log("changing url " + feed.url + " to " + result.meta.url);
+                                      Feeds.update(feed._id, {$set: {url: result.meta.url }});
                                       }
                                       });
                },
@@ -368,7 +392,7 @@ Meteor.methods({
                if ( fpResults ){
                fpResults.forEach( function (rssResult){
                                  
-                                 var doc = {url: rssResult.meta.xmlurl, title: rssResult.meta.title, last_date: rssResult.meta.date, subscribers: [] };
+                                 var doc = {url: rssResult.meta.url, title: rssResult.meta.title, last_date: rssResult.meta.date, subscribers: [] };
                                  doc.subscribers.push(self.userId);
    
                                  var existingFeed = Feeds.findOne( {url: doc.url} );
