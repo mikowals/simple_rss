@@ -7,17 +7,18 @@ Session.setDefault("active", 1);
 Session.setDefault("anonyous_id", amplify.store("anonymous_id"));
 Session.setDefault("import", false);
                    
-Meteor.subscribe("feeds" );
-var Feeds = new Meteor.Collection("feeds");
-
-  //Deps.autorun( function(){             
-var article_sub = Meteor.subscribe("articles", function(){
-                                   Session.set("loaded", true);
-                                   });
-            
-  //      });
-                                            
+var article_sub;
+var Feeds = new Meteor.Collection("feeds");           
 var Articles = new Meteor.Collection("articles");
+
+Meteor.startup = function( {
+                          
+                          Meteor.subscribe("feeds" );
+                          article_sub = Meteor.subscribe("articles", function(){
+                                                         Session.set("loaded", true);
+                                                         });
+                          
+});
 
   //always keep localStorage up to date with most recent articles
   //not too efficient currently - every change rewrites all articles in localStorage
