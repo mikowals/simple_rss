@@ -183,7 +183,7 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
 var cleanSummary = function (text){
   var $ = cheerio.load(text);  //relies on cheerio package
   
-    //$('img').remove();
+  $('img').remove();
   $('table').remove();
   $('script').remove();
   $('iframe').remove();
