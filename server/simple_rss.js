@@ -148,7 +148,7 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
   maxDate = meta.date || 0;
   articlesFromWeb.forEach(function (article) {
                           
-                          
+                          if(existingArticles[article.guid] != 1){
                           var date = article.date || new Date();
                           date = new Date(date);
                           maxDate = (date > maxDate) ? date : maxDate;
@@ -163,7 +163,7 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                           source: meta.title,
                           feed_id: feed._id
                           };
-                          if(existingArticles[new_article.guid] != 1){
+                          
                           Articles.insert(new_article);
                           
                           article_count++;
