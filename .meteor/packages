@@ -7,7 +7,6 @@ preserve-inputs
 bootstrap
 jquery
 underscore
-appcache
 amplify
 http
 accounts-ui
