@@ -137,18 +137,20 @@ Meteor.startup( function(){
                });
 
 var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather than feed from database -> feed should be up to date and passed if needed
-  var existingArticles={};
+  var existingGuid = {};
+  var existingLink = {};
   var last_dates = {};
   var article_count=0;
   var feed = Feeds.findOne({url: meta.url}); // see comment above
-  Articles.find({feed_id: feed._id},{guid:1, date:1}).forEach(function(article){
-                                                               existingArticles[article.guid]=1;
+  Articles.find({feed_id: feed._id},{guid:1, date:1, link:1}).forEach(function(article){
+                                                                      existingGuid[article.guid] = 1;
+                                                                      existingLink[article.link] = 1;
                                                                
                                                               });
   maxDate = meta.date || 0;
   articlesFromWeb.forEach(function (article) {
                           
-                          if(existingArticles[article.guid] != 1){
+                          if(existingGuid[article.guid] !== 1 && existingLink[article.link] !== 1){
                           var date = article.date || new Date();
                           date = new Date(date);
                           maxDate = (date > maxDate) ? date : maxDate;
@@ -165,6 +167,8 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                           };
                           
                           Articles.insert(new_article);
+                          existingGuid[article.guid] = 1;
+                          existingLink[article.link] = 1;
                           
                           article_count++;
                           console.log('%s: %s', meta.title, article.title || article.description);
