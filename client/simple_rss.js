@@ -11,7 +11,7 @@ var article_sub;
 var Feeds = new Meteor.Collection("feeds");           
 var Articles = new Meteor.Collection("articles");
 
-Meteor.startup = function( {
+Meteor.startup( function() {
                           
                           Meteor.subscribe("feeds" );
                           article_sub = Meteor.subscribe("articles", function(){
