@@ -1,21 +1,91 @@
 /* CSS declarations go here */
-
-@baseFontSize=10px;
-
-.feed {
-  cursor:pointer;
+body {
+  font-family: sans-serif;
+  font-size: 20px;
+  font-style: normal;
+  line-height: 21px;
 }
 
-.carousel-inner {
-max-height: 800px;
-overflow-y: scroll;
+#stream {
+  max-width: 500px;
+  margin: 0 auto;
 }
 
-.right {
- float:right;
+#footer {
+  border-top: 1px solid #bbb; 
+  font-size: 0.7em;  
+  max-width: 500px;
+  margin: 0 auto;
 }
 
-#modal_button {
-position: absolute;
-top: 3px;
+.section {
+  padding: 15px 0;
+}
+
+.source {
+  display: table-row;
+  margin: 0 0 0 0;
+  font-weight: 400;
+}
+.source h2 {
+  display: table-cell;
+  padding: 0 8px 0 0;
+  line-height: 1.2em;
+  font-size: 0.6em;
+  font-weight: 400;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.source time {
+  display: table-cell;
+  padding: 0 0 0 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.article {
+  padding: 0 0;
+  margin: 0 0 0 0;
+}
+
+.article h3 {
+  font-size: 1em;
+  line-height: 1.1em;
+}
+
+.article .description {
+  font-size: 0.875em;
+}
+
+a:link {
+  color: #1E68A6;
+}
+
+a:visited {
+  color: #819fc7;
+}
+
+span.spacer {
+  display:table-cell;
+  width: 100%;
+}
+
+span.spacer:after { /* Adds border to spacer */
+    display:inline-block;
+    width:100%;
+    content:".";
+    font-size:0;
+    font-weight: 700;
+    color: transparent;
+    height:1px;
+    background:#bbb;
+    vertical-align:middle;
+    position:relative;
+    top:-1px;
+}
+
+time {
+  font-size: 0.6em;
+  line-height: 1.2em;
 }

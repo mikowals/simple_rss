@@ -70,7 +70,11 @@
 
 <template name="article">
   <div class="section"> 
-    <div class="header"><h2>{{source}}</h2><span class="visible-desktop time">{{timeago date}}</span></div>
+    <div class="source">
+      <h2>{{source}}</h2>
+      <span class="spacer"></span>
+      <time class="visible-desktop time pull-right">{{timeago date}}</time>
+    </div>
     <div class="article">
       <div class="header"><h3><a href="{{{link}}}">{{title}}</a></h3></div>
       <div class="description">{{{summary}}}</div>
