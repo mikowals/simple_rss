@@ -1,33 +1,49 @@
 /* CSS declarations go here */
+
+@media all {
+
+html, 
+body, 
+div {
+    padding:0;
+    margin:0;
+}
+
 body {
-  font-family: sans-serif;
+  font-family: Helvitica, sans-serif;
   font-size: 20px;
   font-style: normal;
   line-height: 21px;
 }
 
+.container {
+  max-width: 600px;
+  margin: 0px auto;
+}
+
 #stream {
-  max-width: 500px;
-  margin: 0 auto;
+
+    min-height:100px;
+    padding:0 5px;
 }
 
 #footer {
   border-top: 1px solid #bbb; 
   font-size: 0.7em;  
-  max-width: 500px;
-  margin: 0 auto;
+  padding: 0 5px;
 }
 
 .section {
-  padding: 15px 0;
+  margin: 0 0 20px 0;
 }
 
-.source {
+.section .header {
+  clear: both;
   display: table-row;
   margin: 0 0 0 0;
   font-weight: 400;
 }
-.source h2 {
+.section .header h2 {
   display: table-cell;
   padding: 0 8px 0 0;
   line-height: 1.2em;
@@ -37,7 +53,7 @@ body {
   white-space: nowrap;
 }
 
-.source time {
+.section .header time {
   display: table-cell;
   padding: 0 0 0 8px;
   vertical-align: middle;
@@ -45,11 +61,11 @@ body {
 }
 
 .article {
-  padding: 0 0;
-  margin: 0 0 0 0;
+  margin: 10px 0 0 0;
 }
 
 .article h3 {
+  margin: 0 0 3px 0;
   font-size: 1em;
   line-height: 1.1em;
 }
@@ -89,3 +105,32 @@ time {
   font-size: 0.6em;
   line-height: 1.2em;
 }
+
+.loader { /* loading graphic */
+  width:32px; 
+  height:32px; 
+  margin:20px auto; 
+  background:url(/loader.gif) no-repeat 0 0;
+}
+
+#feeds_modal td.count, #feeds_modal td.lastDate {
+  white-space: nowrap;
+}
+
+/* end media all */ }
+
+@media screen and (max-width : 480px) {
+
+#feeds_modal {
+  font-size: 0.75em;
+ }
+
+.article h3 {
+    font-size:0.875em;
+}
+
+.article .description {
+    font-size:0.8125em;
+}
+
+/* end of @media screen and (max-width : 340px) */}
