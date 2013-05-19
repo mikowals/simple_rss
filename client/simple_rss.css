@@ -10,7 +10,7 @@ div {
 }
 
 body {
-  font-family: Helvitica, sans-serif;
+  font-family: AppleSDGothicNeo-Medium, Avenir-Light, sans-serif;
   font-size: 20px;
   font-style: normal;
   line-height: 21px;
@@ -71,6 +71,7 @@ body {
 }
 
 .article .description {
+  margin: 3px 0;
   font-size: 0.875em;
 }
 
@@ -92,9 +93,8 @@ span.spacer:after { /* Adds border to spacer */
     width:100%;
     content:".";
     font-size:0;
-    font-weight: 700;
     color: transparent;
-    height:1px;
+    height:0.5px;
     background:#bbb;
     vertical-align:middle;
     position:relative;

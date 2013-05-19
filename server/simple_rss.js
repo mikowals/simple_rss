@@ -159,13 +159,14 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                           title: article.title,
                           guid: article.guid,
                           summary: cleanSummary( article.description ),
+                          
                           date: date,
                           author: article.author,
                           link: article.link,
                           source: meta.title,
                           feed_id: feed._id
                           };
-                          
+                         
                           Articles.insert(new_article);
                           existingGuid[article.guid] = 1;
                           existingLink[article.link] = 1;

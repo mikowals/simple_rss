@@ -76,7 +76,7 @@
       <time class="visible-desktop time pull-right">{{timeago date}}</time>
     </div>
     <div class="article">
-      <div class="header"><h3><a href="{{{link}}}">{{title}}</a></h3></div>
+      <div class="header"><h3><a href="{{{link}}}">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
       <div class="description">{{{summary}}}</div>
       <div class="footer hidden-desktop"><time class="timeago">{{ timeago date }}<time></div>
     </div>
