@@ -210,6 +210,7 @@ var cleanSummary = function (text){
     if ( $.html() ){
         text = $.html();
     }
+    
     if ( text.indexOf('<br') !== -1 ){
       text = text.substring(0, text.indexOf('<br'));
     }

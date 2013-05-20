@@ -94,7 +94,7 @@ span.spacer:after { /* Adds border to spacer */
     content:".";
     font-size:0;
     color: transparent;
-    height:0.5px;
+    height:1px;
     background:#bbb;
     vertical-align:middle;
     position:relative;
