@@ -116,6 +116,7 @@ Feeds.deny({
 
 
 Meteor.startup( function(){
+               console.log( Meteor.call('findArticles') + " added to db" );
                
                if ( !intervalProcesses[ "removeOldArticles"] ){
                var process = Meteor.setInterval(function (){
