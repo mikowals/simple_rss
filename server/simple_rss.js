@@ -35,7 +35,7 @@ Meteor.publish( "articles", function(){
 
                                         });
                
-               return Articles.find({feed_id: {$in: feed_ids}}, {sort: {date: -1}, limit: articlePubLimit, fields: {title: 1, source:1, date:1, summary:1, link:1}} );
+               return Articles.find({feed_id: {$in: feed_ids}}, {sort: {date: -1}, limit: articlePubLimit, fields: {_id: 1, title: 1, source:1, date:1, summary:1, link:1}} );
                
                });
 

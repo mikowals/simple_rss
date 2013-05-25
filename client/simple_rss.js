@@ -24,23 +24,30 @@ Meteor.startup( function() {
   //not too efficient currently - every change rewrites all articles in localStorage
 Deps.autorun( function(){
              if ( Session.equals( "loaded", true ) ){
-                 var articlesToStore = [];
-                 if ( amplify.store("quickArticles") !== null && amplify.store("quickArticles") !== undefined){
-                 articlesToStore = amplify.store("quickArticles");
-                 }
-                 maxStore = 0;
-                 Articles.find({},{sort: {date: -1}, limit: articlesOnLoad}).forEach (function (article){   
-                                                                                                articlesToStore.push(article);
-                                                                                                maxStore++;
-                                                                                                console.log("new article stored ");
-                                                                                                while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
-                                                                                                
-                                                                                                });
-                 while (articlesToStore.length > maxStore) { articlesToStore.shift(); }
-                 
-                 amplify.store("quickArticles", articlesToStore);
-                 }
-                 });
+             var articlesToStore = [];
+             if ( amplify.store("quickArticles") !== null && amplify.store("quickArticles") !== undefined){
+             articlesToStore = amplify.store("quickArticles");
+             }
+             var storedIds = {};
+             articlesToStore.forEach( function( article) {
+                                     storedIds[article._id] = 1;
+                                     });
+             maxStore = 0;
+             Articles.find({},{sort: {date: -1}, limit: articlesOnLoad}).forEach (function (article){  
+                                                                                  if ( !storedIds[ article._id ] ){
+                                                                                  
+                                                                                  articlesToStore.push(article);
+                                                                                  storedIds[ article._id ] = 1;
+                                                                                  maxStore++;
+                                                                                  console.log("new article stored ");
+                                                                                  while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
+                                                                                  }
+                                                                                  });
+             while (articlesToStore.length > maxStore) { articlesToStore.shift(); }
+             
+             amplify.store("quickArticles", articlesToStore);
+             }
+             });
 
 var timeago = function(some_date){
   var timeago = (new Date() - new Date(some_date)) / DAY;
