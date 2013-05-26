@@ -1,11 +1,9 @@
 
 var DAY = 1000 * 60 * 60 * 24;
-var articlesOnLoad = 10;
+var articlesOnLoad = 300;
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
 Session.setDefault("loaded", false);
-Session.setDefault("active", 1);
-Session.setDefault("anonyous_id", amplify.store("anonymous_id"));
-Session.setDefault("import", false);
+Session.setDefault("importOPML", false);
                    
 var article_sub;
 var Feeds = new Meteor.Collection("feeds");           
@@ -13,7 +11,7 @@ var Articles = new Meteor.Collection("articles");
 
 Meteor.startup( function() {
                           
-                          Meteor.subscribe("feeds" );
+                          Meteor.subscribe( "feeds" );
                           article_sub = Meteor.subscribe("articles", function(){
                                                          Session.set("loaded", true);
                                                          });
@@ -24,28 +22,9 @@ Meteor.startup( function() {
   //not too efficient currently - every change rewrites all articles in localStorage
 Deps.autorun( function(){
              if ( Session.equals( "loaded", true ) ){
-             var articlesToStore = [];
-             if ( amplify.store("quickArticles") !== null && amplify.store("quickArticles") !== undefined){
-             articlesToStore = amplify.store("quickArticles");
-             }
-             var storedIds = {};
-             articlesToStore.forEach( function( article) {
-                                     storedIds[article._id] = 1;
-                                     });
-             maxStore = 0;
-             Articles.find({},{sort: {date: -1}, limit: articlesOnLoad}).forEach (function (article){  
-                                                                                  if ( !storedIds[ article._id ] ){
-                                                                                  
-                                                                                  articlesToStore.push(article);
-                                                                                  storedIds[ article._id ] = 1;
-                                                                                  maxStore++;
-                                                                                  console.log("new article stored ");
-                                                                                  while (articlesToStore.length > articlesOnLoad) { articlesToStore.shift(); }
-                                                                                  }
-                                                                                  });
-             while (articlesToStore.length > maxStore) { articlesToStore.shift(); }
              
-             amplify.store("quickArticles", articlesToStore);
+             amplify.store("quickArticles", Articles.find({},{sort: {date: -1}, limit: articlesOnLoad}).fetch() );
+           
              }
              });
 
