@@ -23,7 +23,7 @@ Meteor.startup( function() {
 Deps.autorun( function(){
              if ( Session.equals( "loaded", true ) ){
              
-             amplify.store("quickArticles", Articles.find({},{sort: {date: -1}, limit: articlesOnLoad}).fetch() );
+             amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
            
              }
              });
@@ -79,7 +79,7 @@ Template.modalButtons.events({
                              var fr = new FileReader();
                              fr.readAsText(opmlFile);
                              fr.onloadend = function(evt) {
-                             if (evt.target.readyState == FileReader.DONE) { // DONE == 2
+                             if (evt.target.readyState === FileReader.DONE) { // DONE == 2
                              Meteor.call('importOPML', evt.target.result);
                              }
                              }
@@ -102,8 +102,8 @@ Template.feedList.events({
 
 Template.articleList.articles = function() {
   
-   if ( Session.equals("loaded", true) ) { 
-            return Articles.find({},{sort: {date: -1}});;
+   if ( Session.equals( "loaded", true ) ) { 
+            return Articles.find( {}, { sort: { date: -1 } } );;
   }
   else{
     console.log("articles from QuickArticles");
@@ -112,6 +112,10 @@ Template.articleList.articles = function() {
 };
 
 Template.articleList.loaded = function(){
+  return Session.equals( "loaded", true );
+};
+
+Template.menubar.loaded = function(){
   return Session.equals( "loaded", true );
 };
 

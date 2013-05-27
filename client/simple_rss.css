@@ -105,6 +105,12 @@ time {
   font-size: 0.6em;
   line-height: 1.2em;
 }
+.small-loader { /* loading graphic */
+  width:16px;
+  height:16px; 
+  margin:1px auto; 
+  background:url(/ajax-loader.gif) no-repeat 0 0;
+}
 
 .loader { /* loading graphic */
   width:32px; 

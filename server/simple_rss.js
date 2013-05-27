@@ -303,9 +303,9 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
                                                      removed: function(doc){
                                                      
                                                      Articles.find({source: doc.title}, {_id:1}).forEach( function (article){
-                                                                                                     console.log("removing article " + article._id);
-                                                                                                     Articles.remove(article._id);
-                                                                                                     });
+                                                                                                         console.log("removing article " + article._id);
+                                                                                                         Articles.remove(article._id);
+                                                                                                         });
                                                      
                                                      }
                         
@@ -317,27 +317,7 @@ Meteor.methods({
                
                findArticles: function() {         
                console.log("looking for new articles");
-               var article_count = 0;
-               /**
-               Feeds.find({}).forEach( function(feed){
-                                      if ( feed.url !== null && feed.url !== undefined && feed.url !== "null" ){
-                            
-                                      var rssResult = syncFP( feed.url);
-                                      if (rssResult && rssResult.articles && rssResult.meta){
-                                      article_count += newArticlesToDb (rssResult.articles, rssResult.meta);
-                                      }
-                                      else{
-                                      console.log( "feed returned no data : " + feed.url);
-                                      }
-                                      
-                                      }
-                                      else{
-                                      console.log( "feed with no URL - removing : " + JSON.stringify (feed));
-                                      Feeds.remove( feed._id );
-                                      }
-                                      });
-               **/ 
-               
+               var article_count = 0;         
                
                var urls = [];
                Feeds.find({}).forEach( function(feed){
@@ -439,18 +419,6 @@ Meteor.methods({
                                  
                                  
                                 });
-               }
-               },
-               
-               clientSyncFP : function(url){
-               try{
-               
-               return syncFP(url);
-               
-               }
-               catch(e){
-      
-               return e;
                }
                }
                

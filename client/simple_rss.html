@@ -16,14 +16,12 @@
   </div>
 </template>
 
-<template name="homepage">
-  {{loginButtons align="right"}}
-  <!-- <button value="Use without login" id="use_without_login" class="btn btn-primary" >Use without login</button> -->
-</template>
-
 <template name="menubar">
   <div id="menubar" class="row-fluid">
     <a id="modal_button" class=" pull-left" href="#feeds_modal" data-toggle="modal" role="button"><i class="icon-chevron-down" /></a>
+    {{#unless loaded}}
+    <div class="pull-left small-loader" />
+    {{/unless}}
     <small class="pull-right">{{loginButtons align="right"}}</small>
   </div>
 </template>
