@@ -382,6 +382,7 @@ Meteor.methods({
                },
                
                importOPML: function(upload){
+               check (upload, String);
                var self = this;
                var opml = XML2JS.parse(upload);
                var xmlToAdd = [];

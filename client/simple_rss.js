@@ -60,9 +60,13 @@ Template.modalButtons.events({
                              //could modify this to verify feed and populate fields for insertion
                              'click #addFeed': function() {
                              var url = $("#feedUrl").val();
-                             
-                             Feeds.insert( { url: url } );
-                             $("#feedUrl").val("");
+                             var regex =/(((f|ht){1}tp|tps:\/\/)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]+)/g;
+                             if ( Match.test ( url, String ) && regex.test(url) ){
+                               Feeds.insert( { url: url } );
+                               $("#feedUrl").val("");
+                             } else{
+                             alert("RSS feed entered is not a valid url");
+                             }
                                        
                              },
                              
