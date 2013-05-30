@@ -1,6 +1,6 @@
 
 var DAY = 1000 * 60 * 60 * 24;
-var articlesOnLoad = 500;
+var articlesOnLoad = 20;
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
