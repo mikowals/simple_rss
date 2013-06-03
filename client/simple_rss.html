@@ -40,10 +40,14 @@
 <template name="feed">
   <td class="span4"><small>{{title}}</small>{{#if selected}} <button id="removeFeed" class="btn btn-primary btn-mini pull-right">remove</button>{{/if}}</td>
   <td class="count"><small>{{article_count}}</small></td>
-  <td class="lastDate"><small class=" time pull-right">{{timeago last_date}}</small></td>
+  <td class="lastDate"><small class=" time pull-right">{{>feedTime}}</small></td>
 </template>
 
-<template name="articleList"> 
+<template name="feedTime">
+  {{timeago last_date}}
+</template>
+
+<template name="articleList">
   
     {{>feedModal}}
    
@@ -67,14 +71,18 @@
     <div class="header row-fluid">
       <h2>{{source}}</h2>
       <span class="spacer"></span>
-      <time class="visible-desktop time pull-right">{{timeago date}}</time>
+      <time class="visible-desktop time pull-right"> {{>articleTime}} </time>
     </div>
     <div class="article">
       <div class="header"><h3><a href="{{{link}}}">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
       <div class="description">{{{summary}}}</div>
-      <div class="footer hidden-desktop"><time class="timeago">{{ timeago date }}<time></div>
+      <div class="footer hidden-desktop"><time class="timeago"> {{>articleTime}} </time></div>
     </div>
   </div>
+</template>
+
+<template name="articleTime">
+  {{timeago date}}
 </template>
 
 <template name="feedModal">

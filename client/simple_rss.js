@@ -4,6 +4,7 @@ var articlesOnLoad = 20;
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
+Session.setDefault( "now", new Date() );
                    
 var article_sub;
 var Feeds = new Meteor.Collection("feeds");           
@@ -18,9 +19,10 @@ Meteor.startup( function() {
                                                          });
                if (timeUpdateInterval) Meteor.clearInterval ( timeUpdateInterval);
                
-               timeUpdateInterval = Meteor.setInterval ( 10 * 60 * 1000 , function () {
+               timeUpdateInterval = Meteor.setInterval ( function () {
                                                         Session.set( "now", new Date() );
-                                                        });
+                                                        },
+                                                        10 * 60 * 1000 );
                           
 });
 
@@ -35,7 +37,7 @@ Deps.autorun( function(){
              });
 
 var timeago = function(some_date){
-  var timeago = (new Date( Session.get( "now" )) - new Date(some_date)) / DAY;
+  var timeago = ( new Date( Session.get( "now" ) ) - new Date( some_date ) ) / DAY;
   
   if (Math.floor(timeago )  >= 2) return Math.floor(timeago ) + " days ago";
   else if (Math.floor(timeago )  >= 1) return Math.floor(timeago ) + " day ago";
