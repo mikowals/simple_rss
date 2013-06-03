@@ -8,6 +8,7 @@ Session.setDefault("importOPML", false);
 var article_sub;
 var Feeds = new Meteor.Collection("feeds");           
 var Articles = new Meteor.Collection("articles");
+var timeUpdateInterval;
 
 Meteor.startup( function() {
                           
@@ -15,6 +16,11 @@ Meteor.startup( function() {
                           article_sub = Meteor.subscribe("articles", function(){
                                                          Session.set("loaded", true);
                                                          });
+               if (timeUpdateInterval) Meteor.clearInterval ( timeUpdateInterval);
+               
+               timeUpdateInterval = Meteor.setInterval ( 10 * 60 * 1000 , function () {
+                                                        Session.set( "now", new Date() );
+                                                        });
                           
 });
 
@@ -29,7 +35,7 @@ Deps.autorun( function(){
              });
 
 var timeago = function(some_date){
-  var timeago = (new Date() - new Date(some_date)) / DAY;
+  var timeago = (new Date( Session.get( "now" )) - new Date(some_date)) / DAY;
   
   if (Math.floor(timeago )  >= 2) return Math.floor(timeago ) + " days ago";
   else if (Math.floor(timeago )  >= 1) return Math.floor(timeago ) + " day ago";
