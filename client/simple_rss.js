@@ -1,4 +1,3 @@
-
 var DAY = 1000 * 60 * 60 * 24;
 var articlesOnLoad = 20;
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
@@ -32,11 +31,12 @@ Deps.autorun( function(){
              if ( Session.equals( "loaded", true ) ){
              
              amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
-           
+             Session.set( "now", new Date() );  // should not be necessary but session variable disappears at times
              }
              });
 
 var timeago = function(some_date){
+  console.log( typeof ( Session.get ( "now" ) ) );          
   var timeago = ( new Date( Session.get( "now" ) ) - new Date( some_date ) ) / DAY;
   
   if (Math.floor(timeago )  >= 2) return Math.floor(timeago ) + " days ago";
