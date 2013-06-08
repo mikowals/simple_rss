@@ -31,20 +31,24 @@ Deps.autorun( function(){
              if ( Session.equals( "loaded", true ) ){
              
              amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
-             Session.set( "now", new Date() );  // should not be necessary but session variable disappears at times
              }
              });
 
-var timeago = function(some_date){
-  console.log( typeof ( Session.get ( "now" ) ) );          
-  var timeago = ( new Date( Session.get( "now" ) ) - new Date( some_date ) ) / DAY;
+var timeago = function( some_date ){
+  var now = new Date( Session.get( "now" ) );
+  
+  var timeago = ( + now - new Date( some_date ) ) / DAY;
   
   if (Math.floor(timeago )  >= 2) return Math.floor(timeago ) + " days ago";
   else if (Math.floor(timeago )  >= 1) return Math.floor(timeago ) + " day ago";
   else if (Math.floor(timeago  * 24)  >= 2 ) return Math.floor(timeago * 24) + " hours ago";
   else if (Math.floor(timeago * 24)  >= 1 ) return Math.floor(timeago  * 24) + " hour ago";
   else if (Math.floor(timeago  * 24 * 60) >= 2) return Math.floor(timeago * 24 * 60) + " minutes ago";
-  else return "about a minute ago";
+  else {
+    console.log( "Session.get ( "now" ) is : " + Session.get( "now" ) );
+    console.log( "new Date ( now )  is : " + new Date ( Session.get( "now" ) ) );
+    return "about a minute ago";
+  }
 };
 
 Handlebars.registerHelper('timeago', function(some_date){
