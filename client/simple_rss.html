@@ -20,7 +20,7 @@
   <div id="menubar" class="row-fluid">
     <a id="modal_button" class=" pull-left" href="#feeds_modal" data-toggle="modal" role="button"><i class="icon-chevron-down" /></a>
     {{#unless loaded}}
-    <div class="pull-left small-loader" />
+    {{>smallLoader}}
     {{/unless}}
     <small class="pull-right">{{loginButtons align="right"}}</small>
   </div>
@@ -120,4 +120,8 @@
     </span>
     {{/if}}
   </span>
+</template>
+
+<template name="smallLoader">
+  <div class="pull-left small-loader" />
 </template>
