@@ -45,7 +45,7 @@ var timeago = function( some_date ){
   else if (Math.floor(timeago * 24)  >= 1 ) return Math.floor(timeago  * 24) + " hour ago";
   else if (Math.floor(timeago  * 24 * 60) >= 2) return Math.floor(timeago * 24 * 60) + " minutes ago";
   else {
-    console.log( "Session.get ( "now" ) is : " + Session.get( "now" ) );
+    console.log( "Session.get ( 'now' ) is : " + Session.get( "now" ) );
     console.log( "new Date ( now )  is : " + new Date ( Session.get( "now" ) ) );
     return "about a minute ago";
   }
