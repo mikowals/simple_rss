@@ -24,7 +24,7 @@ Deps.autorun( function(){
              if ( Session.equals( "loaded", true ) ){
              
              amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
-             Session.set ( "now", new Date() );
+             if ( new Date() - Session.get ( "now" ) > 10 * 60 * 1000 )  Session.set ( "now", new Date() );
              }
              });
 
