@@ -37,8 +37,14 @@ Deps.autorun( function(){
 
 var timeago = function( some_date ){
   var now = new Date( Session.get( "now" ) );
+  var referenceDate = new Date( some_date );
   
-  var timeago = ( + now - new Date( some_date ) ) / DAY;
+  if ( referenceDate > now ) {
+    now = new Date();
+    Session.set( "now", now );
+  }
+  
+  var timeago = ( + now -  referenceDate) / DAY;
   
   if (Math.floor(timeago )  >= 2) return Math.floor(timeago ) + " days ago";
   else if (Math.floor(timeago )  >= 1) return Math.floor(timeago ) + " day ago";
@@ -46,8 +52,6 @@ var timeago = function( some_date ){
   else if (Math.floor(timeago * 24)  >= 1 ) return Math.floor(timeago  * 24) + " hour ago";
   else if (Math.floor(timeago  * 24 * 60) >= 2) return Math.floor(timeago * 24 * 60) + " minutes ago";
   else {
-    console.log( "Session.get ( 'now' ) is : " + Session.get( "now" ) );
-    console.log( "new Date ( some_date )  is : " + new Date ( some_date ) );
     return "about a minute ago";
   }
 };
