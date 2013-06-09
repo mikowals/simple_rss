@@ -19,8 +19,10 @@ Meteor.publish("feeds", function () {
 
 Meteor.publish( "articles", function(){
                var self= this;
-               var feed_ids = [];              
-               Feeds.find({subscribers: self.userId }, {_id: 1}).observeChanges({
+               var feed_ids = [];
+               
+               
+               var observer = Feeds.find({subscribers: self.userId }, {_id: 1}).observeChanges({
                                                                                 added: function (id){
                                                                                 feed_ids.push(id);                                       
                                                                                 },
@@ -34,6 +36,10 @@ Meteor.publish( "articles", function(){
                                                                                 }
 
                                         });
+               
+               self.onStop( function() {
+                           observer.stop();
+                           });
                
                return Articles.find({feed_id: {$in: feed_ids}}, {sort: {date: -1}, limit: articlePubLimit, fields: {_id: 1, title: 1, source:1, date:1, summary:1, link:1}} );
                
