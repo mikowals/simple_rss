@@ -123,6 +123,7 @@ Feeds.deny({
 
 Meteor.startup( function(){
                console.log( Meteor.call('findArticles') + " added to db" );
+               Meteor.call('removeOldArticles');
                
                if ( !intervalProcesses[ "removeOldArticles"] ){
                var process = Meteor.setInterval(function (){
@@ -163,24 +164,24 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                           date = new Date(date);
                           maxDate = Math.max( date , maxDate);
                           if ( (new Date() - date) / DAY <= daysStoreArticles ){
-                          var new_article = {
-                          title: article.title,
-                          guid: article.guid,
-                          summary: cleanSummary( article.description ),
+                            var new_article = {
+                              title: article.title,
+                              guid: article.guid,
+                              summary: cleanSummary( article.description ),
                           
-                          date: date,
-                          author: article.author,
-                          link: article.link,
-                          source: meta.title,
-                          feed_id: feed._id
-                          };
+                              date: date,
+                              author: article.author,
+                              link: article.link,
+                              source: meta.title,
+                              feed_id: feed._id
+                            };
                          
-                          Articles.insert(new_article);
-                          existingGuid[article.guid] = 1;
-                          existingLink[article.link] = 1;
+                            Articles.insert(new_article);
+                            existingGuid[article.guid] = 1;
+                            existingLink[article.link] = 1;
                           
-                          article_count++;
-                          console.log('%s: %s', meta.title, article.title || article.description);
+                            article_count++;
+                            console.log('%s: %s', meta.title, article.title || article.description);
                           }
                           }
                           });
