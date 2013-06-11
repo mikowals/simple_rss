@@ -11,12 +11,17 @@ var Articles = new Meteor.Collection("articles");
 
 Meteor.startup( function() {
                           
-                          Meteor.subscribe( "feeds" );
-                          article_sub = Meteor.subscribe("articles", function(){
-                                                         Session.set("loaded", true);
-                                                         });
+               Meteor.subscribe( "feeds" );
+               article_sub = Meteor.subscribe("articles", function(){
+                                              Session.set("loaded", true);
+                                              });
+               
+               intervalProcesses['updateNow'] = intervalProcesses['updateNow'] || Meteor.setInterval( function() {
+                                                                                                     Session.set( "now", new Date() );
+                                                                                                     },
+                                                                                                     10 * 60 * 1000 );
                           
-});
+               });
 
   //always keep localStorage up to date with most recent articles
   //not too efficient currently - every change rewrites all articles in localStorage
@@ -24,9 +29,10 @@ Deps.autorun( function(){
              if ( Session.equals( "loaded", true ) ){
              
              amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
-             if ( new Date() - Session.get ( "now" ) > 10 * 60 * 1000 )  Session.set ( "now", new Date() );
+             Session.set( "now" , new Date() );
              }
              });
+
 
 
 var timeago = function( some_date ){
