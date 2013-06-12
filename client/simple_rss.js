@@ -39,6 +39,9 @@ Deps.autorun( function(){
                Session.set ("loaded", false );
                Meteor.reconnect();
              }
+             else if ( article_sub.ready() ){
+              Session.set("loaded", true);
+             }
              });
 
 
