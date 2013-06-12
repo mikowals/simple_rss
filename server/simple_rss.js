@@ -22,15 +22,15 @@ Meteor.publish( "articles", function(){
                var feed_ids = [];
                
                
-               var observer = Feeds.find({subscribers: self.userId }, {_id: 1}).observeChanges({
+               var observer = Feeds.find({ subscribers: self.userId }, {_id: 1}).observeChanges({
                                                                                 added: function (id){
-                                                                                feed_ids.push(id);                                       
+                                                                                  feed_ids.push(id);                                       
                                                                                 },
                                         
                                                                                 removed: function (id){
-                                                                                var ax;
-                                                                                while (( ax = feed_ids.indexOf(id)) !== -1) {
-                                                                                feed_ids.splice(ax, 1);
+                                                                                  var ax;
+                                                                                  while (( ax = feed_ids.indexOf(id)) !== -1) {
+                                                                                  feed_ids.splice(ax, 1);
                                                                                 }
                                         
                                                                                 }
@@ -41,7 +41,7 @@ Meteor.publish( "articles", function(){
                            observer.stop();
                            });
                
-               return Articles.find({feed_id: {$in: feed_ids}}, {sort: {date: -1}, limit: articlePubLimit, fields: {_id: 1, title: 1, source:1, date:1, summary:1, link:1}} );
+               return Articles.find({ feed_id: {$in: feed_ids} }, { sort: {date: -1}, limit: articlePubLimit, fields: {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1} } );
                
                });
 
@@ -66,19 +66,17 @@ Feeds.allow({
             },
             
             update: function (doc, fields, modifier) {
-            // can only change your own documents
-            return false //doc.owner === userId;
+              return false;
             },
             
             remove: function(userId, doc){
-            if(doc.subscribers.length > 1){
-            console.log(JSON.stringify (doc) );
-            Feeds.update(doc._id, {$pull: {subscribers: userId}} );
-            return false;
-            }
-            else{
-            return doc.subscribers[0] === userId;
-            }
+              if(doc.subscribers.length > 1){
+                Feeds.update(doc._id, {$pull: {subscribers: userId}} );
+                return false;
+              }
+              else{
+                return doc.subscribers[0] === userId;
+              }
             }
             
             //fetch: ['owner']
