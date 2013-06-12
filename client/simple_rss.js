@@ -34,7 +34,7 @@ Deps.autorun( function(){
              });
 
 Deps.autorun( function(){
-             if ( ! Meteor.status.isConnected() ) {
+             if ( ! Meteor.status.connected() ) {
              
                Session.set ("loaded", false );
                Meteor.reconnect();
