@@ -427,6 +427,16 @@ Meteor.methods({
                                  
                                 });
                }
+               },
+               
+               exportOPML: function(){
+               var self = this;
+               var opmlFile = [];
+               Feeds.find( {subscribers: self.userId} ).forEach( function ( feed ) {
+                                                               opmlFile.push ( { xmlUrl : feed.url } );
+                                                               });
+               console.log(JSON.stringify ( opmlFile ) );
+               return opmlFile;
                }
                
                });

@@ -6,8 +6,7 @@ var intervalProcesses = []; //hold interval process id to start and stop with di
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
 Session.setDefault( "now", new Date() );
-Session.setDefault( "offline", "");
-Session.setDefault( "updated", "");
+
                    
 var article_sub;
 var Feeds = new Meteor.Collection("feeds");           
@@ -24,6 +23,8 @@ Meteor.startup( function() {
                                                                                                      Session.set( "now", new Date() );
                                                                                                      },
                                                                                                      updateNowFreq );
+               Session.set( "offline", "");
+               Session.set( "updated", "");
                           
                });
 
@@ -46,7 +47,7 @@ Deps.autorun( function(){
                                                                     4 * 1000 );
              
              }
-             if ( amplify.store( "quickArticles") ) amplify.store( "firstArticleId", amplify.store( "quickArticles")[0]._id );
+             if ( amplify.store( "quickArticles")[0] ) amplify.store( "firstArticleId", amplify.store( "quickArticles")[0]._id );
              }
              });
  
