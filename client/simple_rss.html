@@ -22,6 +22,8 @@
     {{#unless loaded}}
     {{>smallLoader}}
     {{/unless}}
+    {{>offline}}
+    {{>updated}}
     <small class="pull-right">{{loginButtons align="right"}}</small>
   </div>
 </template>
@@ -51,7 +53,8 @@
   
     {{>feedModal}}
    
-    <div id="stream">  
+    <div id="stream">
+      
       {{#each articles}}
       {{>article}}
       {{/each}}
@@ -124,4 +127,18 @@
 
 <template name="smallLoader">
   <div class="pull-left small-loader" />
+</template>
+
+<template name="offline">
+  {{#if offline}}
+  <small class="label label-warning"> {{offline}}</small>
+  {{/if}}
+</template>
+
+<template name="updated">
+  {{#if updated}}
+  <small class="label label-info">
+    {{updated}}
+  </small>
+  {{/if}}
 </template>

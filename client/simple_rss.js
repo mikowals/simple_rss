@@ -4,6 +4,8 @@ var intervalProcesses = []; //hold interval process id to start and stop with di
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
 Session.setDefault( "now", new Date() );
+Session.setDefault( "offline", "");
+Session.setDefault( "updated", "");
                    
 var article_sub;
 var Feeds = new Meteor.Collection("feeds");           
@@ -30,13 +32,25 @@ Deps.autorun( function(){
              
              amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
              Session.set( "now" , new Date() );
+             /**
+             Session.set("updated", "New articles");
+             if ( ! intervalProcesses[ "updated" ] && amplify.store( "quickArticles")[0] && ! Session.equals( "firstArticle", amplify.store( "quickArticles")[0]._id)) {
+             
+             intervalProcesses[ "updated" ] = Meteor.setTimeout ( function() {
+                                                                    Session.set("updated", "");
+                                                                    },
+                                                                    5 * 1000 );
+             
+             Session.set( "firstArticle", amplify.store( "quickArticles")[0]._id);
+             }
+              **/
              }
              });
 
 Deps.autorun( function(){
-             if ( ! Meteor.status().connected ) {
+             if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
                console.log( "Meteor.status().connected = " + Meteor.status().connected )
-               Session.set ("loaded", false );
+               Session.set ("offline", "offline" );
                if ( ! intervalProcesses[ "reconnect" ] ) {
              
                 intervalProcesses[ "reconnect" ] = Meteor.setInterval ( function() {
@@ -46,7 +60,7 @@ Deps.autorun( function(){
                }
              }
              else if ( article_sub && article_sub.ready() ){
-              Session.set("loaded", true);
+              Session.set("offline", "");
               if ( intervalProcesses[ "reconnect" ] ) Meteor.clearInterval ( intervalProcesses[ "reconnect" ] );
              }
              });
@@ -151,6 +165,13 @@ Template.menubar.loaded = function(){
   return Session.equals( "loaded", true );
 };
 
+Template.offline.offline = function(){
+  return Session.get("offline");
+}
+
+Template.updated.updated = function(){
+  return Session.get( "updated" );
+}
 
 Template.feed.selected = function () {
   return Session.equals("selected_feed", this._id) ? "selected" : '';
