@@ -43,22 +43,16 @@ Deps.autorun( function(){
                                                                     Session.set("updated", "");
                                                                     intervalProcesses[ "updated" ] = null;
                                                                     },
-                                                                   4 * 1000 );
+                                                                    4 * 1000 );
              
              }
-             amplify.store( "quickArticles") && amplify.store( "firstArticleId", amplify.store( "quickArticles")[0]._id);
+             if ( amplify.store( "quickArticles") ) amplify.store( "firstArticleId", amplify.store( "quickArticles")[0]._id );
              }
              });
-
-
-
- 
- This will force reconnection attempts and track online status but mostly seems to track server restarts
-   -- so not useful for production
  
 Deps.autorun( function(){
              if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
-               console.log( "Meteor.status().connected = " + Meteor.status().connected )
+             console.log( "Meteor.status().connected = " + Meteor.status().connected );
                Session.set ("offline", "offline" );
               /**
                if ( ! intervalProcesses[ "reconnect" ] ) {
