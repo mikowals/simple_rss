@@ -24,7 +24,6 @@ Meteor.startup( function() {
                                                                                                      },
                                                                                                      updateNowFreq );
                Session.set( "offline", "");
-               Session.set( "updated", "");
                           
                });
 
@@ -36,19 +35,8 @@ Deps.autorun( function(){
              amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
              Session.set( "now" , new Date() );
              
-             Session.set("updated", "New articles");
-             if ( ! intervalProcesses[ "updated" ] && amplify.store( "firstArticleId" ) && amplify.store( "quickArticles")[0] 
-              && amplify.store( "firstArticleId" ) !==  amplify.store( "quickArticles")[0]._id ) {
              
-             intervalProcesses[ "updated" ] = Meteor.setTimeout ( function() {
-                                                                    Session.set("updated", "");
-                                                                    intervalProcesses[ "updated" ] = null;
-                                                                    },
-                                                                    4 * 1000 );
-             
-             }
-             if ( amplify.store( "quickArticles")[0] ) amplify.store( "firstArticleId", amplify.store( "quickArticles")[0]._id );
-             }
+            }
              });
  
 Deps.autorun( function(){

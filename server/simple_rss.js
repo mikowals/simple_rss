@@ -431,11 +431,12 @@ Meteor.methods({
                
                exportOPML: function(){
                var self = this;
-               var opmlFile = [];
+               var opmlFile = "<?xml version='1.0' encoding='UTF-8'?> <opml version='1.0'><body>";
                Feeds.find( {subscribers: self.userId} ).forEach( function ( feed ) {
-                                                               opmlFile.push ( { xmlUrl : feed.url } );
+                                                               opmlFile += "<outline xmlUrl=\"" + feed.url + "\" />";
                                                                });
-               console.log(JSON.stringify ( opmlFile ) );
+               opmlFile += "</body></opml>";
+               console.log( opmlFile );
                return opmlFile;
                }
                
