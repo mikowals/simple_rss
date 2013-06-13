@@ -35,15 +35,21 @@ Deps.autorun( function(){
 
 Deps.autorun( function(){
              if ( ! Meteor.status().connected ) {
-             
+               console.log( "Meteor.status().connected = " + Meteor.status().connected )
                Session.set ("loaded", false );
-               Meteor.reconnect();
+               if ( ! intervalProcesses[ "reconnect" ] ) {
+             
+                intervalProcesses[ "reconnect" ] = Meteor.setInterval ( function() {
+                  Meteor.reconnect();
+                  },
+                  15 * 1000 );
+               }
              }
-             else if ( article_sub.ready() ){
+             else if ( article_sub && article_sub.ready() ){
               Session.set("loaded", true);
+              if ( intervalProcesses[ "reconnect" ] ) Meteor.clearInterval ( intervalProcesses[ "reconnect" ] );
              }
              });
-
 
 var timeago = function( some_date ){
   var now = new Date( Session.get( "now" ) );
