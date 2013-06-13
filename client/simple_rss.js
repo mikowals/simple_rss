@@ -1,5 +1,7 @@
 var DAY = 1000 * 60 * 60 * 24;
 var articlesOnLoad = 20;
+var updateNowFreq = 5 * 60 * 1000;
+
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
@@ -21,7 +23,7 @@ Meteor.startup( function() {
                intervalProcesses['updateNow'] = intervalProcesses['updateNow'] || Meteor.setInterval( function() {
                                                                                                      Session.set( "now", new Date() );
                                                                                                      },
-                                                                                                     10 * 60 * 1000 );
+                                                                                                     updateNowFreq );
                           
                });
 
@@ -32,23 +34,24 @@ Deps.autorun( function(){
              
              amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
              Session.set( "now" , new Date() );
-             /**
+             
              Session.set("updated", "New articles");
-             if ( ! intervalProcesses[ "updated" ] && amplify.store( "quickArticles")[0] && ! Session.equals( "firstArticle", amplify.store( "quickArticles")[0]._id)) {
+             if ( ! intervalProcesses[ "updated" ] && amplify.store( "firstArticleId" ) && amplify.store( "quickArticles")[0] 
+              && amplify.store( "firstArticleId" ) !==  amplify.store( "quickArticles")[0]._id ) {
              
              intervalProcesses[ "updated" ] = Meteor.setTimeout ( function() {
                                                                     Session.set("updated", "");
+                                                                    intervalProcesses[ "updated" ] = null;
                                                                     },
-                                                                    5 * 1000 );
+                                                                   4 * 1000 );
              
-             Session.set( "firstArticle", amplify.store( "quickArticles")[0]._id);
              }
-              **/
+             amplify.store( "quickArticles") && amplify.store( "firstArticleId", amplify.store( "quickArticles")[0]._id);
              }
              });
 
 
-/**  
+
  
  This will force reconnection attempts and track online status but mostly seems to track server restarts
    -- so not useful for production
@@ -56,7 +59,8 @@ Deps.autorun( function(){
 Deps.autorun( function(){
              if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
                console.log( "Meteor.status().connected = " + Meteor.status().connected )
-              // Session.set ("offline", "offline" );
+               Session.set ("offline", "offline" );
+              /**
                if ( ! intervalProcesses[ "reconnect" ] ) {
              
                 intervalProcesses[ "reconnect" ] = Meteor.setInterval ( function() {
@@ -64,13 +68,14 @@ Deps.autorun( function(){
                   },
                   15 * 1000 );
                }
+               **/
              }
              else if ( article_sub && article_sub.ready() ){
               Session.set("offline", "");
-              if ( intervalProcesses[ "reconnect" ] ) Meteor.clearInterval ( intervalProcesses[ "reconnect" ] );
+             //if ( intervalProcesses[ "reconnect" ] ) Meteor.clearInterval ( intervalProcesses[ "reconnect" ] );
              }
              });
- **/
+
 
 var timeago = function( some_date ){
   var now = new Date( Session.get( "now" ) );
