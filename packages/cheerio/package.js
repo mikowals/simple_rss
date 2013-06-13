@@ -3,7 +3,7 @@ Package.describe({
                  });
 
 Npm.depends({
-            "cheerio" : "0.11.0"
+            "cheerio" : "0.12.0"
             
             });
 

@@ -3,7 +3,7 @@ Package.describe({
 });
 
 Npm.depends({
-            "xml2js" : "0.2.6"
+            "xml2js" : "0.2.7"
             
             });
 
