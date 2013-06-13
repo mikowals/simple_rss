@@ -47,10 +47,16 @@ Deps.autorun( function(){
              }
              });
 
+
+/**  
+ 
+ This will force reconnection attempts and track online status but mostly seems to track server restarts
+   -- so not useful for production
+ 
 Deps.autorun( function(){
              if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
                console.log( "Meteor.status().connected = " + Meteor.status().connected )
-               Session.set ("offline", "offline" );
+              // Session.set ("offline", "offline" );
                if ( ! intervalProcesses[ "reconnect" ] ) {
              
                 intervalProcesses[ "reconnect" ] = Meteor.setInterval ( function() {
@@ -64,6 +70,7 @@ Deps.autorun( function(){
               if ( intervalProcesses[ "reconnect" ] ) Meteor.clearInterval ( intervalProcesses[ "reconnect" ] );
              }
              });
+ **/
 
 var timeago = function( some_date ){
   var now = new Date( Session.get( "now" ) );
