@@ -28,6 +28,7 @@ body {
     overflow:scroll;
 }
 
+
 #footer {
   border-top: 1px solid #bbb; 
   font-size: 0.7em;  
@@ -122,6 +123,15 @@ time {
 
 #feeds_modal td.count, #feeds_modal td.lastDate {
   white-space: nowrap;
+}
+
+#login-buttons {
+  padding-top: 2px;
+  float: right;
+}
+
+#menubar {
+  height: 23px;
 }
 
 /* end media all */ }

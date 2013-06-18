@@ -20,11 +20,10 @@
   <div id="menubar" class="row-fluid">
     <a id="modal_button" class=" pull-left" href="#feeds_modal" data-toggle="modal" role="button"><i class="icon-chevron-down" /></a>
     {{#unless loaded}}
-    {{>smallLoader}}
+    {{#isolate}}<div class="pull-left small-loader" />{{/isolate}}
     {{/unless}}
-    {{>offline}}
-    {{>updated}}
-    <small class="pull-right">{{loginButtons align="right"}}</small>
+    {{#isolate}} {{#if offline}}<small class="label"> {{offline}}</small>{{/if}} {{/isolate}}
+    <small>{{loginButtons align="right"}}</small>
   </div>
 </template>
 
@@ -74,12 +73,12 @@
     <div class="header row-fluid">
       <h2>{{source}}</h2>
       <span class="spacer"></span>
-      <time class="visible-desktop time pull-right"> {{>articleTime}} </time>
+      {{#isolate}}<time class="visible-desktop time pull-right"> {{timeago date}} </time>{{/isolate}}
     </div>
     <div class="article">
       <div class="header"><h3><a href="{{{link}}}">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
       <div class="description">{{{summary}}}</div>
-      <div class="footer hidden-desktop"><time class="timeago"> {{>articleTime}} </time></div>
+      {{#isolate}}<div class="footer hidden-desktop"><time class="timeago"> {{timeago date}} </time></div>{{/isolate}}
     </div>
   </div>
 </template>
@@ -129,16 +128,10 @@
   <div class="pull-left small-loader" />
 </template>
 
-<template name="offline">
-  {{#if offline}}
-  <small class="label label-warning"> {{offline}}</small>
-  {{/if}}
-</template>
-
 <template name="updated">
   {{#if updated}}
   <small class="label label-info">
-    {{updated}}
+  {{updated}}
   </small>
   {{/if}}
 </template>

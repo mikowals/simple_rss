@@ -1,6 +1,6 @@
 var DAY = 1000 * 60 * 60 * 24;
 var articlesOnLoad = 20;
-var updateNowFreq = 5 * 60 * 1000;
+var updateNowFreq = 1 * 60 * 1000;
 
 var intervalProcesses = []; //hold interval process id to start and stop with different functions.
 Session.setDefault("loaded", false);
@@ -160,7 +160,7 @@ Template.menubar.loaded = function(){
   return Session.equals( "loaded", true );
 };
 
-Template.offline.offline = function(){
+Template.menubar.offline = function(){
   return Session.get("offline");
 }
 

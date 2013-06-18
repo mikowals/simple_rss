@@ -158,7 +158,7 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                           
                           if(existingGuid[article.guid] !== 1 && existingLink[article.link] !== 1){
                           var date = article.date || new Date();
-                          date = Math.min( date, new Date() );
+                          date = Math.min( new Date ( date ).getTime(), new Date().getTime() );
                           date = new Date(date);
                           maxDate = Math.max( date , maxDate);
                           if ( (new Date() - date) / DAY <= daysStoreArticles ){
