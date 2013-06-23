@@ -8,7 +8,9 @@ syncFP = function(url){
   object.articles =[];
   
   var r = request( url, {timeout: 10000}, function ( error, response ){
-                  if ( error || response.statusCode !== 200 ){
+                  // need to return a future for cases where no response leads to nothing getting piped to feedparser
+                  
+                  if ( !response || response.statusCode !== 200 ){
                   future.ret (null );
                   console.log( url + " returned abnormally" );
                   if ( error ) console.log( " error: " + error );
@@ -25,7 +27,7 @@ syncFP = function(url){
            })
        .on ( 'meta', function ( meta ){
             //console.log( "feedparser emmitted meta for url: " + url );
-            if (meta !== null){
+            if (meta !== null ){
             meta.url = meta.xmlurl || url;
             object["meta"] = meta;
             }
@@ -35,7 +37,7 @@ syncFP = function(url){
             })
        .on('readable', function(){
            var stream = this, item;
-           while (item = stream.read()) {
+           while ( item = stream.read() ) {
            object["articles"].push ( item );
            }
            
@@ -55,56 +57,8 @@ multipleSyncFP = function(urls){
   console.log("got feeds preparing to use feedparser");
   var futures = _.map(urls, function(url){
                       return syncFP( url );
-                      /**
-                      var future = new Future();
-                      var onComplete = future.resolver();
-                      var object = {};
-                      object.articles = [];
-                      
-                      var r = request( url, {timeout: 6000})
-                      .on ( 'error', function ( error ) {
-                            console.log(url + " : " + error);
-                            })
-                      .on ( 'response', function ( response) {
-                           
-                           if ( response.statusCode === 200 ) {
-                           r.pipe(new feedParser())
-                           .on( 'error', function( error ) {
-                               console.log( url + " : " + error  );
-                               object = null;
-                               })
-                           .on ( 'meta', function ( meta ){
-                                if (meta !== null) {
-                                meta.url = meta.xmlurl || url;
-                                object["meta"] = meta;
-                                }
-                                else {
-                                object["meta"] = { url: url};
-                                }
-                                })
-                           .on( 'readable', function(){
-                               var stream = this, item;
-                               while (item = stream.read()) {
-                               object["articles"].push ( item );
-                               }
-                               
-                               })
-                           .on( 'end', function(){
-                               onComplete( object );
-                               });
-                           }
-                           else {
-                           
-                           console.log( url + " statusCode: " + response.statusCode );
-                           onComplete ( null );
-                           }
-                                      
-                           
-                        
                       });
-                      return future;
-                      **/
-                      });
+  
   Future.wait(futures);
   console.log(" all futures from feedparser resolved");
   return _.invoke(futures,'get');
