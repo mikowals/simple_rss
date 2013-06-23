@@ -2,28 +2,22 @@ var feedParser = Npm.require('feedparser');
 var request = Npm.require('request');
 var Future = Npm.require('fibers/future');
 var zlib = Npm.require('zlib');
+var URL = Npm.require('url');
 
-var gzip = zlib.createGzip();
-
-
-var _fp = function(url){
+var _fp = function( url ){
   var future = new Future();
   var object = {};
   object.articles =[];
   
+  
   var options = {
     uri: url,
     headers: {
-      'Connection': "keep-alive",
-      'Cache-Control': "no-cache",
-      'Accept': "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-      'Pragma': "no-cache",
-      'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/29.0.1541.0 Safari/537.36",
-      'DNT': "1",
-      'Accept-Encoding': "gzip,deflate,sdch"
+      'host': URL.parse( url ).hostname,
+      'Accept-Encoding': "gzip,deflate"
   
   },
-  timeout: 7000
+  timeout: 10000
   }
   
   var r = request( options,  function ( error, response ){
@@ -39,8 +33,8 @@ var _fp = function(url){
   
   r.on ( 'response', function ( response ){
        if ( response.statusCode === 200 ){
-        if ( response.headers['content-encoding'] == 'gzip' ){
-        r = r.pipe(zlib.createGunzip());
+        if ( response.headers['content-encoding'] === 'gzip' ){
+          r = r.pipe( zlib.createGunzip() );
         }
         r.pipe( new feedParser() )
         .on('error', function(err ){
