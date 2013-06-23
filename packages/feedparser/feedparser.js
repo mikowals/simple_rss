@@ -7,16 +7,16 @@ syncFP = function(url){
   var object = {};
   object.articles =[];
   
-  var r = request(url, {timeout: 10000} );
-  r.once ( 'error', function ( error ){
-        object = null;
-        future.ret ( object );
-        console.log( url + " future returned with error");
-        })
-  .on ( 'error', function ( error ){
-       console.log( url + " got request error: " + error );
-       })
-  .on ( 'response', function ( response ){
+  var r = request( url, {timeout: 10000}, function ( error, response ){
+                  if ( error || response.statusCode !== 200 ){
+                  future.ret (null );
+                  console.log( url + " returned abnormally" );
+                  if ( error ) console.log( " error: " + error );
+                  if ( response ) console.log( "statusCode: " + response.statusCode );
+                  }
+                  });
+  
+  r.on ( 'response', function ( response ){
        if ( response.statusCode === 200 ){
        r.pipe(new feedParser())
        .on('error', function(err ){
@@ -46,13 +46,8 @@ syncFP = function(url){
            });
        
        }
-       else {
        
-       console.log( url + " http statuscode = " + response.statusCode );
-        future.ret ( null );
-        }
-        })
-  .end();
+      });
   return future;
 }
 
