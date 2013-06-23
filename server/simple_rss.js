@@ -91,7 +91,7 @@ Feeds.deny({
             return true;
            }
            
-           var rssResult = syncFP( doc.url).wait();
+           var rssResult = syncFP( doc.url);
            if (rssResult === null || rssResult.meta === null || rssResult.meta === undefined){
            console.log(doc.url + " has no data to insert");
            return true;
@@ -303,7 +303,7 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
                                                      Feeds.update(doc._id, {$unset: {articles: 1}});
                                                      }
                                                      else{
-                                                     result = syncFP(doc.url).wait();
+                                                     result = syncFP(doc.url);
                                                      console.log( "found " + newArticlesToDb(result.articles, doc) + " for new feed - " + doc.title);
                                                      }
                                                      
@@ -382,7 +382,7 @@ Meteor.methods({
                
                cleanUrls: function(){
                Feeds.find({}).forEach( function(feed){
-                                      var result = syncFP(feed.url).wait();
+                                      var result = syncFP(feed.url);
                                       if (result.meta.url && feed.url !== result.meta.url ){
                                       console.log("changing url " + feed.url + " to " + result.meta.url);
                                       Feeds.update(feed._id, {$set: {url: result.meta.url }});
@@ -401,7 +401,7 @@ Meteor.methods({
                xmlToAdd.forEach( function(url){
                                 try{
                                 if (url !== null && url !== undefined){
-                                fpResults.push( syncFP(url) ).wait();
+                                fpResults.push( syncFP(url) );
                                 }
                                 }
                                 catch(e){

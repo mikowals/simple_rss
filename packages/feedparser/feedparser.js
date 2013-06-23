@@ -2,7 +2,7 @@ var feedParser = Npm.require('feedparser');
 var request = Npm.require('request');
 var Future = Npm.require('fibers/future');
 
-syncFP = function(url){
+var _fp = function(url){
   var future = new Future();
   var object = {};
   object.articles =[];
@@ -53,10 +53,14 @@ syncFP = function(url){
   return future;
 }
 
+syncFP = function ( url ) {
+  return _fp( url ).wait();
+}
+
 multipleSyncFP = function(urls){
   console.log("got feeds preparing to use feedparser");
   var futures = _.map(urls, function(url){
-                      return syncFP( url );
+                      return _fp( url );
                       });
   
   Future.wait(futures);
