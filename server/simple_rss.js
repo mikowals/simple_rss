@@ -344,7 +344,7 @@ Meteor.methods({
                                       }
                                       });
                
-               var rssResults = multipleSyncFP ( feeds );
+               var rssResults = multipleSyncFP ( Feeds.find({}), daysStoreArticles, Articles.update );
                
                rssResults.forEach(function(rssResult){ 
                                   if ( rssResult && rssResult.url && rssResult.articles ){
