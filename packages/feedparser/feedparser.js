@@ -11,11 +11,12 @@ var _fp = function( feed ){
   var options = {
     uri: feed.url,
     headers: {
-      'host': URL.parse( feed.url ).hostname,
-      'Accept-Encoding': "gzip, deflate"  
+      'Host': URL.parse( feed.url ).hostname,
+      'Accept-Encoding': "gzip, deflate"
   },
   timeout: 10000,
-  jar: false
+  jar: false,
+  maxRedirects: 5
   }
   
   if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString();
