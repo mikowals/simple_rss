@@ -15,7 +15,6 @@ var _fp = function( feed ){
       'Accept-Encoding': "gzip, deflate"
   },
   timeout: 10000,
-  jar: false,
   maxRedirects: 5
   }
   
