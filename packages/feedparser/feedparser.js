@@ -14,7 +14,8 @@ var _fp = function( feed ){
       'host': URL.parse( feed.url ).hostname,
       'Accept-Encoding': "gzip, deflate"  
   },
-  timeout: 10000
+  timeout: 10000,
+  jar: false
   }
   
   if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString();
@@ -23,7 +24,8 @@ var _fp = function( feed ){
                   // need to return a future for cases where no response leads to nothing getting piped to feedparser
                   
                   if ( !response || response.statusCode !== 200 ){
-                  future.ret ({ statusCode: response.statusCode } );
+                  var retObj = response && { statusCode:  response.statusCode };
+                  future.ret ( retObj );
                   if ( error ) console.log( feed.url + " error: " + error );
                   if ( response && response.statusCode !== 304 ) console.log( feed.url + " statusCode: " + response.statusCode );
                   }

@@ -1,7 +1,7 @@
 
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
-var updateInterval = 1000 * 60 * 15;
+var updateInterval = 1000 * 60 * 5;
 var intervalProcesses = {};
 var articlePubLimit = 300;
 
@@ -344,10 +344,10 @@ Meteor.methods({
                var rssResults = multipleSyncFP ( feeds );
                
                rssResults.forEach(function(rssResult){ 
-                                  if ( rssResult.url && rssResult.articles ){
+                                  if ( rssResult && rssResult.url && rssResult.articles ){
                                   article_count += newArticlesToDb ( rssResult );
                                   }
-                                  else if ( rssResult.statusCode !== 304 ){
+                                  else if ( !rssResult || rssResult.statusCode !== 304 ){
                                   console.log( "a feed returned no data");
                                   }
                                   }); 
