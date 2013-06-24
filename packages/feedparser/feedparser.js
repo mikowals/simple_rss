@@ -11,7 +11,6 @@ var _fp = function( feed ){
   var options = {
     uri: feed.url,
     headers: {
-      'host': URL.parse( feed.url ).hostname,
       'accept-encoding': "gzip, deflate"
   },
   timeout: 10000,
