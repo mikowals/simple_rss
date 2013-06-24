@@ -92,7 +92,7 @@ Feeds.deny({
            }
            
            var rssResult = syncFP( doc );
-           if ( ! rssResult.url ){
+           if ( ! rssResult || ! rssResult.url ){
            console.log(doc.url + " has no data to insert");
            return true;
            }
@@ -332,7 +332,7 @@ Meteor.methods({
                
                var feeds = [];
                Feeds.find({}).forEach( function(feed){
-                                      if ( feed.url !== null && feed.url !== undefined && feed.url !== "null" ){
+                                      if ( feed && feed.url !== null && feed.url !== undefined && feed.url !== "null" ){
                                       feeds.push( feed );
                                       }
                                       else{
@@ -385,7 +385,7 @@ Meteor.methods({
                cleanUrls: function(){
                Feeds.find({}).forEach( function(feed){
                                       var result = syncFP( feed );
-                                      if (result.url && feed.url !== result.url ){
+                                      if (result && result.url && feed.url !== result.url ){
                                       console.log("changing url " + feed.url + " to " + result.url);
                                       Feeds.update(feed._id, {$set: {url: result.url }});
                                       }

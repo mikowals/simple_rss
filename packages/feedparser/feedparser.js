@@ -6,22 +6,21 @@ var URL = Npm.require('url');
 
 var _fp = function( feed ){
   var future = new Future();
-  feed.articles =[];
+  feed.articles = [];
   
   var options = {
     uri: feed.url,
     headers: {
-      'Host': URL.parse( feed.url ).hostname,
-      'Accept-Encoding': "gzip, deflate"
+      'host': URL.parse( feed.url ).hostname,
+      'accept-encoding': "gzip, deflate"
   },
   timeout: 10000,
-  maxRedirects: 5
   }
   
-  if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString();
+  if ( feed.lastModified ) options.headers['if-modified-since'] = new Date ( feed.lastModified ).toUTCString();
   
   var r = request( options,  function ( error, response ){
-                  // need to return a future for cases where no response leads to nothing getting piped to feedparser
+                  // return a future for cases where no http response leads to nothing getting piped to feedparser
                   
                   if ( !response || response.statusCode !== 200 ){
                   var retObj = response && { statusCode:  response.statusCode };
@@ -33,6 +32,7 @@ var _fp = function( feed ){
   
   r.on ( 'response', function ( response ){
        if ( response.statusCode === 200 ){
+        
         if ( response.headers['content-encoding'] === 'gzip' ){
           r = r.pipe( zlib.createGunzip() );
         }
@@ -43,7 +43,7 @@ var _fp = function( feed ){
         
         r.pipe( new feedParser() )
         .on('error', function(err ){
-            console.log(url + " got feedparser error: " + err);
+            console.log(feed.url + " got feedparser error: " + err);
             feed = null;
             })
         .on ( 'meta', function ( meta ){
@@ -66,8 +66,7 @@ var _fp = function( feed ){
             //console.log("feedparser emmitted end for url: " + url );
             future.ret ( feed );
             });
-        
-        
+      
        }
        
       });
