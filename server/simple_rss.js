@@ -91,12 +91,12 @@ Feeds.deny({
             return true;
            }
            
-           var rssResult = syncFP( doc.url);
-           if (rssResult === null || rssResult.meta === null || rssResult.meta === undefined){
+           var rssResult = syncFP( doc );
+           if ( ! rssResult.url ){
            console.log(doc.url + " has no data to insert");
            return true;
            }
-           else if (rssResult.meta.url && doc.url !== rssResult.meta.url ) { doc.url = rssResult.meta.url; }
+           else if (rssResult.url && doc.url !== rssResult.url ) { doc.url = rssResult.url; }
            existingFeed = Feeds.findOne( {url: doc.url} );
            
            if( existingFeed ){
@@ -106,11 +106,12 @@ Feeds.deny({
            } 
            else{
            console.log(doc.url + " not in db - adding");
-           doc.title = rssResult.meta.title;  
-           doc.last_date = rssResult.meta.date;
+           doc.title = rssResult.title;  
+           doc.last_date = rssResult.date;
            doc.articles = rssResult.articles;
            doc.subscribers = [];
            doc.subscribers.push(userId);
+           doc.lastModified = null;
            return false;
            }
                      
@@ -144,20 +145,22 @@ Meteor.startup( function(){
 
                });
 
-var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather than feed from database -> feed should be up to date and passed if needed
+var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed from database -> feed should be up to date and passed if needed
   var existingGuid = {};
   var existingLink = {};
   var last_dates = {};
   var article_count=0;
-  var feed = Feeds.findOne({url: meta.url}); // see comment above
-  Articles.find({feed_id: feed._id},{guid:1, date:1, link:1}).forEach(function(article){
+    //var feed = Feeds.findOne({url: feed.url }); // see comment above
+  Articles.find({feed_id: updatedFeed._id},{guid:1, date:1, link:1}).forEach(function(article){
                                                                       existingGuid[article.guid] = 1;
                                                                       existingLink[article.link] = 1;
                                                                
                                                               });
-  maxDate = meta.date || 0;
+  if ( updatedFeed.lastModified ) Feeds.update( updatedFeed._id, {$set: { lastModified: updatedFeed.lastModified }} );
+  
+  maxDate = updatedFeed.date || 0;
  
-  articlesFromWeb.forEach(function (article) {
+  updatedFeed.articles.forEach(function (article) {
                           
                           if(existingGuid[article.guid] !== 1 && existingLink[article.link] !== 1){
                           var date = article.date || new Date();
@@ -173,8 +176,8 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                               date: date,
                               author: article.author,
                               link: article.link,
-                              source: meta.title,
-                              feed_id: feed._id
+                              source: updatedFeed.title,
+                              feed_id: updatedFeed._id
                             };
                          
                             Articles.insert(new_article);
@@ -182,14 +185,15 @@ var newArticlesToDb = function(articlesFromWeb, meta){ //using metadata rather t
                             existingLink[article.link] = 1;
                           
                             article_count++;
-                            console.log('%s: %s', meta.title, article.title || article.description);
+                            console.log('%s: %s', updatedFeed.title, article.title || article.description);
                           }
                           }
                           });
   if (article_count > 0){
-    var feed_date = feed.last_date;
-    if (feed_date === null || maxDate > feed_date){
-      Feeds.update(feed._id, {$set:{last_date: maxDate}});
+    var feed_date = updatedFeed.last_date;
+    if (feed_date === null || maxDate > feed_date ){
+      
+      Feeds.update(updatedFeed._id, {$set:{last_date: maxDate }});
     }
   }
   return article_count;
@@ -299,22 +303,20 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
                                                      
                                                      added: function(doc){
                                                      if (doc.articles) {
-                                                     console.log( "found " + newArticlesToDb(doc.articles, doc) + " for new feed - " + doc.title);
+                                                     console.log( "found " + newArticlesToDb( doc ) + " for new feed - " + doc.title);
                                                      Feeds.update(doc._id, {$unset: {articles: 1}});
                                                      }
-                                                     else{
-                                                     result = syncFP(doc.url);
-                                                     console.log( "found " + newArticlesToDb(result.articles, doc) + " for new feed - " + doc.title);
+                                                     else{ 
+                                                     result = syncFP( doc );
+                                                     console.log( "found " + newArticlesToDb( result ) + " for new feed - " + doc.title);
                                                      }
                                                      
                                                      },
                                                      
                                                      removed: function(doc){
                                                      
-                                                     Articles.find({source: doc.title}, {_id:1}).forEach( function (article){
-                                                                                                         console.log("removing article " + article._id);
-                                                                                                         Articles.remove(article._id);
-                                                                                                         });
+                                                     Articles.remove({ feed_id: doc._id });
+                                                     console.log("removed all articles from source: " + doc.title );
                                                      
                                                      }
                         
@@ -328,10 +330,10 @@ Meteor.methods({
                console.log("looking for new articles");
                var article_count = 0;         
                
-               var urls = [];
+               var feeds = [];
                Feeds.find({}).forEach( function(feed){
                                       if ( feed.url !== null && feed.url !== undefined && feed.url !== "null" ){
-                                      urls.push( feed.url);
+                                      feeds.push( feed );
                                       }
                                       else{
                                       console.log( "feed with no URL - removing : " + JSON.stringify (feed));
@@ -339,13 +341,13 @@ Meteor.methods({
                                       }
                                       });
                
-               var rssResults = multipleSyncFP (urls);
+               var rssResults = multipleSyncFP ( feeds );
                
-               rssResults.forEach(function(rssResult){
-                                  if (rssResult && rssResult.articles && rssResult.meta){
-                                  article_count += newArticlesToDb (rssResult.articles, rssResult.meta);
+               rssResults.forEach(function(rssResult){ 
+                                  if ( rssResult.url && rssResult.articles ){
+                                  article_count += newArticlesToDb ( rssResult );
                                   }
-                                  else{
+                                  else if ( rssResult.statusCode !== 304 ){
                                   console.log( "a feed returned no data");
                                   }
                                   }); 
@@ -366,7 +368,7 @@ Meteor.methods({
                
                addSubscriberToFeeds: function(){
                var self = this;
-               Feeds.find({}).forEach( function (feed){
+               Feeds.find({}).forEach( function ( feed ){
                                       console.log("adding subscriber " + self.userId);
                                        Feeds.update( feed._id,{ $addToSet: { subscribers: self.userId }});
                                        });
@@ -382,10 +384,10 @@ Meteor.methods({
                
                cleanUrls: function(){
                Feeds.find({}).forEach( function(feed){
-                                      var result = syncFP(feed.url);
-                                      if (result.meta.url && feed.url !== result.meta.url ){
-                                      console.log("changing url " + feed.url + " to " + result.meta.url);
-                                      Feeds.update(feed._id, {$set: {url: result.meta.url }});
+                                      var result = syncFP( feed );
+                                      if (result.url && feed.url !== result.url ){
+                                      console.log("changing url " + feed.url + " to " + result.url);
+                                      Feeds.update(feed._id, {$set: {url: result.url }});
                                       }
                                       });
                },
@@ -400,8 +402,9 @@ Meteor.methods({
                
                xmlToAdd.forEach( function(url){
                                 try{
+                                var feed = { url: url };
                                 if (url !== null && url !== undefined){
-                                fpResults.push( syncFP(url) );
+                                fpResults.push( syncFP( feed ) );
                                 }
                                 }
                                 catch(e){
@@ -412,13 +415,13 @@ Meteor.methods({
                if ( fpResults ){
                fpResults.forEach( function (rssResult){
                                  
-                                 var doc = {url: rssResult.meta.url, title: rssResult.meta.title, last_date: rssResult.meta.date, subscribers: [] };
+                                 var doc = {url: rssResult.url, title: rssResult.title, last_date: rssResult.date, subscribers: [] };
                                  doc.subscribers.push(self.userId);
    
                                  var existingFeed = Feeds.findOne( {url: doc.url} );
                                  if( existingFeed ){
                                  Feeds.update(existingFeed._id, {$addToSet: {subscribers: self.userId} } );
-                                 console.log( rssResult.meta.title +" in db - subscribing user");
+                                 console.log( rssResult.title +" in db - subscribing user");
                                  }
                                 
                                 else {
