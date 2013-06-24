@@ -2,7 +2,7 @@ var feedParser = Npm.require('feedparser');
 var request = Npm.require('request');
 var Future = Npm.require('fibers/future');
 var zlib = Npm.require('zlib');
-var URL = Npm.require('url');
+  //var URL = Npm.require('url');
 
 var _fp = function( feed ){
   var future = new Future();

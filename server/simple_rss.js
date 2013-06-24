@@ -96,14 +96,17 @@ Feeds.deny({
            console.log(doc.url + " has no data to insert");
            return true;
            }
-           else if (rssResult.url && doc.url !== rssResult.url ) { doc.url = rssResult.url; }
-           existingFeed = Feeds.findOne( {url: doc.url} );
+           else if (rssResult.url && doc.url !== rssResult.url ) {
+             doc.url = rssResult.url;
+             existingFeed = Feeds.findOne( {url: doc.url} );
+           }
            
            if( existingFeed ){
-           console.log(doc.url + " exists in db at different url");
-           Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
-           return true;
-           } 
+             console.log(doc.url + " exists in db at different url");
+             Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
+             return true;
+           }
+           
            else{
            console.log(doc.url + " not in db - adding");
            doc.title = rssResult.title;  
