@@ -329,7 +329,8 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
 
 Meteor.methods({
                
-               findArticles: function() {         
+               findArticles: function() {
+               var start = new Date();
                console.log("looking for new articles");
                var article_count = 0;         
                
@@ -356,7 +357,7 @@ Meteor.methods({
                                   }); 
                
                
-               console.log("finished find articles");
+               console.log("finished find articles " + ( new Date() - start ) / 1000 + " seconds");
                return article_count; 
                },
                
