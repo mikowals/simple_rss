@@ -16,7 +16,8 @@ var _fp = function( feed ){
   timeout: 10000,
   }
   
-  if ( feed.lastModified ) options.headers['if-modified-since'] = new Date ( feed.lastModified ).toUTCString();
+  if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString(); // 
+  if ( feed.etag ) options.headers['If-None-Match'] =  feed.etag; //
   
   var r = request( options,  function ( error, response ){
                   // return a future for cases where no http response leads to nothing getting piped to feedparser
@@ -39,6 +40,10 @@ var _fp = function( feed ){
         if ( response.headers['last-modified'] ){
           feed.lastModified = response.headers[ 'last-modified' ] ;
         }
+        if ( response.headers['etag'] ){
+        feed.etag = response.headers[ 'etag' ] ;
+        }
+        
         
         r.pipe( new feedParser() )
         .on('error', function(err ){
@@ -57,7 +62,7 @@ var _fp = function( feed ){
         .on('readable', function(){
             var stream = this, item;
             while ( item = stream.read() ) {
-            feed.articles.push ( item );
+              feed.articles.push ( item );
             }
             
             })
