@@ -64,34 +64,44 @@ var _fp = function( arg ){
             var stream = this, item;
             while ( item = stream.read() ) {
             
-            if ( new Date ( item.date ) > keepTimeLimit ){
-            if ( insert && keepTimeLimit ){
-            insert( { feed_id: feed._id,
-                   title: item.title,
-                   guid: item.guid,
-                   summary: cleanSummary( item.description ),
-                   date: item.date || new Date(),
-                   author: item.author,
-                   link: item.link,
-                   source: feed.title
-              
-                   });
+            if ( new Date ( item.date ) - keepTimeLimit > 0 && feed.existingGuids.indexOf( item.guid ) === -1 ){
+            var doc = {
+            
+            feed_id: feed._id,
+            title: item.title,
+            guid: item.guid,
+            summary: cleanSummary( item.description ),
+            date: item.date || new Date(),
+            author: item.author,
+            link: item.link,
+            source: feed.title
+            
+            }
+            if ( insert ){
+            insert ( doc , function() {
+                          console.log('%s: %s', doc.source, doc.title );
+                          }) ;
+            
+            if ( feed.newCount ) feed.newCount++;
+            else feed.newCount = 1;
             }
             
-            else feed.articles.push ( item );
+            else{
+             feed.articles.push( );
             }
             
-            
+            }
             }
           })
         .on( 'end', function() {
-            //console.log("feedparser emmitted end for url: " + url );
+           
             future.ret ( feed );
             });
       
        }
        
       });
+  
   return future;
 }
 

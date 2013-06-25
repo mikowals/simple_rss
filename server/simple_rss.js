@@ -1,3 +1,4 @@
+var Future = Npm.require ('fibers/future');
 
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
@@ -203,9 +204,13 @@ var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed
 }
 
 var insertNewGuid = function( doc ){
-  if (! Articles.findOne( { guid: doc.guid } ) ){
-    Articles.insert( doc );
-  }
+  
+ 
+    Articles.insert( doc , function() {
+                    console.log('%s: %s', doc.source, doc.title );
+                    }) ;
+ 
+
   
 }
 
@@ -339,17 +344,28 @@ Meteor.methods({
                findArticles: function() {         
                console.log("looking for new articles");
                var article_count = 0;         
+               var feeds = Feeds.find({}, { _id: 1, url: 1, title: 1 } ).fetch();
                
-               var rssResults = multipleSyncFP ( Feeds.find({}).fetch(), daysStoreArticles, insertNewGuid );
+               feeds.forEach( function ( feed ) {
+                             feed.existingGuids = _.pluck( Articles.find( { feed_id: feed._id }, { guid: 1 } ).fetch(), 'guid' );
+                             });
+               
+               var keepLimit = new Date() - daysStoreArticles;
+               
+               var rssResults = multipleSyncFP ( feeds, keepLimit, Articles.insert );
                
                rssResults.forEach(function(rssResult){ 
-                                  if ( rssResult && rssResult.url && rssResult.articles ){
-                                  article_count += newArticlesToDb ( rssResult );
+                                  if ( rssResult ) {
+                                  Feeds.update(rssResult._id, {$set: {lastModified: rssResult.lastModified } } );
+                                  if ( rssResult.newCount ){
+                                   article_count += rssResult.newCount;
+                                  }
                                   }
                                   else if ( !rssResult || rssResult.statusCode !== 304 ){
                                   console.log( "a feed returned no data");
                                   }
                                   }); 
+               
                
                
                console.log("finished find articles");
