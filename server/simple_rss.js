@@ -172,27 +172,16 @@ var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed
                           date = new Date(date);
                           maxDate = Math.max( date , maxDate);
                           if ( (new Date() - date) / DAY <= daysStoreArticles ){
-                            var new_article = {
-                              title: article.title,
-                              guid: article.guid,
-                              summary: cleanSummary( article.description ),
+                               var new_article = article;
+                               Articles.insert(new_article);
+                               existingGuid[article.guid] = 1;
+                               existingLink[article.link] = 1;
                           
-                              date: date,
-                              author: article.author,
-                              link: article.link,
-                              source: updatedFeed.title,
-                              feed_id: updatedFeed._id
-                            };
-                         
-                            Articles.insert(new_article);
-                            existingGuid[article.guid] = 1;
-                            existingLink[article.link] = 1;
-                          
-                            article_count++;
-                            console.log('%s: %s', updatedFeed.title, article.title || article.description);
-                          }
-                          }
-                          });
+                               article_count++;
+                               console.log('%s: %s', updatedFeed.title, article.title || article.description);
+                               }
+                               }
+                               });
   if (article_count > 0){
     var feed_date = updatedFeed.last_date;
     if (feed_date === null || maxDate > feed_date ){
@@ -350,18 +339,19 @@ Meteor.methods({
                              feed.existingGuids = _.pluck( Articles.find( { feed_id: feed._id }, { guid: 1 } ).fetch(), 'guid' );
                              });
                
-               var keepLimit = new Date() - daysStoreArticles;
+               var keepLimit = new Date().getTime() - daysStoreArticles * DAY;
                
                var rssResults = multipleSyncFP ( feeds, keepLimit, Articles.insert );
                
                rssResults.forEach(function(rssResult){ 
-                                  if ( rssResult ) {
+                                  if ( rssResult && !rssResult.statusCode ) {
                                   Feeds.update(rssResult._id, {$set: {lastModified: rssResult.lastModified } } );
+                                  console.log( "updated lastModified for : " + rssResult.url );
                                   if ( rssResult.newCount ){
                                    article_count += rssResult.newCount;
                                   }
                                   }
-                                  else if ( !rssResult || rssResult.statusCode !== 304 ){
+                                  else if ( rssResult.statusCode !== 304 ){
                                   console.log( "a feed returned no data");
                                   }
                                   }); 

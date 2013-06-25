@@ -64,7 +64,8 @@ var _fp = function( arg ){
             var stream = this, item;
             while ( item = stream.read() ) {
             
-            if ( new Date ( item.date ) - keepTimeLimit > 0 && feed.existingGuids.indexOf( item.guid ) === -1 ){
+            if ( new Date ( item.date ).getTime() - keepTimeLimit > 0 ){
+            console.log( "found " + feed.title + " : " + item.title || item.link );
             var doc = {
             
             feed_id: feed._id,
@@ -77,8 +78,8 @@ var _fp = function( arg ){
             source: feed.title
             
             }
-            if ( insert ){
-            insert ( doc , function() {
+            if ( insert && feed.existingGuids.indexOf( doc.guid ) === -1 ){
+            insert ( doc , function( error, newId) {
                           console.log('%s: %s', doc.source, doc.title );
                           }) ;
             
@@ -87,7 +88,7 @@ var _fp = function( arg ){
             }
             
             else{
-             feed.articles.push( );
+             feed.articles.push( doc );
             }
             
             }
