@@ -5,6 +5,7 @@ var daysStoreArticles = 2;
 var updateInterval = 1000 * 60 * 5;
 var intervalProcesses = {};
 var articlePubLimit = 300;
+var commonDuplicates = {};
 
 Accounts.config({sendVerificationEmail: true});
 
@@ -192,15 +193,9 @@ var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed
   return article_count;
 }
 
-var insertNewGuid = function( doc ){
+var insertNewGuid = function( doc, cb ){
   
- 
-    Articles.insert( doc , function() {
-                    console.log('%s: %s', doc.source, doc.title );
-                    }) ;
- 
-
-  
+  Articles.insert( doc , cb) ;
 }
 
 var cleanSummary = function (text){
@@ -330,18 +325,35 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
 
 Meteor.methods({
                
-               findArticles: function() {         
+               findArticles: function() {
+               var start = new Date();
                console.log("looking for new articles");
                var article_count = 0;         
                var feeds = Feeds.find({}, { _id: 1, url: 1, title: 1 } ).fetch();
                
-               feeds.forEach( function ( feed ) {
-                             feed.existingGuids = _.pluck( Articles.find( { feed_id: feed._id }, { guid: 1 } ).fetch(), 'guid' );
-                             });
-               
                var keepLimit = new Date().getTime() - daysStoreArticles * DAY;
                
-               var rssResults = multipleSyncFP ( feeds, keepLimit, Articles.insert );
+               var tmpStorage = new Meteor.Collection( null );
+               
+               var watcher = tmpStorage.find({}).observe( {
+                                                         added: function ( doc ){
+                                                         
+                                                         if ( ! commonDuplicates[ doc.guid ] && ! Articles.findOne( { $or: [{guid: doc.guid }, {link: doc.link } ] }) ){
+                                                         Articles.insert ( doc, function ( error, result ){
+                                                             if ( error ) console.log( "findArticles: " + error );
+                                                             
+                                                             });
+                                                         console.log( "inserting " + doc.title );
+                                                         
+                                                         }
+                                                         else if ( ! commonDuplicates[ doc.guid ] ) commonDuplicates[ doc.guid ] = 1;
+                                                         
+                                                         tmpStorage.remove( doc );
+                                                         
+                                                         }
+                                                         });
+               
+               var rssResults = multipleSyncFP ( feeds, keepLimit, tmpStorage );
                
                rssResults.forEach(function(rssResult){ 
                                   if ( rssResult && !rssResult.statusCode ) {
@@ -357,8 +369,9 @@ Meteor.methods({
                                   }); 
                
                
+               watcher.stop();
+               console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds");
                
-               console.log("finished find articles");
                return article_count; 
                },
                

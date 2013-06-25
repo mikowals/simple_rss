@@ -5,12 +5,11 @@ var zlib = Npm.require('zlib');
 var cheerio = Npm.require( 'cheerio');
   //var URL = Npm.require('url');
 
-var _fp = function( arg ){
+var _fp = function( fd, kl, tmpCol ){
   var future = new Future();
-  var feed = arg.feed;
-  var keepTimeLimit = arg.keepTimeLimit || null;
-  var insert = arg.callback || null;
-  
+  var feed = fd;
+  var keepTimeLimit = kl || null;
+    
   
   feed.articles = [];
   
@@ -65,7 +64,7 @@ var _fp = function( arg ){
             while ( item = stream.read() ) {
             
             if ( new Date ( item.date ).getTime() - keepTimeLimit > 0 ){
-            console.log( "found " + feed.title + " : " + item.title || item.link );
+            //console.log( "found " + feed.title + " : " + item.title || item.link );
             var doc = {
             
             feed_id: feed._id,
@@ -78,13 +77,9 @@ var _fp = function( arg ){
             source: feed.title
             
             }
-            if ( insert && feed.existingGuids.indexOf( doc.guid ) === -1 ){
-            insert ( doc , function( error, newId) {
-                          console.log('%s: %s', doc.source, doc.title );
-                          }) ;
+            if ( tmpCol ){
+            tmpCol.insert ( doc );
             
-            if ( feed.newCount ) feed.newCount++;
-            else feed.newCount = 1;
             }
             
             else{
@@ -110,15 +105,19 @@ syncFP = function ( feed ) {
   return _fp( { feed: feed } ).wait();
 }
 
-multipleSyncFP = function( feeds, keepTimeLimit, cb ){
+multipleSyncFP = function( feeds, keepTimeLimit, tmpStorage ){
   console.log("got feeds preparing to use feedparser");
+  
+  
   var futures = _.map( feeds, function( feed ){
           
-                      return _fp( { feed: feed, keepTimeLimit: keepTimeLimit, callback: cb } );
+                      return _fp( feed, keepTimeLimit, tmpStorage );
                       });
+
   
   Future.wait(futures);
   console.log(" all futures from feedparser resolved");
+
   return _.invoke(futures,'get');
                       
   
