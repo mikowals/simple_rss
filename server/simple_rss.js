@@ -202,6 +202,13 @@ var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed
   return article_count;
 }
 
+var insertNewGuid = function( doc ){
+  if (! Articles.findOne( { guid: doc.guid } ) ){
+    Articles.insert( doc );
+  }
+  
+}
+
 var cleanSummary = function (text){
   var $ = cheerio.load(text);  //relies on cheerio package
   
@@ -333,18 +340,7 @@ Meteor.methods({
                console.log("looking for new articles");
                var article_count = 0;         
                
-               var feeds = [];
-               Feeds.find({}).forEach( function(feed){
-                                      if ( feed && feed.url !== null && feed.url !== undefined && feed.url !== "null" ){
-                                      feeds.push( feed );
-                                      }
-                                      else{
-                                      console.log( "feed with no URL - removing : " + JSON.stringify (feed));
-                                           Feeds.remove( feed._id );
-                                      }
-                                      });
-               
-               var rssResults = multipleSyncFP ( Feeds.find({}), daysStoreArticles, Articles.update );
+               var rssResults = multipleSyncFP ( Feeds.find({}).fetch(), daysStoreArticles, insertNewGuid );
                
                rssResults.forEach(function(rssResult){ 
                                   if ( rssResult && rssResult.url && rssResult.articles ){

@@ -2,10 +2,16 @@ var feedParser = Npm.require('feedparser');
 var request = Npm.require('request');
 var Future = Npm.require('fibers/future');
 var zlib = Npm.require('zlib');
+var cheerio = Npm.require( 'cheerio');
   //var URL = Npm.require('url');
 
-var _fp = function( feed ){
+var _fp = function( arg ){
   var future = new Future();
+  var feed = arg.feed;
+  var keepTimeLimit = arg.keepTimeLimit || null;
+  var insert = arg.callback || null;
+  
+  
   feed.articles = [];
   
   var options = {
@@ -57,10 +63,27 @@ var _fp = function( feed ){
         .on('readable', function(){
             var stream = this, item;
             while ( item = stream.read() ) {
-            feed.articles.push ( item );
+            
+            if ( new Date ( item.date ) > keepTimeLimit ){
+            if ( insert && keepTimeLimit ){
+            insert( { feed_id: feed._id,
+                   title: item.title,
+                   guid: item.guid,
+                   summary: cleanSummary( item.description ),
+                   date: item.date || new Date(),
+                   author: item.author,
+                   link: item.link,
+                   source: feed.title
+              
+                   });
             }
             
-            })
+            else feed.articles.push ( item );
+            }
+            
+            
+            }
+          })
         .on( 'end', function() {
             //console.log("feedparser emmitted end for url: " + url );
             future.ret ( feed );
@@ -73,13 +96,14 @@ var _fp = function( feed ){
 }
 
 syncFP = function ( feed ) {
-  return _fp( feed ).wait();
+  return _fp( { feed: feed } ).wait();
 }
 
-multipleSyncFP = function( feeds ){
+multipleSyncFP = function( feeds, keepTimeLimit, cb ){
   console.log("got feeds preparing to use feedparser");
   var futures = _.map( feeds, function( feed ){
-                      return _fp( feed );
+          
+                      return _fp( { feed: feed, keepTimeLimit: keepTimeLimit, callback: cb } );
                       });
   
   Future.wait(futures);
@@ -87,4 +111,43 @@ multipleSyncFP = function( feeds ){
   return _.invoke(futures,'get');
                       
   
+}
+
+var cleanSummary = function (text){
+  var $ = cheerio.load(text);  //relies on cheerio package
+  
+  $('img').remove();
+  $('table').remove();
+  $('script').remove();
+  $('iframe').remove();
+  $('.feedflare').remove();
+  
+  if( $('p').length )
+    {
+    text = $('p').eq(0).html() + ( $('p').eq(1).html() || '');
+    }
+  else if( $('li').length ){
+    text = '<ul>';
+    $('ul li').slice(0,6).each( function(){
+                               text += "<li>" + $(this).html() + "</li>";
+                               });
+    text += "</ul>";
+  }
+  
+  else{
+    if ( $.html() ){
+      text = $.html();
+    }
+    
+    if ( text.indexOf('<br') !== -1 ){
+      text = text.substring(0, text.indexOf('<br'));
+    }
+    
+    text = text.substring(0, 500);
+  }
+  
+  if (text === null || text === undefined || text === "null") {
+    text = '';
+  }
+  return text;
 }

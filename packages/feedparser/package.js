@@ -7,8 +7,8 @@ Npm.depends({
             "addressparser": "0.1.3",
             "resanitize": "0.1.10",
             "array-indexofobject": "0.0.1",
-            "readable-stream": "1.0.2"
-            
+            "readable-stream": "1.0.2",
+            "cheerio" : "0.12.0"
 
             });
 
