@@ -4,9 +4,7 @@
 # but you can also edit it by hand.
 
 preserve-inputs
-bootstrap
 jquery
-underscore
 amplify
 http
 accounts-ui
@@ -14,3 +12,5 @@ accounts-password
 accounts-google
 appcache
 audit-argument-checks
+bootstrap
+random
