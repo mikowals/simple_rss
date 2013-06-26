@@ -353,6 +353,7 @@ Meteor.methods({
 
 
     console.log("finished find articles " + ( new Date() - start ) / 1000 + " seconds");
+  
     return article_count; 
   },
 
@@ -444,6 +445,7 @@ Meteor.methods({
     console.log( opmlFile );
     return opmlFile;
   }
+   
 
 });
 
