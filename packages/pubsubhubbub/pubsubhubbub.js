@@ -26,8 +26,8 @@ feedSubscriber.on( 'feed', function (feed){
 
 
 feedSubscriber.on("listen", function(){
-          var topic = "http://feeds.reuters.com/Reuters/worldNews",
-          hub = "http://pubsubhubbub.appspot.com/";
+          var topic = "http://feeds.reuters.com/Reuters/worldNews";
+          var hub = "http://pubsubhubbub.appspot.com/";
           
           feedSubscriber.subscribe(topic, hub, function(err, subscription){
                            if(err){
