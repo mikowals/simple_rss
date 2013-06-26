@@ -1,0 +1,1 @@
+resanitize = Npm.require('resanitize');
