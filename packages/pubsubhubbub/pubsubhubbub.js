@@ -7,7 +7,7 @@ var Future = Npm.require('fibers/future');
 var options = {
   port: 8921,
   callbackServer: "http://new-river.mak-play.com",
-  token: Random.id()
+
 }
 
 var feedSubscriber = new pubsub( options );
