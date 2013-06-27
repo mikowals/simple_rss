@@ -145,7 +145,7 @@ Feeds.deny({
 
 Meteor.startup( function(){
                 commonDuplicates = Articles.find({}, { link: 1}).fetch();
-               
+               subscribeToPubSub( Feeds.find({ hub: {$ne: null}} ).fetch()); 
 	       Meteor.call('findArticles');
                Meteor.call('removeOldArticles');
                
@@ -304,16 +304,20 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
 
 var watcher = tmpStorage.find({}).observe( {
 		added: function ( doc ){
-			if (! doc.feed_id && doc.sourceUrl ) doc.feed_id = Feeds.findOne({ url: doc.sourceUrl })._id;
-			else  console.log( doc.title + " can not be added to db without feed_id");
-			
+			if (! doc.feed_id ){
+				if (doc.sourceUrl ) doc.feed_id = Feeds.findOne({ url: doc.sourceUrl })._id;
+				else  {
+					console.log( doc.title + " can not be added to db without feed_id");
+					return;
+				}
+			}	
 			if ( doc.feed_id && ! Articles.findOne( { $or: [{guid: doc.guid }, {link: doc.link } ] }) ){
 		
 				Articles.insert ( doc, function ( error, result ){
-					if ( error ) console.log( "findArticles: " + error );
+					if ( error ) console.log( "watcher insert to db: " + error );
 
 				});
-				console.log( "inserting " + doc.title );
+				//console.log( "db insert: " + doc.title );
 				commonDuplicates.push ( doc.link );
 			}
 
@@ -331,7 +335,7 @@ Meteor.methods({
 		var start = new Date();
 		console.log("looking for new articles");
 		var article_count = 0;         
-		var feeds = Feeds.find({}, { _id: 1, url: 1, title: 1 } ).fetch();
+		var feeds = Feeds.find({ hub: null }, { _id: 1, url: 1, title: 1 } ).fetch();
 
 		var keepLimit = new Date().getTime() - daysStoreArticles * DAY;
 
@@ -341,7 +345,6 @@ Meteor.methods({
 		rssResults.forEach(function(rssResult){ 
 			if ( rssResult.statusCode === 200 ) {
 				Feeds.update(rssResult._id, {$set: {lastModified: rssResult.lastModified, etag: rssResult.etag } } );
-				console.log( "updated lastModified for : " + rssResult.url );
 			}
 			else if ( rssResult.error ) console.log (rssResult.url + " returned " + rssResult.error);
 			else if (typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){
@@ -353,7 +356,7 @@ Meteor.methods({
 	console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds"); 
 	},
 
-removeOldArticles: function(){
+	removeOldArticles: function(){
 			   console.log("removeOldArticles method called on server");
 			   var dateLimit = new Date(new Date() - (daysStoreArticles* DAY));
 
@@ -362,7 +365,7 @@ removeOldArticles: function(){
 			   return error || 'success';
 		   },
 
-addSubscriberToFeeds: function(){
+	addSubscriberToFeeds: function(){
 			      var self = this;
 			      Feeds.find({}).forEach( function ( feed ){
 					      console.log("adding subscriber " + self.userId);
@@ -417,7 +420,11 @@ cleanUrls: function(){
 		});
 		}
 
-
-
-		}
+		},
+	getHubs: function(){
+		 getHubs ( Feeds.find({ hub: null} ).fetch() ).forEach( function (updatedFeed){
+				 Feeds.update( updatedFeed._id, {$set: {hub: updatedFeed.hub} });
+				 })
+		 console.log( " finished finding hubs for all feeds without them ");
+	 }
 });
