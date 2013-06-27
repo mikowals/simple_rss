@@ -21,8 +21,10 @@ var _fp = function( fd, kl ){
   timeout: 10000,
  }
   
-  if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString();
-  if ( feed.etag ) options.headers['If-None-Match'] = feed.etag
+  
+  if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString(); // 
+  if ( feed.etag ) options.headers['If-None-Match'] =  feed.etag; //
+  
 
   var r = request( options,  function ( error, response ){
                   // return a future for cases where no http response leads to nothing getting piped to feedparser
@@ -44,12 +46,10 @@ var _fp = function( fd, kl ){
         if ( response.headers['last-modified'] ){
           feed.lastModified = response.headers[ 'last-modified' ] ;
         }
-	if ( response.headers['etag'] ){
-		feed.etag = response.headers[ 'etag' ] ;
-	}
-
-
-        r.pipe( new feedParser() )
+        
+        
+        
+  r.pipe( new feedParser() )
         .on('error', function(err ){
             console.log(feed.url + " got feedparser error: " + err);
             feed.error = err;

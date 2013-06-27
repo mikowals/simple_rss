@@ -16,9 +16,9 @@ Articles._ensureIndex( {"date": 1} );
  
 
 Meteor.publish("feeds", function () {
-               var self = this;
-               return Feeds.find({subscribers: self.userId }, {_id: 1, title: 1, url:1, last_date:1});
-               });
+  var self = this;
+  return Feeds.find({subscribers: self.userId }, {_id: 1, title: 1, url:1, last_date:1});
+});
 
 Meteor.publish( "articles", function(){
                var self= this;
@@ -62,85 +62,84 @@ Meteor.publish( "articles", function(){
 	console.log("articles published to user: " + self.userId );
 	var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
 	return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: articlePubLimit, fields: visibleFields } );
+               
 });
 
 Articles.allow({
-               insert: function ( doc ) {
-               return false //(userId && doc.owner === userId);
-               },
-               update: function (userId, doc, fieldNames, modifier ) {
-               return false;
-               },
-               
-               remove: function ( doc ) {
-               // can only remove your own documents
-               return false //doc.owner === userId;
-               }
-               //fetch: ['owner']
-               });
+  insert: function ( doc ) {
+    return false //(userId && doc.owner === userId);
+  },
+  update: function (userId, doc, fieldNames, modifier ) {
+    return false;
+  },
+ 
+  remove: function ( doc ) {
+ // can only remove your own documents
+  return false //doc.owner === userId;
+ }
+ //fetch: ['owner']
+});
 
 Feeds.allow({
-            insert: function (userId, doc) {
-            return doc.subscribers[0] === userId;
-            },
-            
-            update: function (doc, fields, modifier) {
-              return false;
-            },
-            
-            remove: function(userId, doc){
-              if(doc.subscribers.length > 1){
-                Feeds.update(doc._id, {$pull: {subscribers: userId}} );
-                return false;
-              }
-              else{
-                return doc.subscribers[0] === userId;
-              }
-            }
-            
-            //fetch: ['owner']
-            });
+  insert: function (userId, doc) {
+    return doc.subscribers[0] === userId;
+  },
+
+  update: function (doc, fields, modifier) {
+    return false;
+  },
+
+  remove: function(userId, doc){
+    if(doc.subscribers.length > 1){
+      Feeds.update(doc._id, {$pull: {subscribers: userId}} );
+      return false;
+    }
+    else{
+      return doc.subscribers[0] === userId;
+    }
+  }
+    
+  //fetch: ['owner']
+});
 
 Feeds.deny({
-           insert: function(userId, doc){
-           var existingFeed = Feeds.findOne({url: doc.url});
-           if( existingFeed ){
-           console.log(doc.url + " exists in db");
-            Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
-            return true;
-           }
+  insert: function(userId, doc){
+    var existingFeed = Feeds.findOne({url: doc.url});
+    if( existingFeed ){
+      console.log(doc.url + " exists in db");
+      Feeds.update(existingFeed._id, { $addToSet: { subscribers: userId }});
+      return true;
+    }
+
+    var rssResult = syncFP( doc );
+    if ( ! rssResult || ! rssResult.url ){
+      console.log(doc.url + " has no data to insert");
+      return true;
+    }
+    else if (rssResult.url && doc.url !== rssResult.url ) {
+      doc.url = rssResult.url;
+      existingFeed = Feeds.findOne( {url: doc.url} );
+    }
+
+    if( existingFeed ){
+      console.log(doc.url + " exists in db at different url");
+      Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
+      return true;
+    }
            
-           var rssResult = syncFP( doc, new Date() - daysStoreArticles * DAY );
-           if ( ! rssResult || ! rssResult.url ){
-           console.log(doc.url + " has no data to insert");
-           return true;
-           }
-           else if (rssResult.url && doc.url !== rssResult.url ) {
-             doc.url = rssResult.url;
-             existingFeed = Feeds.findOne( {url: doc.url} );
-           }
-           
-           if( existingFeed ){
-             console.log(doc.url + " exists in db at different url");
-             Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
-             return true;
-           }
-           
-           else{
-           console.log(doc.url + " not in db - adding");
-           doc.title = rssResult.title;  
-           doc.last_date = rssResult.date;
-           doc.articles = rssResult.articles;
-           doc.subscribers = [];
-           doc.subscribers.push(userId);
-           doc.lastModified = null;
-           return false;
-           }
-                     
-           }
-           
-           
-           
+    else{
+      console.log(doc.url + " not in db - adding");
+      doc.title = rssResult.title;  
+      doc.last_date = rssResult.date;
+      doc.articles = rssResult.articles;
+      doc.subscribers = [];
+      doc.subscribers.push(userId);
+      doc.lastModified = null;
+      return false;
+    }
+
+  }
+
 });
 
 
@@ -165,25 +164,22 @@ Meteor.startup( function(){
                intervalProcesses[ "findArticles"] = process;
                console.log("updating on");
                }
-
-
-               });
+});
 
 var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed from database -> feed should be up to date and passed if needed
   var existingGuid = {};
   var existingLink = {};
   var last_dates = {};
   var article_count=0;
-    //var feed = Feeds.findOne({url: feed.url }); // see comment above
-  Articles.find({feed_id: updatedFeed._id},{guid:1, date:1, link:1}).forEach(function(article){
-                                                                      existingGuid[article.guid] = 1;
-                                                                      existingLink[article.link] = 1;
-                                                               
-                                                              });
-  if ( updatedFeed.lastModified ) Feeds.update( updatedFeed._id, {$set: { lastModified: updatedFeed.lastModified }} );
+  //var feed = Feeds.findOne({url: feed.url }); // see comment above
   
+  Articles.find( {feed_id: updatedFeed._id},{guid:1, date:1, link:1}).forEach(function(article){
+    existingGuid[article.guid] = 1;
+    existingLink[article.link] = 1;
+  });
+
   maxDate = updatedFeed.date || 0;
- 
+  
   updatedFeed.articles.forEach(function (article) {
                           
                           if(existingGuid[article.guid] !== 1 && existingLink[article.link] !== 1){
@@ -207,20 +203,23 @@ var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed
     if (feed_date === null || maxDate > feed_date ){
       
       Feeds.update(updatedFeed._id, {$set:{last_date: maxDate }});
+                               
     }
   }
+
+  var feed_date = updatedFeed.last_date;
+  if (feed_date === null || maxDate > feed_date ){
+
+    Feeds.update(updatedFeed._id, {$set:{last_date: maxDate }});
+  }
+
   return article_count;
 }
 
-var insertNewGuid = function( doc, cb ){
-  
-  Articles.insert( doc , cb) ;
-}
 
   //recursively read javascript object tree looking for urls of rss feeds
 var eachRecursive = function (obj, resultArr) {
-  for (var k in obj)
-    {
+  for (var k in obj) {
 
     if (typeof obj[k] === "object"){
       eachRecursive(obj[k], resultArr);
@@ -230,7 +229,7 @@ var eachRecursive = function (obj, resultArr) {
         resultArr.push( obj['xmlUrl'] );
       }
     }
-    }
+  }
 }
 
 /** a first effort at parsing rss.  probably not much need for it if feedParser works
@@ -278,7 +277,6 @@ var rssUrlHandler = function(urls){
  **/
 
 var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
-                                                     _suppress_initial: true,
                                                     /** redundant with watcher looking at tmp storage
 
                                                      added: function(doc){
@@ -302,6 +300,7 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
                                                      }
                         
                                                      });
+
 
 var watcher = tmpStorage.find({}).observe( {
 		added: function ( doc ){
@@ -415,36 +414,10 @@ cleanUrls: function(){
                                  var doc = {url: rssResult.url, title: rssResult.title, last_date: rssResult.date, subscribers: [] };
                                  doc.subscribers.push(self.userId);
    
-                                 var existingFeed = Feeds.findOne( {url: doc.url} );
-                                 if( existingFeed ){
-                                 Feeds.update(existingFeed._id, {$addToSet: {subscribers: self.userId} } );
-                                 console.log( rssResult.title +" in db - subscribing user");
-                                 }
-                                
-                                else {
-                                 console.log(doc.url + " not in db - adding");
-                                 doc.articles = rssResult.articles;
-                                 Feeds.insert(doc);
-                                 }
-                                 
-                                 
-                                });
-               }
-               },
-               
-               exportOPML: function(){
-               var self = this;
-               var opmlFile = "<?xml version='1.0' encoding='UTF-8'?> <opml version='1.0'><body>";
-               Feeds.find( {subscribers: self.userId} ).forEach( function ( feed ) {
-                                                               opmlFile += "<outline xmlUrl=\"" + feed.url + "\" />";
-                                                               });
-               opmlFile += "</body></opml>";
-               console.log( opmlFile );
-               return opmlFile;
-               }
-               
-               });
+		});
+		}
 
 
 
-
+		}
+});
