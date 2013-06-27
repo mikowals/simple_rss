@@ -67,7 +67,7 @@ var _fp = function( fd, kl ){
             var stream = this, item;
             while ( item = stream.read() ) {
             
-	      if ( new Date ( item.date ).getTime() - keepTimeLimit > 0 && ! _.findWhere (commonDuplicates, { guid: item.guid })){
+	      if ( new Date ( item.date ).getTime() - keepTimeLimit > 0 && ! _.findWhere (commonDuplicates, { link: item.link })){
 		//console.log( "found " + feed.title + " : " + item.title || item.link );
 		var doc = {
             
@@ -125,7 +125,7 @@ multipleSyncFP = function( feeds, keepTimeLimit ){
   
 }
 
-var cleanSummary = function (text){
+cleanSummary = function (text){
   var $ = cheerio.load(text);  //relies on cheerio package
   
   $('img').remove();

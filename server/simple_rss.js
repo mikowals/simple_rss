@@ -145,7 +145,7 @@ Feeds.deny({
 
 
 Meteor.startup( function(){
-                commonDuplicates = Articles.find({}, { guid: 1}).fetch();
+                commonDuplicates = Articles.find({}, { link: 1}).fetch();
                
 	       Meteor.call('findArticles');
                Meteor.call('removeOldArticles');
@@ -215,45 +215,6 @@ var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed
 var insertNewGuid = function( doc, cb ){
   
   Articles.insert( doc , cb) ;
-}
-
-var cleanSummary = function (text){
-  var $ = cheerio.load(text);  //relies on cheerio package
-  
-  $('img').remove();
-  $('table').remove();
-  $('script').remove();
-  $('iframe').remove();
-  $('.feedflare').remove();
-  
-  if( $('p').length ) 
-    {
-    text = $('p').eq(0).html() + ( $('p').eq(1).html() || ''); 
-    }
-  else if( $('li').length ){
-    text = '<ul>';
-    $('ul li').slice(0,6).each( function(){
-                               text += "<li>" + $(this).html() + "</li>";
-                               });
-    text += "</ul>";
-  }
-  
-  else{
-    if ( $.html() ){
-        text = $.html();
-    }
-    
-    if ( text.indexOf('<br') !== -1 ){
-      text = text.substring(0, text.indexOf('<br'));
-    }
-    
-    text = text.substring(0, 500);
-  }
-
-  if (text === null || text === undefined || text === "null") {
-    text = '';
-  }
-  return text;
 }
 
   //recursively read javascript object tree looking for urls of rss feeds
@@ -337,22 +298,25 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
                                                      
                                                      Articles.remove({ feed_id: doc._id });
                                                      console.log("removed all articles from source: " + doc.title );
-                                                     commonDuplicates = Articles.find({}, { guid: 1}).fetch();
+                                                     commonDuplicates = Articles.find({}, { link: 1}).fetch();
                                                      }
                         
                                                      });
 
 var watcher = tmpStorage.find({}).observe( {
 		added: function ( doc ){
+			if (! doc.feed_id && doc.sourceUrl ) doc.feed_id = Feeds.findOne({ url: doc.sourceUrl })._id;
+			else  console.log( doc.title + " can not be added to db without feed_id");
+			
+			if ( doc.feed_id && ! Articles.findOne( { $or: [{guid: doc.guid }, {link: doc.link } ] }) ){
+		
+				Articles.insert ( doc, function ( error, result ){
+					if ( error ) console.log( "findArticles: " + error );
 
-		if ( ! Articles.findOne( { $or: [{guid: doc.guid }, {link: doc.link } ] }) ){
-		Articles.insert ( doc, function ( error, result ){
-			if ( error ) console.log( "findArticles: " + error );
-
-			});
-		console.log( "inserting " + doc.title );
-		commonDuplicates.push ( doc.guid );
-		}
+				});
+				console.log( "inserting " + doc.title );
+				commonDuplicates.push ( doc.link );
+			}
 
 		tmpStorage.remove( doc , function( error ) {
 		return null;
@@ -395,7 +359,7 @@ removeOldArticles: function(){
 			   var dateLimit = new Date(new Date() - (daysStoreArticles* DAY));
 
 			   var error = Articles.remove({date:  {$lt: dateLimit} }, function(error){ return error;});
-			   commonDuplicates = Articles.find({}, { guid: 1}).fetch();
+			   commonDuplicates = Articles.find({}, { link: 1}).fetch();
 			   return error || 'success';
 		   },
 

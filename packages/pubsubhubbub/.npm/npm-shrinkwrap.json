@@ -1,34 +1,5 @@
 {
   "dependencies": {
-    "nodepie": {
-      "version": "0.6.1",
-      "dependencies": {
-        "xml2json": {
-          "version": "0.3.2",
-          "dependencies": {
-            "node-expat": {
-              "version": "2.0.0"
-            }
-          }
-        },
-        "iconv": {
-          "version": "2.0.6"
-        },
-        "fetch": {
-          "version": "0.3.1",
-          "dependencies": {
-            "encoding": {
-              "version": "0.1.6",
-              "dependencies": {
-                "iconv-lite": {
-                  "version": "0.2.7"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "pubsubhubbub": {
       "version": "0.1.1",
       "dependencies": {
@@ -120,31 +91,31 @@
               }
             }
           }
-        },
-        "nodepie": {
-          "version": "0.6.1",
+        }
+      }
+    },
+    "nodepie": {
+      "version": "0.6.1",
+      "dependencies": {
+        "xml2json": {
+          "version": "0.3.2",
           "dependencies": {
-            "xml2json": {
-              "version": "0.3.2",
+            "node-expat": {
+              "version": "2.0.0"
+            }
+          }
+        },
+        "iconv": {
+          "version": "2.0.6"
+        },
+        "fetch": {
+          "version": "0.3.1",
+          "dependencies": {
+            "encoding": {
+              "version": "0.1.6",
               "dependencies": {
-                "node-expat": {
-                  "version": "2.0.0"
-                }
-              }
-            },
-            "iconv": {
-              "version": "2.0.6"
-            },
-            "fetch": {
-              "version": "0.3.1",
-              "dependencies": {
-                "encoding": {
-                  "version": "0.1.6",
-                  "dependencies": {
-                    "iconv-lite": {
-                      "version": "0.2.7"
-                    }
-                  }
+                "iconv-lite": {
+                  "version": "0.2.7"
                 }
               }
             }
