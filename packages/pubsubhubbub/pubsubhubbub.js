@@ -97,9 +97,9 @@ var _npParse = function( feedXml ){
   npFeed.init();
   
   return npFeed;
-}
+};
 
-var _articlFromNP = function ( feedItem ){
+var _articleFromNP = function ( feedItem ){
   
   var item = feedItem;
   var npArticle = {
@@ -114,12 +114,12 @@ var _articlFromNP = function ( feedItem ){
   }
   
   return npArticle;
-}
+};
 
 var _publishArticleToStorage = function ( feed , storage ){
 	
 	var doc = _articleFromNP( feed );
-  
+  doc.feed_id = feed.feed_id || null;
   console.log ("pubsub - feed: " + doc.source + " : " + doc.title + " : " + doc.sourceUrl );
 	storage.insert( doc, function( error, result){
                     if (error) console.log ( "pubsub error inserting to tmpStorage: " + error );
@@ -128,4 +128,36 @@ var _publishArticleToStorage = function ( feed , storage ){
   //	console.log("done handling pubsub feed event.  Feed: " + doc.title);
 	return true;
 
-}
+};
+
+getArticlesNP = function( feeds ){
+    
+  feeds.forEach( function( feed ) {
+                var options = {url: feed.url, headers: {}, timeout: 10000 };
+                options.headers['If-None-Match'] = feed.etag;
+                options.headers['If-Modified-Since'] = feed.lastModified;
+                //options.headers['Accept-Encoding'] = "gzip, deflate";
+                
+                request (options, function (error, response, body)){
+                if (error) console.log ( "pubsub error inserting to tmpStorage: " + error );
+                else if ( response && response.statusCode === 200) {
+                  feed.statusCode = 200;
+                  feed.etag = response.headers[ 'etag' ] ;
+                  feed.lastModified = response.headers[ 'last-modified' ] ;
+                  
+                
+                  var npFeed = _npParse ( body );
+                  npFeed.feed_id = feed._id;
+                  for ( var ii = 0; ii < npFeed.getItems(); ii++){
+                    _publishArticleToStorage( npFeed.getItem( ii ));
+                
+                  }
+                
+                  }
+                else if (response && response.statusCode !== 304){
+                console.log( feed.url + " received statusCode: " + response.statusCode);
+                
+                }
+                }
+  
+};
