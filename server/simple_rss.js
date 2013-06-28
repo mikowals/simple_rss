@@ -1,7 +1,7 @@
 
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
-var updateInterval = 1000 * 60 * 5;
+var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 300;
 
@@ -165,59 +165,9 @@ Meteor.startup( function(){
                console.log("updating on");
                }
 });
-
-var newArticlesToDb = function( updatedFeed ){ //using metadata rather than feed from database -> feed should be up to date and passed if needed
-  var existingGuid = {};
-  var existingLink = {};
-  var last_dates = {};
-  var article_count=0;
-  //var feed = Feeds.findOne({url: feed.url }); // see comment above
   
-  Articles.find( {feed_id: updatedFeed._id},{guid:1, date:1, link:1}).forEach(function(article){
-    existingGuid[article.guid] = 1;
-    existingLink[article.link] = 1;
-  });
 
-  maxDate = updatedFeed.date || 0;
-  
-  updatedFeed.articles.forEach(function (article) {
-                          
-                          if(existingGuid[article.guid] !== 1 && existingLink[article.link] !== 1){
-                          var date = article.date || new Date();
-                          date = Math.min( new Date ( date ).getTime(), new Date().getTime() );
-                          date = new Date(date);
-                          maxDate = Math.max( date , maxDate);
-                          if ( (new Date() - date) / DAY <= daysStoreArticles ){
-                               var new_article = article;
-                               Articles.insert(new_article);
-                               existingGuid[article.guid] = 1;
-                               existingLink[article.link] = 1;
-                          
-                               article_count++;
-                               console.log('%s: %s', updatedFeed.title, article.title || article.description);
-                               }
-                               }
-                               });
-  if (article_count > 0){
-    var feed_date = updatedFeed.last_date;
-    if (feed_date === null || maxDate > feed_date ){
-      
-      Feeds.update(updatedFeed._id, {$set:{last_date: maxDate }});
-                               
-    }
-  }
-
-  var feed_date = updatedFeed.last_date;
-  if (feed_date === null || maxDate > feed_date ){
-
-    Feeds.update(updatedFeed._id, {$set:{last_date: maxDate }});
-  }
-
-  return article_count;
-}
-
-
-  //recursively read javascript object tree looking for urls of rss feeds
+//recursively read javascript object tree looking for urls of rss feeds
 var eachRecursive = function (obj, resultArr) {
   for (var k in obj) {
 
@@ -232,65 +182,7 @@ var eachRecursive = function (obj, resultArr) {
   }
 }
 
-/** a first effort at parsing rss.  probably not much need for it if feedParser works
- 
-var rssUrlHandler = function(urls){
-  var futures = _.map(urls, function(url){
-                      var future = new Future();
-                      var onComplete = future.resolver();
-                      
-                      if ( url.indexOf('http://') === -1 && url.indexOf('https://') === -1 ) {
-                      console.log(url);
-                      url = 'http://' + url; 
-                      }
-                      
-                      Meteor.http.get(url, function (error, result) {
-                                      if( error){
-                                      console.log( error ); 
-                                      }
-                                      if ( result.statusCode === 200 ){
-                                      var $ = cheerio.load (result.content);
-                                      console.log( $('channel').find('title').text() );
-                                      var meta = {};
-                                      
-                                      meta['title'] = $('channel').title;
-                                      meta['date'] = $('channel').pubDate || $('channel').PubDate;
-                                      meta['xmlUrl'] = $('channel').xmlUrl || url;
-                                  
-                                      var articles = $('item');
-                                      var object = {};
-                                      console.log(url + " : " + meta.title); 
-                                      object["meta"] = meta;
-                                      object["articles"] = articles;
-                                      
-                                      onComplete( object );
-                                      }
-                                      
-                          });    
-                      return future;
-                      });
-  Future.wait(futures);
-  
-  console.log('finished reading feeds');
-  return _.invoke(futures,'get');
-}
- **/
-
 var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
-                                                    /** redundant with watcher looking at tmp storage
-
-                                                     added: function(doc){
-                                                     if (doc.articles) {
-                                                     console.log( "found " + newArticlesToDb( doc ) + " for new feed - " + doc.title);
-                                                     Feeds.update(doc._id, {$unset: {articles: 1}});
-                                                     }
-                                                     else{ 
-                                                     result = syncFP( doc );
-                                                     console.log( "found " + newArticlesToDb( result ) + " for new feed - " + doc.title);
-                                                     }
-                                                     
-                                                     },
-                                                     **/
 
                                                      removed: function(doc){
                                                      
@@ -303,39 +195,41 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
 
 
 var watcher = tmpStorage.find({}).observe( {
-		added: function ( doc ){
-			if (! doc.feed_id ){
-				if (doc.sourceUrl ) doc.feed_id = Feeds.findOne({ url: doc.sourceUrl })._id;
-				else  {
-					console.log( doc.title + " can not be added to db without feed_id");
-					return;
-				}
-			}	
-			if ( doc.feed_id && ! Articles.findOne( { $or: [{guid: doc.guid }, {link: doc.link } ] }) ){
-		
-				Articles.insert ( doc, function ( error, result ){
-					if ( error ) console.log( "watcher insert to db: " + error );
+	added: function ( doc ){
+		console.log(" watcher found new doc: " + JSON.stringify( doc ) );
 
+		doc.feed_id = doc.feed_id ||  Feeds.findOne({$or:[{ url: doc.sourceUrl},{title: doc.source }] })._id;
+		var existing = Articles.findOne( {$or:[ {guid: doc.guid}, {link: doc.link }] } );		
+		if ( doc.feed_id && ! existing){
+	
+			Articles.insert ( doc, function ( error, result ){
+				if ( error ) console.log( "watcher insert to db: " + error );
+					console.log( "db insert: " + doc.title );
+					commonDuplicates.push ( doc.link );
 				});
-				//console.log( "db insert: " + doc.title );
-				commonDuplicates.push ( doc.link );
-			}
-
-		tmpStorage.remove( doc , function( error ) {
-		return null;
-		});
+			Feeds.update( doc.feed_id, {$set: {lastDate: doc.date}}, function( error, result){
+				if (error) console.log ("watcher error while updating feed lastDate: " + error);
+			});		
+		}
+		else{
+			console.log( doc.title + " : " + doc.source + " already in db from: " + existing.date );
 
 		}
+		tmpStorage.remove( doc , function( error ) {
+			return null;
 		});
+
+	}
+});
 
 
 Meteor.methods({
 
 	findArticles: function() {
 		var start = new Date();
-		console.log("looking for new articles");
+		//console.log("looking for new articles");
 		var article_count = 0;         
-		var feeds = Feeds.find({ hub: null }, { _id: 1, url: 1, title: 1 } ).fetch();
+		var feeds = Feeds.find({hub: null}, { _id: 1, url: 1, title: 1 } ).fetch();
 
 		var keepLimit = new Date().getTime() - daysStoreArticles * DAY;
 
@@ -353,7 +247,7 @@ Meteor.methods({
 		}); 
 
 
-	console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds"); 
+	//console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds"); 
 	},
 
 	removeOldArticles: function(){

@@ -2,14 +2,19 @@ var pubsub = Npm.require('pubsubhubbub').PubSubHubbub;
 var nodepie = Npm.require('nodepie');
 var Future = Npm.require('fibers/future');
 
+nodepie.Item.prototype.getGuid = function(){
+    return this._parseContents( this.element.guid );
+};
+
 var listening = false;
 
 var options = {
   port: 8084,
   callbackServer: "http://pubsub.mak-play.com",
-  token: Random.id()
-
-}
+  token: Random.id(),
+  maxRSSSize: 20 * 1024 * 1024,
+  callbackPath: "/"
+};
 
 console.log("pubsub token: " + options.token);
 var feedSubscriber = new pubsub( options );
@@ -25,7 +30,6 @@ feedSubscriber.on( 'error', function (err){
 });
 
 feedSubscriber.on( 'feed', function (feed){
-	console.log ("pubsub - feed: " + feed.getTitle() + " : " + feed.getItem().getTitle());
 	var item = feed.getItem();
 	var doc = {
 		title: item.getTitle(),
@@ -33,9 +37,10 @@ feedSubscriber.on( 'feed', function (feed){
 		summary: cleanSummary( item.getContents() ),
 		date: item.getDate(),
 		source: feed.getTitle(),
-		guid: item.getPermalink(),
+		guid: item.getGuid(),
 		sourceUrl : feed.getSelf()
 	};
+	console.log ("pubsub - feed: " + doc.source + " : " + doc.title + " : " + doc.sourceUrl );
 	tmpStorage.insert( doc, function( error, result){
 		if (error) console.log ( "pubsub error inserting to tmpStorage: " + error );
 //		if (result) console.log ( "tmpStorage insert: " + ( doc.title || doc.source ));	
