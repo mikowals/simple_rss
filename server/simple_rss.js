@@ -196,7 +196,7 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
 
 var watcher = tmpStorage.find({}).observe( {
 	added: function ( doc ){
-		console.log(" watcher found new doc: " + JSON.stringify( doc ) );
+                                          //console.log(" watcher found new doc: " + JSON.stringify( doc ) );
 
 		doc.feed_id = doc.feed_id ||  Feeds.findOne({$or:[{ url: doc.sourceUrl},{title: doc.source }] })._id;
 		var existing = Articles.findOne( {$or:[ {guid: doc.guid}, {link: doc.link }] } );		

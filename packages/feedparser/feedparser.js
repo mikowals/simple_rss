@@ -163,17 +163,3 @@ cleanSummary = function (text){
   }
   return text;
 }
-
-getXml = function( feed ){
-  var future = new Future();
-  var r = request( feed.url, { timeout: 10000 }, function (error, response, body){
-    if ( error ) console.log ( "getXml error: " + error );
-    if ( response && response.statusCode === 200 ){
-
-	future.ret ( body );
-	}
-    else console.log ( "getXml response: " + ( response && JSON.stringfy ( response )) );
-  });
-
-  return future.wait();
-}
