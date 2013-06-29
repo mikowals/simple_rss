@@ -11,14 +11,13 @@ var _fp = function( fd, kl ){
   var start = new Date();
   var future = new Future();
   var feed = fd;
-  var keepTimeLimit = kl || 0;
   
   var options = {
     url: feed.url,
     headers: {
       'Accept-Encoding': "gzip, deflate"
   },
-  timeout: 10000,
+  timeout: 10000
  }
   
   
@@ -32,7 +31,7 @@ var _fp = function( fd, kl ){
                   if ( !response || response.statusCode !== 200 ){
                   if ( error ) console.log( feed.url + " error: " + error + " in " + (new Date() - start )/1000+ " seconds");
                   if ( response  && response.statusCode !== 304 ) console.log( feed.url + " statusCode: " + response.statusCode + " in " + (new Date() - start )/1000+ " seconds");
-                  future.return ({url: feed.url, error: error, statusCode: response && response.statusCode} )
+                  future.ret ({url: feed.url, error: error, statusCode: response && response.statusCode} );
 		  }
                   });
   
@@ -67,7 +66,7 @@ var _fp = function( fd, kl ){
             var stream = this, item;
             while ( item = stream.read() ) {
             
-	      if ( new Date ( item.date ).getTime() - keepTimeLimit > 0 && ! _.findWhere (commonDuplicates, { link: item.link })){
+	      if ( new Date ( item.date ).getTime() - keepLimitDate > 0 && ! _.findWhere (commonDuplicates, { link: item.link })){
 		//console.log( "found " + feed.title + " : " + item.title || item.link );
 		var doc = {
             
@@ -103,17 +102,17 @@ var _fp = function( fd, kl ){
   return future;
 }
 
-syncFP = function ( feed, keepLimit ) {
-  return _fp( feed, keepLimit ).wait();
+syncFP = function ( feed ) {
+  return _fp( feed ).wait();
 }
 
-multipleSyncFP = function( feeds, keepTimeLimit ){
+multipleSyncFP = function( feeds ){
   var start = new Date();
   console.log("got feeds preparing to use feedparser");
   
   var futures = _.map( feeds, function( feed ){
           
-                      return _fp( feed, keepTimeLimit );
+                      return _fp( feed );
                       });
 
   

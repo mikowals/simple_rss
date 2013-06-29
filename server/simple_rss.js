@@ -1,6 +1,7 @@
-
+var Future = Npm.require( 'fibers/future');
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
+keepLimitDate = new Date( new Date() - daysStoreArticles * DAY );
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 300;
@@ -144,26 +145,30 @@ Feeds.deny({
 
 
 Meteor.startup( function(){
-                commonDuplicates = Articles.find({}, { link: 1}).fetch();
-               subscribeToPubSub( Feeds.find({ hub: {$ne: null}} ).fetch()); 
-	       Meteor.call('findArticles');
-               Meteor.call('removeOldArticles');
+	commonDuplicates = Articles.find({}, { link: 1}).fetch();
+//	var start = new Date();
+//	var updatedFeeds = Future.wait( getArticlesNP( Feeds.find({}).fetch() ) );	
+//	console.log("getArticlesNP completed in " + (new Date() - start) / 1000 +  " seconds" );
+	Meteor.call('findArticles', {} );
+       subscribeToPubSub( Feeds.find({ hub: {$ne: null}} ).fetch()); 
                
-               if ( !intervalProcesses[ "removeOldArticles"] ){
+	Meteor.call('removeOldArticles');
+               
+       if ( !intervalProcesses[ "removeOldArticles"] ){
                var process = Meteor.setInterval(function (){
-                                                Meteor.call('removeOldArticles'); },
-                                                DAY);
+			Meteor.call('removeOldArticles'); },
+				DAY);
                intervalProcesses["removeOldArticles"] = process;
-               }
+       }
                
-               if ( !intervalProcesses[ "findArticles"] ){
+       if ( !intervalProcesses[ "findArticles"] ){
                var process = Meteor.setInterval( function(){
-                                                 Meteor.call('findArticles');
-                                                }, 
-                                                updateInterval);
-               intervalProcesses[ "findArticles"] = process;
+		 Meteor.call('findArticles', { hub: null});
+		}, 
+		updateInterval);
+	       intervalProcesses[ "findArticles"] = process;
                console.log("updating on");
-               }
+       }
 });
   
 
@@ -199,7 +204,7 @@ var watcher = tmpStorage.find({}).observe( {
                                           //console.log(" watcher found new doc: " + JSON.stringify( doc ) );
 
 		doc.feed_id = doc.feed_id ||  Feeds.findOne({$or:[{ url: doc.sourceUrl},{title: doc.source }] })._id;
-		var existing = Articles.findOne( {$or:[ {guid: doc.guid}, {link: doc.link }] } );		
+		var existing = Articles.findOne( {$or:[ {guid: "dummy"}, {link: doc.link }] } );		
 		if ( doc.feed_id && ! existing){
 	
 			Articles.insert ( doc, function ( error, result ){
@@ -212,7 +217,8 @@ var watcher = tmpStorage.find({}).observe( {
 			});		
 		}
 		else{
-			console.log( doc.title + " : " + doc.source + " already in db from: " + existing.date );
+			console.log( doc.title + " : " + doc.source + " : " +  " already in db from: " + 
+				existing.date + " : " + existing.title );
 
 		}
 		tmpStorage.remove( doc , function( error ) {
@@ -225,16 +231,17 @@ var watcher = tmpStorage.find({}).observe( {
 
 Meteor.methods({
 
-	findArticles: function() {
-		var start = new Date();
+	findArticles: function( criteria ) {
+	check ( criteria,  Object ); 
+
+	criteria = criteria || {};		
+	var start = new Date();
 		//console.log("looking for new articles");
 		var article_count = 0;         
-		var feeds = Feeds.find({hub: null}, { _id: 1, url: 1, title: 1 } ).fetch();
-
-		var keepLimit = new Date().getTime() - daysStoreArticles * DAY;
 
 
-		var rssResults = multipleSyncFP ( feeds, keepLimit );
+
+		var rssResults = multipleSyncFP ( Feeds.find( criteria ).fetch() );
 
 		rssResults.forEach(function(rssResult){ 
 			if ( rssResult.statusCode === 200 ) {
@@ -252,9 +259,8 @@ Meteor.methods({
 
 	removeOldArticles: function(){
 			   console.log("removeOldArticles method called on server");
-			   var dateLimit = new Date(new Date() - (daysStoreArticles* DAY));
 
-			   var error = Articles.remove({date:  {$lt: dateLimit} }, function(error){ return error;});
+			   var error = Articles.remove({date:  {$lt: keepLimitDate} }, function(error){ return error;});
 			   commonDuplicates = Articles.find({}, { link: 1}).fetch();
 			   return error || 'success';
 		   },

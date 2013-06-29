@@ -4,7 +4,7 @@ var Future = Npm.require('fibers/future');
 var request = Npm.require( 'request');
 
 nodepie.Item.prototype.getGuid = function(){
-    return this._parseContents( this.element.guid );
+	return this._parseContents( this.element.guid );
 };
 
 var listening = false;
@@ -30,7 +30,8 @@ feedSubscriber.on( 'error', function (err){
 });
 
 feedSubscriber.on( 'feed', function (feed){
-  return _publishArticleToStorage ( feed.getItem(), tmpStorage);
+  console.log( "pubsub -feed: " + feed.getTitle());
+  return _publishArticlesToStorage ( feed, tmpStorage);
 });
 
 feedSubscriber.on("listen", function(){
@@ -86,78 +87,99 @@ subscribeToPubSub = function( feeds ) {
 		var ii = feeds.length -1;
 		if ( listening ) {
 			subscribe ( feeds[ ii ].url, feeds[ ii ].hub ) 
-				feeds.splice( ii, 1);
+			feeds.splice( ii, 1);
 		}
 	}	
 };
 
 var _npParse = function( feedXml ){
   
-  var npFeed = nodepie ( feexXml );
+  var npFeed = new nodepie ( feedXml );
   npFeed.init();
   
   return npFeed;
 };
 
-var _articleFromNP = function ( feedItem ){
+var _articleFromNP = function ( feed, itemNum ){
   
-  var item = feedItem;
+  var item = feed.getItem( itemNum || 0 );
+  ;
   var npArticle = {
   title: item.getTitle(),
   link: item.getPermalink(),
   summary: cleanSummary( item.getContents() ),
   date: item.getDate(),
   source: feed.getTitle(),
-  guid: item.getGuid(),
-  sourceUrl : feed.getSelf()
-    
+  guid: item.getGuid() || item.getPermalink(),
+  sourceUrl : feed.getSelf(),
+  feed_id: feed.feed_id || null  
   }
   
   return npArticle;
 };
 
-var _publishArticleToStorage = function ( feed , storage ){
-	
-	var doc = _articleFromNP( feed );
-  doc.feed_id = feed.feed_id || null;
-  console.log ("pubsub - feed: " + doc.source + " : " + doc.title + " : " + doc.sourceUrl );
-	storage.insert( doc, function( error, result){
-                    if (error) console.log ( "pubsub error inserting to tmpStorage: " + error );
+var _publishArticlesToStorage = function ( feed , storage ){
+	var ii = 0;
+	var ii = 0;
+        while ( ii < feed.getItemQuantity() ) {
+		var doc = _articleFromNP( feed, ii );
+		if (doc.date > keepLimitDate ){
+			storage.insert( doc, function( error, result){
+			if (error) console.log ( "pubsub error inserting to tmpStorage: " + error );
                     //		if (result) console.log ( "tmpStorage insert: " + ( doc.title || doc.source ));
-                    });
+			});
+		}
+		ii++;
+	}
   //	console.log("done handling pubsub feed event.  Feed: " + doc.title);
-	return true;
+	return ii;
 
 };
 
 getArticlesNP = function( feeds ){
-    
-  feeds.forEach( function( feed ) {
-                var options = {url: feed.url, headers: {}, timeout: 10000 };
-                options.headers['If-None-Match'] = feed.etag;
-                options.headers['If-Modified-Since'] = feed.lastModified;
-                //options.headers['Accept-Encoding'] = "gzip, deflate";
-                
-                request (options, function (error, response, body)){
-                if (error) console.log ( "pubsub error inserting to tmpStorage: " + error );
-                else if ( response && response.statusCode === 200) {
-                  feed.statusCode = 200;
-                  feed.etag = response.headers[ 'etag' ] ;
-                  feed.lastModified = response.headers[ 'last-modified' ] ;
-                  
-                
-                  var npFeed = _npParse ( body );
-                  npFeed.feed_id = feed._id;
-                  for ( var ii = 0; ii < npFeed.getItems(); ii++){
-                    _publishArticleToStorage( npFeed.getItem( ii ));
-                
-                  }
-                
-                  }
-                else if (response && response.statusCode !== 304){
-                console.log( feed.url + " received statusCode: " + response.statusCode);
-                
-                }
-                }
-  
+
+	var futures = _.map( feeds, function( feed ) {
+		return getFeedNP ( feed ); 
+	});
+return futures;
 };
+
+getFeedNP = function( feed ){
+	var future = new Future();
+	var options = {url: feed.url, headers: {}, timeout: 10000 };
+	options.headers['If-None-Match'] = feed.etag;
+	options.headers['If-Modified-Since'] = feed.lastModified;
+	//options.headers['Accept-Encoding'] = "gzip, deflate";
+        var interval = Meteor.setInterval( 
+		function(){
+		console.log ( "waiting for feed: " + feed.title) }, 10000);
+	request (options, function (error, response, body){
+		var returnObj = error || response;			
+		if (error) console.log ( feed.url + "got request error: " + error );
+		else if ( response && response.statusCode === 200 && body) {
+			feed.statusCode = 200;
+			feed.etag = response.headers[ 'etag' ] ;
+			feed.lastModified = response.headers[ 'last-modified' ] ;
+			//console.log ( body );
+			var npFeed = _npParse( body );
+			feed.url = npFeed.getPermalink();
+			feed.title = npFeed.getTitle();
+			feed.lastDate = npFeed.getDate();
+
+			npFeed.feed_id = feed._id;
+			_publishArticlesToStorage( npFeed, tmpStorage );
+			returnObj = feed;
+		}
+		else if (response && response.statusCode !== 304){
+			console.log( feed.url + " received statusCode: " + response.statusCode);
+
+		  }
+		Meteor.clearInterval( interval );
+		future.ret ( returnObj );	  
+	});
+
+	return future;
+};
+
+
+
