@@ -73,15 +73,15 @@ feed.url = feed.url.toLowerCase();
             
 		  feed_id: feed._id,
 		  title: item.title,
-		  guid: item.guid,
+		  guid: item.guid || item.link,
 		  summary: cleanSummary( item.description ),
 		  date: item.date || new Date(),
 		  author: item.author,
-		  link: item.link,
+		  link: item.link.toLowerCase(),
 		  source: feed.title
             
 		}
-            
+                 doc.guid = doc.guid.toLowerCase();
 		tmpStorage.insert ( doc, function( error, result){
 		  if ( error ) console.log( "tmpStorage error: " + error + " in " + (new Date() - start ) /1000 + " seconds");
 		   //else console.log( "tmpStorage inserted " + (doc.title || doc.link) + " in " + (new Date() - start ) /1000 + " seconds"); 

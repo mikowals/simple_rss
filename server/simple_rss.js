@@ -195,9 +195,15 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
                                                      Articles.remove({ feed_id: doc._id });
                                                      console.log("removed all articles from source: " + doc.title );
                                                      commonDuplicates = Articles.find({}, { link: 1}).fetch();
-                                                     }
-                        
-                                                     });
+						     //unsubscribe pubsub needed
+						     if ( !doc.hub  ) {                                                    
+							     Meteor.clearInterval( intervalProcesses.findArticles );
+							     intervalProcesses.findArticles = Meteor.setInterval ( 
+							     function(){ Meteor.call('findArticles', { hub: null });},
+							     updateInterval);
+						     }
+						     }
+						     });
 
 
 var watcher = tmpStorage.find({}).observe( {
@@ -337,9 +343,10 @@ lowerCaseUrls: function(){
 				       });
 
 		       Articles.find({}).forEach( function ( article) {
-article.guid = article.guid || article.link;
-				       Articles.update( article._id, {$set: { link: article.link.toLowerCase(), guid: article.guid.toLowerCase()}});
-				       });
+				Articles.remove( {_id: {$ne: article._id},link: article.link});
+				article.guid = article.guid || article.link;
+			       Articles.update( article._id, {$set: { link: article.link.toLowerCase(), guid: article.guid.toLowerCase()}});
+			});
 
 	       }
 });
