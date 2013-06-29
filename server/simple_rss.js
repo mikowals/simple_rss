@@ -105,7 +105,8 @@ Feeds.allow({
 
 Feeds.deny({
   insert: function(userId, doc){
-    var existingFeed = Feeds.findOne({url: doc.url});
+	doc.url = doc.url.toLowerCase();    
+	var existingFeed = Feeds.findOne({url: doc.url});
     if( existingFeed ){
       console.log(doc.url + " exists in db");
       Feeds.update(existingFeed._id, { $addToSet: { subscribers: userId }});
@@ -286,7 +287,7 @@ cleanUrls: function(){
 				   var result = syncFP( feed );
                                       if (result && result.url && feed.url !== result.url ){
                                       console.log("changing url " + feed.url + " to " + result.url);
-                                      Feeds.update(feed._id, {$set: {url: result.url }});
+                                      Feeds.update(feed._id, {$set: {url: result.url.toLowerCase() }});
                                       }
                                       });
                },
@@ -326,5 +327,19 @@ cleanUrls: function(){
 				 Feeds.update( updatedFeed._id, {$set: {hub: updatedFeed.hub} });
 				 })
 		 console.log( " finished finding hubs for all feeds without them ");
-	 }
+	 },
+
+lowerCaseUrls: function(){
+
+
+		       Feeds.find({}).forEach( function (feed){
+				       Feeds.update(feed._id, {$set:{url: feed.url.toLowerCase()}});
+				       });
+
+		       Articles.find({}).forEach( function ( article) {
+article.guid = article.guid || article.link;
+				       Articles.update( article._id, {$set: { link: article.link.toLowerCase(), guid: article.guid.toLowerCase()}});
+				       });
+
+	       }
 });

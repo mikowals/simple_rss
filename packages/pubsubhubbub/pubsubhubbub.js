@@ -101,21 +101,21 @@ var _npParse = function( feedXml ){
 };
 
 var _articleFromNP = function ( feed, itemNum ){
-  
-  var item = feed.getItem( itemNum || 0 );
-  ;
-  var npArticle = {
-  title: item.getTitle(),
-  link: item.getPermalink(),
-  summary: cleanSummary( item.getContents() ),
-  date: item.getDate(),
-  source: feed.getTitle(),
-  guid: item.getGuid() || item.getPermalink(),
-  sourceUrl : feed.getSelf(),
-  feed_id: feed.feed_id || null  
-  }
-  
-  return npArticle;
+
+	var item = feed.getItem( itemNum || 0 );
+	var npArticle = {
+		title: item.getTitle(),
+		link: item.getPermalink().toLowerCase(),
+		summary: cleanSummary( item.getContents() ),
+		date: item.getDate(),
+		source: feed.getTitle(),
+		guid: item.getGuid() || item.getPermalink(),
+		sourceUrl : feed.getSelf().toLowerCase(),
+		feed_id: feed.feed_id || null  
+	}
+	npArticle.guid = npArticle.guid.toLowerCase();
+	console.log( npArticle.sourceUrl +" : "+ npArticle.source);  
+	return npArticle;
 };
 
 var _publishArticlesToStorage = function ( feed , storage ){
@@ -162,7 +162,7 @@ getFeedNP = function( feed ){
 			feed.lastModified = response.headers[ 'last-modified' ] ;
 			//console.log ( body );
 			var npFeed = _npParse( body );
-			feed.url = npFeed.getPermalink();
+			feed.url = npFeed.getPermalink().toLowerCase();
 			feed.title = npFeed.getTitle();
 			feed.lastDate = npFeed.getDate();
 

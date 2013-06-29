@@ -57,6 +57,7 @@ var _fp = function( fd, kl ){
              //console.log( "feedparser emmitted meta for url: " + url );
              if (meta !== null ){
              feed.url = meta.xmlurl || feed.url;
+feed.url = feed.url.toLowerCase();
              feed.title = meta.title;
              feed.date = new Date( meta.date );
              feed.author = meta.author;
