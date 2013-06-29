@@ -21,22 +21,24 @@ var feedSubscriber = new pubsub( options );
 
 feedSubscriber.on( 'subscribe', function ( data ){
            console.log ("pubsub - subscribe: " + JSON.stringify ( data ) );
-           return
+           return;
 });
 
 feedSubscriber.on( 'error', function (err){
            console.log ("pubsub - error: " + err );
-           return
+           return;
 });
 
 feedSubscriber.on( 'feed', function (feed){
-  console.log( "pubsub -feed: " + feed.getTitle());
-  return _publishArticlesToStorage ( feed, tmpStorage);
+var article = new Article().fromNodePieFeed( feed );
+article.insert();  
+console.log( "pubsub -feed: " + feed.getTitle());
+  return;
 });
 
 feedSubscriber.on("listen", function(){
 	listening = true;
-	return
+	return;
 });
 
 var subscribe =  function ( topic, hub ){
