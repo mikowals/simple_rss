@@ -1,4 +1,3 @@
-var Future = Npm.require( 'fibers/future');
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
 keepLimitDate = new Date( new Date() - daysStoreArticles * DAY );
@@ -11,8 +10,8 @@ tmpStorage = new Meteor.Collection( null );
 
 Accounts.config({sendVerificationEmail: true});
 
-var Feeds = new Meteor.Collection("feeds");
-var Articles = new Meteor.Collection("articles");
+Feeds = new Meteor.Collection("feeds");
+Articles = new Meteor.Collection("articles");
 Articles._ensureIndex( {"date": 1} );
  
 
@@ -60,7 +59,6 @@ Meteor.publish( "articles", function(){
                
               //self.ready();
 
-	console.log("articles published to user: " + self.userId );
 	var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
 	return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: articlePubLimit, fields: visibleFields } );
                
@@ -146,12 +144,8 @@ Feeds.deny({
 
 
 Meteor.startup( function(){
-	commonDuplicates = Articles.find({}, { link: 1}).fetch();
-//	var start = new Date();
-//	var updatedFeeds = Future.wait( getArticlesNP( Feeds.find({}).fetch() ) );	
-//	console.log("getArticlesNP completed in " + (new Date() - start) / 1000 +  " seconds" );
 	Meteor.call('findArticles', {} );
-       subscribeToPubSub( Feeds.find({ hub: {$ne: null}} ).fetch()); 
+       //subscribeToPubSub( Feeds.find({ hub: {$ne: null}} ).fetch()); 
                
 	Meteor.call('removeOldArticles');
                
@@ -168,7 +162,6 @@ Meteor.startup( function(){
 		}, 
 		updateInterval);
 	       intervalProcesses[ "findArticles"] = process;
-               console.log("updating on");
        }
 });
   
@@ -189,150 +182,131 @@ var eachRecursive = function (obj, resultArr) {
 }
 
 var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
+  
+  _supress_initial: true,
+  added: function ( doc ){
+    if (doc.hub){
+     subscribeToPubSub( [ doc ] );
+    } 
+   },
+  
+  removed: function(doc){
 
-                                                     removed: function(doc){
-                                                     
-                                                     Articles.remove({ feed_id: doc._id });
-                                                     console.log("removed all articles from source: " + doc.title );
-                                                     commonDuplicates = Articles.find({}, { link: 1}).fetch();
-						     //unsubscribe pubsub needed
-						     if ( !doc.hub  ) {                                                    
-							     Meteor.clearInterval( intervalProcesses.findArticles );
-							     intervalProcesses.findArticles = Meteor.setInterval ( 
-							     function(){ Meteor.call('findArticles', { hub: null });},
-							     updateInterval);
-						     }
-						     }
-						     });
+    Articles.remove({ feed_id: doc._id });
+    console.log("removed all articles from source: " + doc.title );
+    if ( doc.hub  ) {                                                    
+      unsubscribePubSub( [ doc ] );
+    }
+  }
+});
 
 
 var watcher = tmpStorage.find({}).observe( {
-	added: function ( doc ){
-                                          //console.log(" watcher found new doc: " + JSON.stringify( doc ) );
+  added: function ( doc ){
+  var article = new Article( doc ).toDB();
 
-		doc.feed_id = doc.feed_id ||  Feeds.findOne({$or:[{ url: doc.sourceUrl},{title: doc.source }] })._id;
-		var existing = Articles.findOne( {$or:[ {guid: "dummy"}, {link: doc.link }] } );		
-		if ( doc.feed_id && ! existing){
-	
-			Articles.insert ( doc, function ( error, result ){
-				if ( error ) console.log( "watcher insert to db: " + error );
-					console.log( "db insert: " + doc.title );
-					commonDuplicates.push ( doc.link );
-				});
-			Feeds.update( doc.feed_id, {$set: {lastDate: doc.date}}, function( error, result){
-				if (error) console.log ("watcher error while updating feed lastDate: " + error);
-			});		
-		}
-		else{
-			console.log( doc.title + " : " + doc.source + " : " +  " already in db from: " + 
-				existing.date + " : " + existing.title );
+    tmpStorage.remove( doc , function( error ) {
+      return null;  
+    });
 
-		}
-		tmpStorage.remove( doc , function( error ) {
-			return null;
-		});
-
-	}
+  }
 });
 
 
 Meteor.methods({
 
-	findArticles: function( criteria ) {
-	check ( criteria,  Object ); 
+  findArticles: function( criteria ) {
+    check ( criteria,  Object ); 
+    console.time("findArticles");
+    criteria = criteria || {};		
+    //console.log("looking for new articles");
+    var article_count = 0;         
 
-	criteria = criteria || {};		
-	var start = new Date();
-		//console.log("looking for new articles");
-		var article_count = 0;         
+    var rssResults = getArticlesNP ( Feeds.find( criteria ).fetch() );
 
+    rssResults.forEach(function(rssResult){ 
+    if ( rssResult.statusCode === 200 ) {
+      Feeds.update(rssResult._id, {$set: {lastModified: rssResult.lastModified, etag: rssResult.etag, lastDate: rssResult.date } } );
+    }
+    else if ( rssResult.error ) console.log (rssResult.url + " returned " + rssResult.error);
+    else if (typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){
+      console.log( rssResult.url + " responded with " + rssResult.statusCode );
+    }
+  }); 
 
+  console.timeEnd("findArticles");
+//console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds"); 
+  },
 
-		var rssResults = multipleSyncFP ( Feeds.find( criteria ).fetch() );
+removeOldArticles: function(){
+		     console.log("removeOldArticles method called on server");
 
-		rssResults.forEach(function(rssResult){ 
-			if ( rssResult.statusCode === 200 ) {
-				Feeds.update(rssResult._id, {$set: {lastModified: rssResult.lastModified, etag: rssResult.etag } } );
-			}
-			else if ( rssResult.error ) console.log (rssResult.url + " returned " + rssResult.error);
-			else if (typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){
-				console.log( rssResult.url + " responded with " + rssResult.statusCode );
-			}
-		}); 
-
-
-	//console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds"); 
-	},
-
-	removeOldArticles: function(){
-			   console.log("removeOldArticles method called on server");
-
-			   var error = Articles.remove({date:  {$lt: keepLimitDate} }, function(error){ return error;});
-			   commonDuplicates = Articles.find({}, { link: 1}).fetch();
-			   return error || 'success';
+		     var error = Articles.remove({date:  {$lt: keepLimitDate} }, function(error){ return error;});
+		     commonDuplicates = Articles.find({}, { link: 1}).fetch();
+		     return error || 'success';
 		   },
 
-	addSubscriberToFeeds: function(){
-			      var self = this;
-			      Feeds.find({}).forEach( function ( feed ){
-					      console.log("adding subscriber " + self.userId);
-					      Feeds.update( feed._id,{ $addToSet: { subscribers: self.userId }});
-					      });
+addSubscriberToFeeds: function(){
+			var self = this;
+			Feeds.find({}).forEach( function ( feed ){
+			    console.log("adding subscriber " + self.userId);
+			    Feeds.update( feed._id,{ $addToSet: { subscribers: self.userId }});
+			    });
 		      },
 
 addFeed_idToArticles: function(){
-			      Articles.find({}).forEach( function (article){
-					      var feed_id = Feeds.findOne({title: article.source})._id;
-					      Articles.update(article._id,{$set: {feed_id: feed_id}});
-					      });
+			Articles.find({}).forEach( function (article){
+			    var feed_id = Feeds.findOne({title: article.source})._id;
+			    Articles.update(article._id,{$set: {feed_id: feed_id}});
+			    });
 
 		      },
 
 cleanUrls: function(){
-		   Feeds.find({}).forEach( function(feed){
-				   var result = syncFP( feed );
-                                      if (result && result.url && feed.url !== result.url ){
-                                      console.log("changing url " + feed.url + " to " + result.url);
-                                      Feeds.update(feed._id, {$set: {url: result.url.toLowerCase() }});
-                                      }
-                                      });
-               },
-               
-               importOPML: function(upload){
-               check (upload, String);
-               var self = this;
-               var opml = XML2JS.parse(upload);
-               var xmlToAdd = [];
-               eachRecursive(opml, xmlToAdd); 
-               var fpResults = [];
-               
-               xmlToAdd.forEach( function(url){
-                                try{
-                                var feed = { url: url };
-                                if (url !== null && url !== undefined){
-                                fpResults.push( syncFP( feed ) );
-                                }
-                                }
-                                catch(e){
-                                console.log( e + " parsing url " + url);
-                                }
-                                });
-               console.log( "finished with feedparser");
-               if ( fpResults ){
-               fpResults.forEach( function (rssResult){
-                                 
-                                 var doc = {url: rssResult.url, title: rssResult.title, last_date: rssResult.date, subscribers: [] };
-                                 doc.subscribers.push(self.userId);
-   
-		});
-		}
+	     Feeds.find({}).forEach( function(feed){
+		 var result = syncFP( feed );
+		 if (result && result.url && feed.url !== result.url ){
+		 console.log("changing url " + feed.url + " to " + result.url);
+		 Feeds.update(feed._id, {$set: {url: result.url.toLowerCase() }});
+		 }
+		 });
+	   },
 
-		},
-	getHubs: function(){
-		 getHubs ( Feeds.find({ hub: null} ).fetch() ).forEach( function (updatedFeed){
-				 Feeds.update( updatedFeed._id, {$set: {hub: updatedFeed.hub} });
-				 })
-		 console.log( " finished finding hubs for all feeds without them ");
+importOPML: function(upload){
+	      check (upload, String);
+	      var self = this;
+	      var opml = XML2JS.parse(upload);
+	      var xmlToAdd = [];
+	      eachRecursive(opml, xmlToAdd); 
+	      var fpResults = [];
+
+	      xmlToAdd.forEach( function(url){
+		  try{
+		  var feed = { url: url };
+		  if (url !== null && url !== undefined){
+		  fpResults.push( syncFP( feed ) );
+		  }
+		  }
+		  catch(e){
+		  console.log( e + " parsing url " + url);
+		  }
+		  });
+	      console.log( "finished with feedparser");
+	      if ( fpResults ){
+		fpResults.forEach( function (rssResult){
+
+		    var doc = {url: rssResult.url, title: rssResult.title, last_date: rssResult.date, subscribers: [] };
+		    doc.subscribers.push(self.userId);
+
+		    });
+	      }
+
+	    },
+getHubs: function(){
+	   getHubs ( Feeds.find({ hub: null} ).fetch() ).forEach( function (updatedFeed){
+	       Feeds.update( updatedFeed._id, {$set: {hub: updatedFeed.hub} });
+	       })
+	   console.log( " finished finding hubs for all feeds without them ");
 	 },
 
 lowerCaseUrls: function(){
@@ -348,5 +322,13 @@ lowerCaseUrls: function(){
 			       Articles.update( article._id, {$set: { link: article.link.toLowerCase(), guid: article.guid.toLowerCase()}});
 			});
 
-	       }
+	       },
+
+	articleToDB: function ( article ) {
+		this.unblock();		
+		return article.toDB();
+	}
+
+
+
 });
