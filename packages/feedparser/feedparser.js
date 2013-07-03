@@ -10,7 +10,9 @@ var cheerio = Npm.require( 'cheerio');
 var _fp = function( fd, kl ){
   var start = new Date();
   var future = new Future();
-  var feed = fd;
+  var feed = {};
+  feed.url = fd.url;
+  feed._id = fd._id;
 
   var options = {
   url: feed.url,

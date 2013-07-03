@@ -5,7 +5,6 @@ var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 300;
 
-commonDuplicates = {};
 tmpStorage = new Meteor.Collection( null );
 
 Accounts.config({sendVerificationEmail: true});
@@ -112,9 +111,10 @@ Feeds.deny({
     }
 
     var rssResult = syncFP( doc );
-    if ( ! rssResult || ! rssResult.url ){
-      console.log(doc.url + " has no data to insert");
-      return true;
+    if ( rssResult.error || rssResult.statusCode !== 200 ){
+	console.log(JSON.stringify (rssResult) + " has no data to insert"); 
+	return true;
+
     }
     else if (rssResult.url && doc.url !== rssResult.url ) {
       doc.url = rssResult.url;
@@ -131,7 +131,6 @@ Feeds.deny({
       console.log(doc.url + " not in db - adding");
       doc.title = rssResult.title;  
       doc.last_date = rssResult.date;
-      doc.articles = rssResult.articles;
       doc.subscribers = [];
       doc.subscribers.push(userId);
       doc.lastModified = null;
@@ -145,7 +144,6 @@ Feeds.deny({
 
 Meteor.startup( function(){
 	Meteor.call('findArticles', {} );
-       //subscribeToPubSub( Feeds.find({ hub: {$ne: null}} ).fetch()); 
                
 	Meteor.call('removeOldArticles');
                
@@ -183,7 +181,6 @@ var eachRecursive = function (obj, resultArr) {
 
 var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
   
-  _supress_initial: true,
   added: function ( doc ){
     if (doc.hub){
      subscribeToPubSub( [ doc ] );
@@ -222,7 +219,8 @@ Meteor.methods({
     //console.log("looking for new articles");
     var article_count = 0;         
 
-    var rssResults = getArticlesNP ( Feeds.find( criteria ).fetch() );
+    //var rssResults = multipleSyncFP ( Feeds.find( criteria ).fetch() );
+    var rssResults = multipleSyncFP( Feeds.find( criteria ).fetch() );
 
     rssResults.forEach(function(rssResult){ 
     if ( rssResult.statusCode === 200 ) {

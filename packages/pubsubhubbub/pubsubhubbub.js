@@ -1,14 +1,8 @@
-var pubsub = Npm.require('pubsubhubbub').PubSubHubbub;
+//var pubsub = Npm.require('pubsubhubbub').PubSubHubbub;
 var nodepie = Npm.require('nodepie');
 var Future = Npm.require('fibers/future');
 var request = Npm.require( 'request');
-
-var subscriptions = [];
-
-nodepie.NS.feedburner = 'http://rssnamespace.org/feedburner/ext/1.0';
-nodepie.Item.prototype.getGuid = function(){
-	return this._parseContents( this.element.guid );
-};
+var subscriptions = {};
 
 var listening = false;
 
@@ -20,17 +14,14 @@ var options = {
 
 console.log("pubsub token: " + options.token); 
 
-var feedSubscriber = new pubsub( options );
+var feedSubscriber = new PubSubHubbub( options );
 
 feedSubscriber.on( 'subscribe', function ( data ){
-           subscriptions.push( data.topic );
-console.log ("pubsub - subscribe: " + JSON.stringify ( data ) );
-           return;
+	console.log ("pubsub - subscribe: " + data.topic );
+        return;
 });
 
 feedSubscriber.on("unsubscribe", function(data){
-	var removeId = subscriptions.indexOf( data.topic );
-	subscriptions.splice( removeId, 1 );
 	console.log("Unsubscribe");
 	console.log(data);
 });
@@ -41,30 +32,36 @@ feedSubscriber.on( 'error', function (err){
 });
 
 feedSubscriber.on( 'feed', function (feed){
-    var article = new Article().fromNodePieFeed( feed );
-    if ( subscriptions.indexOf( article.sourceUrl ) !== -1 ) article.tmpStorage.insert( article );  
-    console.log( "pubsub -feed: " + article.title + " : " + article.source );
+	var article = new Article().fromFeedParserItem( feed.article );
+	article.source = feed.meta.title;
+	article.soureUrl = feed.meta.url;
+	if ( subscriptions[ article.source ]){
+	//	console.log( "pubsub - feed: " + JSON.stringify ( feed.meta ) );
+		article.feed_id = subscriptions[ article.source ];
+		tmpStorage.insert( article );  
+	}
+	console.log( "pubsub -feed: " + article.title + " : " + article.source + " : " + article.feed_id);
     return;  
-    });
+});
 
 feedSubscriber.on("listen", function(){
     listening = true;
     return;
     });
 
-var subscribe =  function ( topic, hub ){
-  if ( subscriptions.indexOf (topic) === -1 ){
-    feedSubscriber.subscribe(topic, hub, function(err, subscription){
+var subscribe =  function ( feed ){
+  if ( ! subscriptions[ feed.title ] ){
+    feedSubscriber.subscribe(feed.url, feed.hub, function(err, subscription){
 	if(err){
 	//                           console.log("Subscribing failed");
-	console.log("pubsub subscription " + topic + " got error " + err);
+	console.log("pubsub subscription " + feed.url + " got error " + err);
 	return;
 	}
 
-	if(subscription === topic){
-	//console.log("Subscribed "+topic+" to "+hub);
+	if(subscription === feed.url){
+		subscriptions[ feed.title ] =  feed._id;
 	}else{
-	console.log("pubsub - Invalid response: " + subscription + " !== " + topic );
+	console.log("pubsub - Invalid response: " + subscription + " !== " + feed.url );
 	return;
 	}
 	});
@@ -79,7 +76,7 @@ getHubs = function ( feeds ){
       var r = request ( feed.url, {timeout: 10000}, function( error, response, body){
 	if (error) console.log( "getHubs error for feed: " + feed.title + " : " + error);
 	if (response && response.statusCode === 200){
-
+	console.log( JSON.stringify ( feed ) );
 	var feedObj = _npParse( body );
 	console.log( "getHubs nodepie : " +  feedObj.getTitle() + " : " + feedObj.getHub());
 	var updatedFeed = feed;
@@ -88,10 +85,10 @@ getHubs = function ( feeds ){
 	}
 	else future.ret ( null );
 	});
-      return future;
+      return future.wait();
       });
 
-  Future.wait( futures );
+ // Future.wait( futures );
 
   return _.invoke( futures, 'get');
 };
@@ -100,7 +97,7 @@ subscribeToPubSub = function( feeds ) {
   while ( feeds.length > 0 ){
 		var ii = feeds.length -1;
 		if ( listening ) {
-			subscribe ( feeds[ ii ].url, feeds[ ii ].hub ) 
+			subscribe ( feeds[ ii ] ) 
 			feeds.splice( ii, 1);
 		}
 	}	
@@ -108,21 +105,32 @@ subscribeToPubSub = function( feeds ) {
 
 unsubscribePubSub = function ( feeds ){
   feeds.forEach( function ( feed ) {
-	feedSubscriber.unsubscribe ( feed.url, feed.hub, function ( error, data ){
-	if (error) console.log( "pubsub unsubscibe go error " + error );
-	 });
+    feedSubscriber.unsubscribe ( feed.url, feed.hub, function ( error, data ){
+      if (error){
+	console.log( "pubsub unsubscibe go error " + error );
+      }	
+      else {
+	delete subscriptions[ feed.title ];
+      }
+    });
   });
 };
 
 var _npParse = function( feedXml ){
-  
+
   var npFeed = new nodepie ( feedXml );
-  npFeed.init();
-  
-  return npFeed;
+  try {
+    npFeed.init();
+    return npFeed;
+  }
+  catch ( e ){
+    console.log("_npParese got error: " +  e);
+console.log ( feedXml.substring( 0, 100) );
+      return null
+  } 
 };
 
-getArticlesNP = function ( feeds ){
+findArticlesNP = function ( feeds ){
 
 	var futures = _.map( feeds, function( feed ){
 		return getFeedNP( feed );
@@ -150,19 +158,19 @@ getFeedNP = function( feed ){
 			feed.lastModified = response.headers[ 'last-modified' ] ;
 			//console.log ( body );
 			var npFeed = _npParse( body );
-			feed.url = npFeed.getSelf() || feed.url;
-			feed.url = feed.url.toLowerCase();
-			feed.title = npFeed.getTitle();
-			feed.lastDate = npFeed.getDate();
-
-			npFeed.feed_id = feed._id;
-			for ( var ii = 0; ii < npFeed.getItemQuantity(); ii++){
-				var doc = new Article().fromNodePieFeed( npFeed, ii );
-				tmpStorage.insert( doc, function( error , result){
-					if ( error ) console.log( 'getFeedNP error: ' + error);
-				} );
+			if ( npFeed) {
+				 feed.title = npFeed.getTitle();
+				feed.lastDate = npFeed.getDate();
+				npFeed.url = feed.url;
+				npFeed.feed_id = feed._id;
+				for ( var ii = 0; ii < npFeed.getItemQuantity(); ii++){
+					var doc = new Article().fromNodePieFeed( npFeed, ii );
+					tmpStorage.insert( doc, function( error , result){
+						if ( error ) console.log( 'getFeedNP error: ' + error);
+					} );
+				}
+				returnObj = feed;
 			}
-			returnObj = feed;
 		}
 		else if (response && response.statusCode !== 304){
 			console.log( feed.url + " received statusCode: " + response.statusCode);
