@@ -1,8 +1,41 @@
-//var pubsub = Npm.require('pubsubhubbub').PubSubHubbub;
+var pubsub = Npm.require('pubsubhubbub').PubSubHubbub;
 var nodepie = Npm.require('nodepie');
 var Future = Npm.require('fibers/future');
 var request = Npm.require( 'request');
 var subscriptions = {};
+
+pubsub.prototype.serverPOSTHandler = function(req, res){
+var self = this;
+var feedResult = {};
+var fp = req.pipe( new feedParser());
+fp.on('error', function(err ){
+        console.log(" got feedparser error: " + err);
+        res.error = err;
+        })
+      .on ( 'meta', function ( meta ){
+        //console.log( "feedparser emmitted meta for url: " + url );
+        if (meta !== null ){
+          feedResult.meta  = meta;
+        }
+      })
+      .on('readable', function(){
+          var stream = this, item, doc;
+          while ( item = stream.read() ) {
+
+           feedResult.article = item ;
+          }
+          self.emit( 'feed', feedResult);
+      })
+      .on( 'end', function() {
+          //console.log( rssResult ); 
+          });
+
+    req.on("end", (function(){
+        res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
+        res.end();
+    }).bind(this));
+
+}
 
 var listening = false;
 
@@ -14,7 +47,7 @@ var options = {
 
 console.log("pubsub token: " + options.token); 
 
-var feedSubscriber = new PubSubHubbub( options );
+var feedSubscriber = new pubsub( options );
 
 feedSubscriber.on( 'subscribe', function ( data ){
 	console.log ("pubsub - subscribe: " + data.topic );
