@@ -160,6 +160,10 @@ Template.menubar.loaded = function(){
   return Session.equals( "loaded", true );
 };
 
+Template.menubar.rendered = function(){
+  FastClick.attach( document.body );
+}
+
 Template.menubar.offline = function(){
   return Session.get("offline");
 }
