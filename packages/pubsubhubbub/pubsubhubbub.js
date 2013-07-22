@@ -8,7 +8,7 @@ pubsub.prototype.serverPOSTHandler = function(req, res){
 var self = this;
 var feedResult = {};
 var fp = req.pipe( new feedParser());
-fp.on('error', function(err ){
+  fp.on('error', function(err ){
         console.log(" got feedparser error: " + err);
         res.error = err;
         })
@@ -27,7 +27,7 @@ fp.on('error', function(err ){
           self.emit( 'feed', feedResult);
       })
       .on( 'end', function() {
-          //console.log( rssResult ); 
+      //    console.log( feedResult.meta ); 
           });
 
     req.on("end", (function(){
@@ -66,9 +66,8 @@ feedSubscriber.on( 'error', function (err){
 
 feedSubscriber.on( 'feed', function (feed){
 	var article = new Article().fromFeedParserItem( feed.article );
-	article.source = feed.meta.title;
-	article.soureUrl = feed.meta.url;
-	if ( subscriptions[ article.source ]){
+	article.source = article.source || feed.meta.title;
+        if ( subscriptions[ article.source ]){
 	//	console.log( "pubsub - feed: " + JSON.stringify ( feed.meta ) );
 		article.feed_id = subscriptions[ article.source ];
 		tmpStorage.insert( article );  

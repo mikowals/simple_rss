@@ -129,6 +129,7 @@ Feeds.deny({
            
     else{
       console.log(doc.url + " not in db - adding");
+      doc.hub = rssResult.hub || null;;
       doc.title = rssResult.title;  
       doc.last_date = rssResult.date;
       doc.subscribers = [];

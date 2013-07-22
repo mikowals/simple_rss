@@ -1,4 +1,4 @@
-//var existingLinks = _.pluck( Articles.find({}, {link: 1}).fetch(), 'link' );
+
 Article = function( doc ){
   var self = this;
   self.title = null;
@@ -56,7 +56,13 @@ Article.prototype.toDB = function(){
       return  null;
     }
     else{
-      var existing = Articles.findOne( {$or:[{ link: this.link },{ link: this.link.toLowerCase()}]} );
+      var existing = null;
+      if ( this.link ) {
+         existing = Articles.findOne( {$or:[{ link: this.link },{ link: this.link.toLowerCase()}]} );
+      } else{
+        console.log ( "No link errror saving to db - " + this.title + " : " + this.source );
+        return null;
+      }     
       if ( existing ){
 	//Articles.update( existing._id, {$set: { summary: this.summary, date: this.date, link: this.link } }, function( error, result){
 	// if( error ) console.log( "update of existing article got error: " + error);
@@ -124,13 +130,17 @@ Article.prototype.fromNodePieFeed = function ( feed, itemNum ){
 };
 
 Article.prototype.fromFeedParserItem = function( item ){
-
   this.title = item.title;
   this.date = item.date || new Date();
   this.author =item.author;
-  this.link = item.link;
+  this.link = item.origlink || item.link;
   this.setSummary( item.description );
-  this.source = item.meta.url;
+  this.source = item.meta.title;
+  this.setSourceUrl( item.meta.xmlurl);
+  if ( this.link === null || this.link === undefined){
+    console.log ( "null link from feed: " );
+    console.log ( this.source +" : " + this.sourceUrl );  
+  }
   return this;
 };
 

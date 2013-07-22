@@ -71,9 +71,9 @@ var _fp = function( fd, kl ){
 	  while ( item = stream.read() ) {
 
 	  doc = new Article().fromFeedParserItem( item );
+	  doc.source =  item.source.title;
 	  }
 	  doc.feed_id = feed._id;
-	  doc.source =  feed.title;
 	  tmpStorage.insert( doc );
 	  })
       .on( 'end', function() {
