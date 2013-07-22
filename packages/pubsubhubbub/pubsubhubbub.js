@@ -66,7 +66,7 @@ feedSubscriber.on( 'error', function (err){
 
 feedSubscriber.on( 'feed', function (feed){
 	var article = new Article().fromFeedParserItem( feed.article );
-	article.source = article.source || feed.meta.title;
+	article.source = feed.meta.title;
         if ( subscriptions[ article.source ]){
 	//	console.log( "pubsub - feed: " + JSON.stringify ( feed.meta ) );
 		article.feed_id = subscriptions[ article.source ];

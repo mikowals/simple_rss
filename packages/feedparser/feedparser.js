@@ -71,7 +71,7 @@ var _fp = function( fd, kl ){
 	  while ( item = stream.read() ) {
 
 	  doc = new Article().fromFeedParserItem( item );
-	  doc.source =  item.source.title;
+	  doc.source =  item.meta.title;
 	  }
 	  doc.feed_id = feed._id;
 	  tmpStorage.insert( doc );
