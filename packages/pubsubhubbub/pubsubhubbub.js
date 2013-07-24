@@ -92,6 +92,7 @@ var subscribe =  function ( feed ){
 
 	if(subscription === feed.url){
 		subscriptions[ feed.title ] =  feed._id;
+                subscriptions[ feed._id ] = { title: feed.title, url: feed.url, hub: feed.hub };
 	}else{
 	console.log("pubsub - Invalid response: " + subscription + " !== " + feed.url );
 	return;
@@ -136,7 +137,8 @@ subscribeToPubSub = function( feeds ) {
 };
 
 unsubscribePubSub = function ( feeds ){
-  feeds.forEach( function ( feed ) {
+  feeds.forEach( function ( feed_id ) {
+    var feed = subscriptions.feed_id;
     feedSubscriber.unsubscribe ( feed.url, feed.hub, function ( error, data ){
       if (error){
 	console.log( "pubsub unsubscibe go error " + error );

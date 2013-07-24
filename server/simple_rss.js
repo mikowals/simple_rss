@@ -9,8 +9,8 @@ tmpStorage = new Meteor.Collection( null );
 
 Accounts.config({sendVerificationEmail: true});
 
-Feeds = new Meteor.Collection("feeds");
-Articles = new Meteor.Collection("articles");
+Feeds = new Meteor.SmartCollection("feeds");
+Articles = new Meteor.SmartCollection("articles");
 Articles._ensureIndex( {"date": 1} );
  
 
@@ -180,30 +180,33 @@ var eachRecursive = function (obj, resultArr) {
   }
 }
 
-var handle = Feeds.find({}, {sort:{_id: 1}}).observe({
+var handle = Feeds.find({}, {sort:{_id: 1}}).observeChanges({
   
-  added: function ( doc ){
-    if (doc.hub){
-     subscribeToPubSub( [ doc ] );
+  added: function ( id, fields ){
+    if ( fields.hub ){
+     var feed = {};
+     
+     subscribeToPubSub( [{ _id: id, hub: fields.hub, url: fields.url, title: fields.title } ] );
     } 
    },
   
-  removed: function(doc){
+  removed: function( id ){
 
-    Articles.remove({ feed_id: doc._id });
-    console.log("removed all articles from source: " + doc.title );
+    Articles.remove({ feed_id: id });
+    console.log("removed all articles from source: " + id );
     if ( doc.hub  ) {                                                    
-      unsubscribePubSub( [ doc ] );
+      unsubscribePubSub( [ id ] );
     }
   }
 });
 
 
-var watcher = tmpStorage.find({}).observe( {
-  added: function ( doc ){
-  var article = new Article( doc ).toDB();
+var watcher = tmpStorage.find({}).observeChanges( {
+  added: function ( id, fields ){
+  fields._id = id;
+  var article = new Article( { fields } ).toDB();
 
-    tmpStorage.remove( doc , function( error ) {
+    tmpStorage.remove( id , function( error ) {
       return null;  
     });
 
