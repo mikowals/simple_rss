@@ -11,7 +11,7 @@ Accounts.config({sendVerificationEmail: true});
 
 Feeds = new Meteor.SmartCollection("feeds");
 Articles = new Meteor.SmartCollection("articles");
-Articles._ensureIndex( {"date": 1} );
+//Articles._ensureIndex( {"date": 1} ); //not working with SmartCollections
  
 
 Meteor.publish("feeds", function () {
@@ -194,9 +194,9 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observeChanges({
 
     Articles.remove({ feed_id: id });
     console.log("removed all articles from source: " + id );
-    if ( doc.hub  ) {                                                    
-      unsubscribePubSub( [ id ] );
-    }
+    
+    unsubscribePubSub( [ id ] );
+    
   }
 });
 
@@ -204,7 +204,7 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observeChanges({
 var watcher = tmpStorage.find({}).observeChanges( {
   added: function ( id, fields ){
   fields._id = id;
-  var article = new Article( { fields } ).toDB();
+  var article = new Article( fields ).toDB();
 
     tmpStorage.remove( id , function( error ) {
       return null;  
