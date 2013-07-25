@@ -10,7 +10,8 @@ Session.setDefault( "now", new Date() );
                    
 var article_sub;
 var Feeds = new Meteor.SmartCollection("feeds");           
-var Articles = new Meteor.SmartCollection("articles");
+var ArticlesOld = new Meteor.SmartCollection("articles");
+var Articles = new GroundDB ( ArticlesOld );
 
 Meteor.startup( function() {
                           
@@ -143,13 +144,13 @@ Template.feedList.events({
 
 Template.articleList.articles = function() {
   
-   if ( Session.equals( "loaded", true ) ) { 
+//   if ( Session.equals( "loaded", true ) ) { 
             return Articles.find( {}, { sort: { date: -1 } } );;
-  }
-  else{
-    console.log("articles from QuickArticles");
-    return amplify.store("quickArticles");
-  }
+ // }
+ // else{
+   // console.log("articles from QuickArticles");
+   // return amplify.store("quickArticles");
+ // }
 };
 
 Template.articleList.loaded = function(){

@@ -2,13 +2,19 @@
   "meteor": {},
   "dependencies": {
     "basePackages": {
-      "smart-collections": {}
+      "smart-collections": {},
+      "GroundDB": {}
     },
     "packages": {
       "smart-collections": {
         "git": "https://github.com/arunoda/meteor-smart-collections.git",
-        "tag": "v0.1.12",
-        "commit": "4c9ff6ca35a4a0486323e6ef07b51ecaf34b8656"
+        "tag": "v0.1.16",
+        "commit": "0691a70f1b8afb457b25011b7fdb4f8aef483034"
+      },
+      "GroundDB": {
+        "git": "https://github.com/raix/Meteor-GroundDB.git",
+        "tag": "v0.0.8",
+        "commit": "d1f106643b48fb202c264a374f5349cb975cee60"
       }
     }
   }
