@@ -18,7 +18,7 @@ Article = function( doc ){
 
   self.setSourceUrl = function( sourceUrl ){
     if (self.sourceUrl && typeof self.sourceUrl === "string" ){
-      self.sourceUrl = sourceUrl.toLowerCase();
+      self.sourceUrl = sourceUrl;
     }
     else{
       self.sourceUrl = null;
