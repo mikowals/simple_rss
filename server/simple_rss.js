@@ -3,7 +3,7 @@ var daysStoreArticles = 2;
 keepLimitDate = new Date( new Date() - daysStoreArticles * DAY );
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
-var articlePubLimit = 300;
+var articlePubLimit = 150;
 
 tmpStorage = new Meteor.Collection( null );
 
@@ -102,7 +102,7 @@ Feeds.allow({
 
 Feeds.deny({
   insert: function(userId, doc){
-	doc.url = doc.url.toLowerCase();    
+	doc.url = doc.url;    
 	var existingFeed = Feeds.findOne({url: doc.url});
     if( existingFeed ){
       console.log(doc.url + " exists in db");
@@ -269,7 +269,7 @@ cleanUrls: function(){
 		 var result = syncFP( feed );
 		 if (result && result.url && feed.url !== result.url ){
 		 console.log("changing url " + feed.url + " to " + result.url);
-		 Feeds.update(feed._id, {$set: {url: result.url.toLowerCase() }});
+		 Feeds.update(feed._id, {$set: {url: result.url }});
 		 }
 		 });
 	   },
