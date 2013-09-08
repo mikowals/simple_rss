@@ -8,13 +8,13 @@
     "packages": {
       "smart-collections": {
         "git": "https://github.com/arunoda/meteor-smart-collections.git",
-        "tag": "v0.1.16",
-        "commit": "0691a70f1b8afb457b25011b7fdb4f8aef483034"
+        "tag": "v0.3.10",
+        "commit": "3f93fb36093a5edb0c1f261ec98ba966e2a92368"
       },
       "GroundDB": {
         "git": "https://github.com/raix/Meteor-GroundDB.git",
-        "tag": "v0.0.8",
-        "commit": "d1f106643b48fb202c264a374f5349cb975cee60"
+        "tag": "v0.0.18",
+        "commit": "f237b16a1e803c3fc7a3bc6f03e776ac027ffef6"
       }
     }
   }

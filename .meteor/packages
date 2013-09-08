@@ -13,3 +13,10 @@ accounts-google
 appcache
 bootstrap
 random
+standard-app-packages
+cheerio
+feedparser
+pubsubhubbub
+resanitize
+smart-collections
+xml2js

@@ -7,5 +7,7 @@ Npm.depends({
             });
 
 Package.on_use(function (api) {
-               api.add_files([ "pubsubhubbub.js"], "server");
-               });
+               api.use( ['random'], "server" );
+	       api.add_files([ "pubsubhubbub.js"], "server");
+               api.export && api.export( ["subscribeToPubSub"],"server");
+	       });
