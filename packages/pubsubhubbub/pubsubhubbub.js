@@ -114,9 +114,9 @@ getHubs = function ( feeds ){
 	console.log( "getHubs nodepie : " +  feedObj.getTitle() + " : " + feedObj.getHub());
 	var updatedFeed = feed;
 	updatedFeed.hub = feedObj.getHub() || null;
-	future.ret ( updatedFeed );
+	future.return ( updatedFeed );
 	}
-	else future.ret ( null );
+	else future.return ( null );
 	});
       return future.wait();
       });
@@ -213,7 +213,7 @@ getFeedNP = function( feed ){
 			console.log( feed.url + " received statusCode: " + response.statusCode);
 
 		  }
-		future.ret ( returnObj );	  
+		future.return ( returnObj );	  
 	});
 	return future;
 };
