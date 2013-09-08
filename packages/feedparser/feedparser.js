@@ -33,7 +33,7 @@ var _fp = function( fd, kl ){
       if ( !response || response.statusCode !== 200 ){
       if ( error ) console.log( feed.url + " error: " + error + " in " + (new Date() - start )/1000+ " seconds");
       if ( response  && response.statusCode !== 304 ) console.log( feed.url + " statusCode: " + response.statusCode + " in " + (new Date() - start )/1000+ " seconds");
-      future.ret ({url: feed.url, error: error, statusCode: response && response.statusCode} );
+      future.return ({url: feed.url, error: error, statusCode: response && response.statusCode} );
       }
       });
 
@@ -77,7 +77,7 @@ var _fp = function( fd, kl ){
 	  })
       .on( 'end', function() {
 	  //console.log( feed.url + " returned in " + ( new Date() -start ) /1000 + " seconds"); 
-	  future.ret ( feed );
+	  future.return ( feed );
 	  });
 
       }
