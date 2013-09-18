@@ -2,6 +2,7 @@ var pubsub = Npm.require('pubsubhubbub').PubSubHubbub;
 var nodepie = Npm.require('nodepie');
 var Future = Npm.require('fibers/future');
 var request = Npm.require( 'request');
+var urllib = Npm.require("url");
 var subscriptions = {};
 
 pubsub.prototype.serverPOSTHandler = function(req, res){
@@ -33,15 +34,15 @@ var fp = req.pipe( new feedParser());
     req.on("end", (function(){
         res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
         res.end();
-    }).bind(this));
+    }).bind(self));
 
 }
 
 var listening = false;
 
 var options = {
-  port: 8084,
-  callbackServer: "http://pubsub.mak-play.com",
+  callbackServer: Meteor.absoluteUrl(),
+  callbackPath: "pubsubTest",
   token: Random.id()
 };
 
@@ -49,6 +50,21 @@ console.log("pubsub token: " + options.token);
 
 var feedSubscriber = new pubsub( options );
 
+WebApp.connectHandlers.stack.splice(0,0,{
+      route: "/" + feedSubscriber.callbackPath,
+      handle: function(req, res, next) {
+       if(req.method === 'POST') {
+         return  feedSubscriber.serverPOSTHandler( req, res);
+
+       }
+       
+       if(req.method === 'GET') {
+         return feedSubscriber.serverGETHandler( req, res);
+     }
+    }
+   });
+
+feedSubscriber.server.close();
 feedSubscriber.on( 'subscribe', function ( data ){
 	console.log ("pubsub - subscribe: " + data.topic );
         return;
