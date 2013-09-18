@@ -9,9 +9,9 @@ tmpStorage = new Meteor.Collection( null );
 
 Accounts.config({sendVerificationEmail: true});
 
-Feeds = new Meteor.SmartCollection("feeds");
-Articles = new Meteor.SmartCollection("articles");
-//Articles._ensureIndex( {"date": 1} ); //not working with SmartCollections
+Feeds = new Meteor.Collection("feeds");
+Articles = new Meteor.Collection("articles");
+//Articles.ensureIndex( {"date": 1} ); //not working with SmartCollections
  
 
 Meteor.publish("feeds", function () {

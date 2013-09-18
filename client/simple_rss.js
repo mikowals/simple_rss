@@ -9,8 +9,8 @@ Session.setDefault( "now", new Date() );
 
                    
 var article_sub;
-var Feeds = new Meteor.SmartCollection("feeds");           
-var Articles = new Meteor.SmartCollection("articles");
+var Feeds = new Meteor.Collection("feeds");           
+var Articles = new Meteor.Collection("articles");
 
 Meteor.startup( function() {
                           
