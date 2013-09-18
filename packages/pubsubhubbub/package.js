@@ -1,7 +1,7 @@
 
 
 Npm.depends({
-            "pubsubhubbub": "0.1.1",
+            "pubsubhubbub": "0.2.3",
             "nodepie": "0.6.1",
 
             });
