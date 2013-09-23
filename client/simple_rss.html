@@ -19,10 +19,8 @@
 <template name="menubar">
   <div id="menubar" class="row-fluid">
     <a id="modal_button" class=" pull-left" href="#feeds_modal" data-toggle="modal" role="button"><i class="icon-chevron-down" /></a>
-    {{#unless loaded}}
-    {{#isolate}}<small class="label">Loading</small>{{/isolate}}
-    {{/unless}}
-    {{#isolate}} {{#if offline}}<small class="label"> {{offline}}</small>{{/if}} {{/isolate}}
+    {{#isolate}} {{#unless loaded}}<small class="label">Loading</small>{{/unless}} {{/isolate}}
+    {{#isolate}} {{#if offline}}<small class="label">{{offline}}</small>{{/if}} {{/isolate}}
     <small>{{loginButtons align="right"}}</small>
   </div>
 </template>
