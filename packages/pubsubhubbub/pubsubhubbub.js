@@ -106,6 +106,7 @@ onPostRequest = function(req, res){
       req.on("end", (function(){;
         var sig = hmac.digest('hex');
         if( feedSubscriber.secret && sig != signature){
+           console.log( topic + " : " + feedResult.article.title + " -  did not get matching signatures" );
            console.log( sig );
            console.log ( signature );
            return this._sendError(req, res, 403, "Forbidden");

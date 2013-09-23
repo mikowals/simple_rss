@@ -110,8 +110,9 @@ time {
 .small-loader { /* loading graphic */
   width:16px;
   height:16px; 
-  margin:1px auto; 
-  background:url(/ajax-loader.gif) no-repeat 0 0;
+  margin:1px auto;
+  content: 
+#  background:url(/ajax-loader.gif) no-repeat 0 0;
 }
 
 .loader { /* loading graphic */
@@ -132,6 +133,54 @@ time {
 
 #menubar {
   height: 23px;
+}
+
+
+#progress 
+{
+    -webkit-border-radius: 1px;
+    background-color: rgba(67,53,49,.6);
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    height: 11px;
+    line-height: 11px;
+    #margin: 80px auto;
+    text-align: center;
+    width: 300px;
+    -webkit-transition: opacity 0.15s ease-in-out;
+    opacity: 0;
+}
+
+.msg {
+    display: inline-block;
+}
+
+.dot {
+    display: inline-block;
+    border-radius: 1px;
+    background-color: #fff;
+    -webkit-animation: dot 1.5s infinite;
+    margin-right: 4px;
+}
+
+.one {
+    -webkit-animation-delay: 0.0s;
+}
+
+.two {
+    -webkit-animation-delay: 0.5s;
+}
+
+.three {
+    -webkit-animation-delay: 1.0s;
+}
+
+@-webkit-keyframes dot {
+     0% { width: 3px; height: 3px; margin-right: 4px; }
+    25% { width: 5px; height: 5px; margin-right: 2px; }
+    33% { width: 3px; height: 3px; margin-right: 4px; }
+   100% { width: 3px; height: 3px; margin-right: 4px; }
 }
 
 /* end media all */ }
