@@ -12,6 +12,12 @@ var options = {
   secret: Random.id()
 };
 
+
+//if no ROOT_URL was set assume we are on my server
+if ( Meteor.absoluteUrl() === "http://localhost:3000/"){
+  options.callbackUrl = "http://localhost:3000/" + options.callbackPath;
+}
+
 console.log( options );
 console.log ( Meteor.absoluteUrl() );
 function FeedSubscriber ( options ){
@@ -92,7 +98,7 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
       return self._sendError(req, res, 403, "Forbidden");
     }
   }
-
+/**
   var feedResult = {};
   var fp = req.pipe( new feedParser());
   fp.on('error', function(err ){
@@ -116,21 +122,39 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
   .on( 'end', function() {
       //    console.log( feedResult.meta ); 
       });
+**/
+  var fp = req.pipe( new feedParser());
+  req.on( 'data', function ( data) {
+    hmac.update ( data );
+  });
+  req.on("end", (function(){
+    var sig = hmac.digest('hex');
+    if( self.secret && sig != signature){
+      console.log( topic + " :  did not get matching signatures" );
+      console.log( sig );
+      console.log ( signature );
+      return self._sendError(req, res, 403, "Forbidden");
+    }
+    self._parseFeed( fp  );
+    res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
+    res.end();
+  }).bind( self ));
 
-  req.on( 'data', function( data ){
-      hmac.update( data );
-      }); 
-  req.on("end", (function(){;
-	var sig = hmac.digest('hex');
-	if( self.secret && sig != signature){
-	console.log( topic + " : " + feedResult.article.title + " -  did not get matching signatures" );
-	console.log( sig );
-	console.log ( signature );
-	return self._sendError(req, res, 403, "Forbidden");
-	}
-	res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
-	res.end();
-	}).bind( self ));
+};
+
+FeedSubscriber.prototype._parseFeed = function ( fp ){
+  var self = this;
+  fp.on('error', function(err ){
+      console.log(" got feedparser error: " + err);
+      })
+  .on('readable', function(){
+      var stream = this, item, feedResult = {};
+      while ( item = stream.read() ) {
+        feedResult.meta = item.meta;
+        feedResult.article = item ;
+      }
+      self.emit( 'feed', feedResult);
+   })
 
 };
 
@@ -224,13 +248,11 @@ url: hub,
 };
 
 FeedSubscriber.prototype.subscribe = function ( topic, hub, callbackUrl, callback ){
-  console.log ("subscripe called for : " + topic);
   this.sendRequest( "subscribe", topic, hub, callbackUrl, callback );
 
 };
 
 FeedSubscriber.prototype.unsubscribe = function ( topic, hub, callbackUrl, callback ){
-
    this.sendRequest( "unsubscribe", topic, hub, callbackUrl, callback );
 
 };
@@ -248,8 +270,6 @@ FeedSubscriber.prototype._sendError = function(req, res, code, message){
             "    </body>\n"+
             "</html>");
 };
-
-
 
 var feedSubscriber = new FeedSubscriber( options );
 
@@ -271,7 +291,7 @@ feedSubscriber.on( 'error', function (err){
 
 feedSubscriber.on( 'feed', function (feed){
 	var article = new Article().fromFeedParserItem( feed.article );
-	article.source = feed.meta.title;
+	article.source = feed.meta && feed.meta.title;
         if ( subscriptions[ article.source ]){
 	//	console.log( "pubsub - feed: " + JSON.stringify ( feed.meta ) );
 		article.feed_id = subscriptions[ article.source ];
@@ -280,11 +300,6 @@ feedSubscriber.on( 'feed', function (feed){
 	console.log( "pubsub -feed: " + article.title + " : " + article.source + " : " + article.feed_id);
     return;  
 });
-
-feedSubscriber.on("listen", function(){
-    listening = true;
-    return;
- });
 
 var subscribe =  function ( feed ){
   if ( ! subscriptions[ feed.title ] ){
@@ -307,7 +322,6 @@ var subscribe =  function ( feed ){
 }
 
 subscribeToPubSub = function( feeds ) {
-  console.log( "subscribeToPubSub called" );
   while ( feeds.length > 0 ){
     var ii = feeds.length -1;
     subscribe ( feeds[ ii ] ); 
