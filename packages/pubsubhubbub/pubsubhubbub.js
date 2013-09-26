@@ -1,21 +1,19 @@
-var pubsub = Npm.require('pubsubhubbub');
-var nodepie = Npm.require('nodepie');
 var Future = Npm.require('fibers/future');
 var request = Npm.require( 'request');
 var urllib = Npm.require("url");
 var crypto = Npm.require("crypto");
 var subscriptions = {};
-var listening;
+
 
 var options = {
   callbackUrl: Meteor.absoluteUrl() + "hubbub",
   secret: Random.id()
 };
 
-var feedSubscriber = new pubsub.createServer( options );
+function feedSubscriber =( options ){
 
   WebApp.connectHandlers.stack.splice(0,0,{
-      route: "/hubbub",
+      route: options.uri;,
       handle: function(req, res, next) {
        if(req.method === 'POST') {
          return  onPostRequest( req, res);
@@ -27,11 +25,13 @@ var feedSubscriber = new pubsub.createServer( options );
      }
     }
    });
-   feedSubscriber.emit( "listen", { uri: "/" + "hubbub" });
+  this..emit( "listen", { uri: "/" + "hubbub" });
 
-  listening = true;
+  this.listening = true;
 
-onPostRequest = function(req, res){
+
+
+  this.onPostRequest = function(req, res){
 
     var bodyChunks = [],
         params = urllib.parse(req.url, true, true),
