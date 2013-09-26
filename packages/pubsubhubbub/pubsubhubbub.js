@@ -1,37 +1,48 @@
 var Future = Npm.require('fibers/future');
 var request = Npm.require( 'request');
+var Stream = Npm.require("stream").Stream;
 var urllib = Npm.require("url");
+var utillib = Npm.require("util")
 var crypto = Npm.require("crypto");
 var subscriptions = {};
 
 
 var options = {
+  callbackUri: "/hubbub",
   callbackUrl: Meteor.absoluteUrl() + "hubbub",
   secret: Random.id()
 };
 
-function feedSubscriber =( options ){
+console.log( options );
+function FeedSubscriber ( options ){
+  var self = this;
+  Stream.call( self );
+
+  options = options || {};
+  
+  var callbackUri = options.callbackUri || "/";
+  var callbackUrl = options.callbackUrl ||  Meteor.absoluteUrl() + callbackUri;
+  var secret = options.secret || null;
 
   WebApp.connectHandlers.stack.splice(0,0,{
-      route: options.uri;,
+      route: callbackUri,
       handle: function(req, res, next) {
        if(req.method === 'POST') {
-         return  onPostRequest( req, res);
-
+         return  self.onPostRequest( req, res);
        }
-
        if(req.method === 'GET') {
-         return feedSubscriber._onGetRequest( req, res);
+         return self.onGetRequest( req, res);
      }
     }
    });
-  this..emit( "listen", { uri: "/" + "hubbub" });
+  self.emit( "listen", { uri: callbackUri });
 
-  this.listening = true;
+  self.listening = true;
+};
 
+utillib.inherits( FeedSubscriber, Stream );
 
-
-  this.onPostRequest = function(req, res){
+FeedSubscriber.prototype.onPostRequest = function(req, res){
 
     var bodyChunks = [],
         params = urllib.parse(req.url, true, true),
@@ -115,23 +126,129 @@ function feedSubscriber =( options ){
         res.end();
     }).bind( feedSubscriber));
 
-}
+  };
 
-console.log("pubsub token: " + options.token); 
+  FeedSubscriber.prototype.onGetRequest = function( req, res ){
+    
+    var params = urllib.parse(req.url, true, true),
+            data;
+
+    if(!params.query["hub.topic"] || !params.query['hub.mode']){
+            return this._sendError(req, res, 400, "Bad Request");
+    }
+
+    switch(params.query['hub.mode']){
+      case "denied":
+	res.writeHead(200, {'Content-Type': 'text/plain'});
+	data = {topic: params.query["hub.topic"], hub: params.query.hub};
+	res.end(params.query['hub.challenge'] || "ok");
+	break;
+      case "subscribe":
+      case "unsubscribe":
+	res.writeHead(200, {'Content-Type': 'text/plain'});
+	res.end(params.query['hub.challenge']);
+	data = {
+          lease: Number(params.query["hub.lease_seconds"] || 0) + Math.round(Date.now()/1000),
+          topic: params.query["hub.topic"],
+          hub: params.query.hub
+	};
+        break;
+      default:
+        return this._sendError(req, res, 403, "Forbidden");
+      }
+      
+      this.emit(params.query["hub.mode"], data);
+    };
+
+  FeedSubscriber.prototype.sendRequest = function( mode, topic, hub, callbackUrl, callback ){
+    
+    if(!callback && typeof callbackUrl == "function"){
+      callback = callbackUrl;
+      callbackUrl = undefined;
+    }
+
+    callbackUrl = callbackUrl || this.callbackUrl + 
+      (this.callbackUrl.replace(/^https?:\/\//i, "").match(/\//)?"":"/") +
+      (this.callbackUrl.match(/\?/)?"&":"?") +
+      "topic="+encodeURIComponent(topic)+
+      "&hub="+encodeURIComponent(hub);
+
+    var form = {
+      "hub.callback": callbackUrl,
+      "hub.mode": mode,
+      "hub.topic": topic,
+      "hub.verify": "async"
+    },
+
+	postParams = {
+          url: hub,
+          form: form,
+          encoding: "utf-8"
+	};
+
+    if(this.secret){
+      form["hub.secret"] = crypto.createHmac("sha1", this.secret).update(topic).digest("hex");
+    }
+
+    request.post(postParams, function(error, response, responseBody){
+
+	if(error){
+	if(callback){
+	return callback(error);    
+	}else{
+	return this.emit("denied", {topic: topic, error: error});
+	}
+	}
+
+	if(response.statusCode != 202 && response.statusCode != 204){
+	var err = new Error("Invalid response status " + response.statusCode);
+	err.responseBody = (responseBody || "").toString();
+	if(callback){
+	return callback(err);
+	}else{
+	return this.emit("denied", {topic: topic, error: err});
+	}
+	}
+
+	return callback && callback(null, topic);
+    });
+
+  };
+
+FeedSubscriber.prototype.subscribe = function ( topic, hub, callbackUrl, callback ){
+
+   this.sendRequest( "subscribe", topic, hub, callbackUrl, callback );
+
+};
+
+FeedSubscriber.prototype.unsubscribe = function ( topic, hub, callbackUrl, callback ){
+
+   this.sendRequest( "unsubscribe", topic, hub, callbackUrl, callback );
+
+};
+
+
+
+
+
+
+
+var feedSubscriber = new FeedSubscriber( options );
 
 feedSubscriber.on( 'subscribe', function ( data ){
-	console.log ("pubsub - subscribe: " + data.topic );
-        return;
-});
+    console.log ("pubsub - subscribe: " + data.topic );
+    return;
+    });
+
 
 feedSubscriber.on("unsubscribe", function(data){
-	console.log("Unsubscribe");
-	console.log(data);
-});
+    console.log("Unsubscribe");
+    console.log(data);
+    });
 
 feedSubscriber.on( 'error', function (err){
-           console.log ("pubsub - error: " + err );
-           return;
+    console.log ("pubsub - error: " + err );
+    return;
 });
 
 feedSubscriber.on( 'feed', function (feed){
