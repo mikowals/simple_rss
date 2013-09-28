@@ -1,3 +1,4 @@
+var Fiber = Npm.require( 'fibers' );
 feedParser = Npm.require('feedparser');
 var request = Npm.require('request');
 var Future = Npm.require('fibers/future');
@@ -7,7 +8,7 @@ var cheerio = Npm.require( 'cheerio');
 //http.globalAgent.maxSockets = 200;
 //var URL = Npm.require('url');
 
-var _fp = function( fd, kl ){
+var _fp = function( fd, kl, forDB ){
   var start = new Date();
   var future = new Future();
   var feed = {};
@@ -22,12 +23,10 @@ var _fp = function( fd, kl ){
   timeout: 10000
   }
 
-
   if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString(); // 
   if ( feed.etag ) options.headers['If-None-Match'] =  feed.etag; //
 
-
-  var r = request( options,  function ( error, response ){
+  var r = request( options,  Meteor.bindEnvironment( function ( error, response ){
       // return a future for cases where no http response leads to nothing getting piped to feedparser
 
       if ( !response || response.statusCode !== 200 ){
@@ -35,22 +34,22 @@ var _fp = function( fd, kl ){
       if ( response  && response.statusCode !== 304 ) console.log( feed.url + " statusCode: " + response.statusCode + " in " + (new Date() - start )/1000+ " seconds");
       future.return ({url: feed.url, error: error, statusCode: response && response.statusCode} );
       }
-      });
+      }, function ( e ) { throw e;})
+  );
 
-  r.on ( 'response', function ( response ){
+  r.on ( 'response', Meteor.bindEnvironment( function ( response ){
       if ( response.statusCode === 200 ){
-      feed.statusCode = 200; 
-      if ( response.headers['content-encoding'] === 'gzip' ){
-      r = r.pipe( zlib.createGunzip() );
-      }
+        feed.statusCode = 200; 
+        if ( response.headers['content-encoding'] === 'gzip' ){
+          r = r.pipe( zlib.createGunzip() );
+        }
 
       if ( response.headers['last-modified'] ){
-      feed.lastModified = response.headers[ 'last-modified' ] ;
+        feed.lastModified = response.headers[ 'last-modified' ] ;
       }
 
 
-
-      r.pipe( new feedParser() )
+     r.pipe( new feedParser() )
       .on('error', function(err ){
 	console.log(feed.url + " got feedparser error: " + err);
 	feed.error = err;
@@ -64,31 +63,39 @@ var _fp = function( fd, kl ){
 	feed.date = new Date( meta.date );
 	feed.author = meta.author;
 	}
-	})
-      .on('readable', function(){
-	  var stream = this, item, doc;
-	  while ( item = stream.read() ) {
-
-	  doc = new Article().fromFeedParserItem( item );
-	  doc.source =  item.meta.title;
-	  }
-	  doc.feed_id = feed._id;
-	  tmpStorage.insert( doc );
-	  })
+      })
+      .on('readable',  function(){
+        var stream = this, item, doc;
+        while ( item = stream.read() ) {
+          doc = new Article().fromFeedParserItem( item );
+          doc.sourceUrl = feed.url;
+          doc.feed_id = feed._id;
+          Fiber ( function ( ) {
+             if ( doc.date > keepLimitDate ){
+               Articles.insert( doc, function( error ) {
+                 if ( !error ) console.log( doc.title + " : " + doc.source );
+               }) ;
+               Fiber.yield();
+             }
+          }).run(); 
+        }
+      }
+      )
       .on( 'end', function() {
 	  //console.log( feed.url + " returned in " + ( new Date() -start ) /1000 + " seconds"); 
 	  future.return ( feed );
 	  });
-
       }
-
-  });
-
+  }, function ( e ) { throw e;})
+  );
+  
+ // Future.wait( futures );
   return future;
 }
 
 syncFP = function ( feed ) {
-  return _fp( feed ).wait();
+  var retObject = _fp( feed ).wait();
+  return retObject;
 };
 
 multipleSyncFP = function( feeds ){
@@ -100,7 +107,7 @@ multipleSyncFP = function( feeds ){
 
   Future.wait(futures);
   console.log(" all futures from feedparser resolved in " + ( new Date() - start ) /1000 + " seconds");
-
+  
   return _.invoke(futures,'get');
 };
 

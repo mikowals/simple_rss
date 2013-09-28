@@ -1,3 +1,4 @@
+var Fiber = Npm.require( 'fibers');
 
 Article = function( doc ){
   var self = this;
@@ -62,11 +63,9 @@ Article.prototype.toDB = function(){
       } else{
         console.log ( "No link errror saving to db - " + this.title + " : " + this.source );
         return null;
-      }     
+      }
+     
       if ( existing ){
-	//Articles.update( existing._id, {$set: { summary: this.summary, date: this.date, link: this.link } }, function( error, result){
-	// if( error ) console.log( "update of existing article got error: " + error);
-	//});
 	return  null;
       }
       else if (! this.feed_id ){
@@ -91,9 +90,8 @@ Article.prototype.toDB = function(){
 	else{
 	  //console.log( "inserted to DB: " + result);
 	}
-
       }
-      Articles.insert ( {
+      Articles.insert(  {
 summary: this.summary, 
 feed_id: this.feed_id, 
 title: this.title, 
@@ -101,42 +99,22 @@ source: this.source,
 link: this.link, 
 date: this.date, 
 author: this.author 
-	}, 
-	callback
-      );
+	});
+    return true;
     }
   }
-  return true;
-}
-
-Article.prototype.fromNodePieItem = function ( item ){
-
-  this.title =  item.getTitle();
-  this.date = item.getUpdateDate() || new Date();
-  this.author = item.getAuthor();
-  this.link = item.getPermalink() ;
-  this.setSummary ( item.getContents() );
-  return this;
+  
 };
 
-Article.prototype.fromNodePieFeed = function ( feed, itemNum ){
-
-  this.feed_id = feed.feed_id || null;
-  this.source =  feed.getTitle();
-  this.setSourceUrl( feed.url || feed.getPermalink() );
-  var item = feed.getItem( itemNum || 0 );
-  this.fromNodePieItem( item );
-  return this;
-};
-
-Article.prototype.fromFeedParserItem = function( item ){
+Article.prototype.fromFeedParserItem =  function( item ){
+  this.feed_id = item.feed_id;
   this.title = item.title;
   this.date = item.date || new Date();
   this.author =item.author;
   this.link = item.origlink || item.link;
   this.setSummary( item.description );
-  this.source = item.meta.title;
-  this.setSourceUrl( item.meta.xmlurl);
+  this.source = item.meta && item.meta.title || item.source && item.source.title;
+  this.setSourceUrl( item.sourceUrl || item.meta && item.meta.xmlurl );
   if ( this.link === null || this.link === undefined){
     console.log ( "null link from feed: " );
     console.log ( this.source +" : " + this.sourceUrl );  

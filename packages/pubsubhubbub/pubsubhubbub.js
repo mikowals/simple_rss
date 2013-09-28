@@ -1,26 +1,13 @@
 var Future = Npm.require('fibers/future');
+
 var request = Npm.require( 'request');
 var Stream = Npm.require("stream").Stream;
 var urllib = Npm.require("url");
 var utillib = Npm.require("util")
 var crypto = Npm.require("crypto");
-var subscriptions = {};
 
 
-var options = {
-  callbackPath: "hubbub",  //leave slash off since this will be argument to eteor.AbsoluteUrl()
-  secret: Random.id()
-};
-
-
-//if no ROOT_URL was set assume we are on my server
-if ( Meteor.absoluteUrl() === "http://localhost:3000/"){
-  options.callbackUrl = "http://localhost:3000/" + options.callbackPath;
-}
-
-console.log( options );
-console.log ( Meteor.absoluteUrl() );
-function FeedSubscriber ( options ){
+FeedSubscriber = function ( options ){
   var self = this;
   Stream.call( self );
 
@@ -30,6 +17,7 @@ function FeedSubscriber ( options ){
   self.callbackUri = options.callbackUri || "/" + self.callbackPath;
   self.callbackUrl = options.callbackUrl ||  Meteor.absoluteUrl( self.callbackPath );
   self.secret = options.secret || null;
+  self.subscriptions = new Meteor.Collection( null );
 
   WebApp.connectHandlers.stack.splice(0,0,{
       route: self.callbackUri,
@@ -47,11 +35,68 @@ function FeedSubscriber ( options ){
   self.emit( "listen", { uri: self.callbackUri });
 
   self.listening = true;
-  console.log ( "started a feed subscriberi : " + self.callbackUrl);
+  console.log ( "started a feed subscriber with url : " + self.callbackUrl);
+  
+  self.on( 'denied', function ( data ){
+    console.error ( "denied request: " + data); 
+  });
+
+  self.on ( 'subscribe' , Meteor.bindEnvironment( function ( data ) {
+    self.subscriptions.update( {sourceUrl: data.topic}, {$set: {subscribed: true}}, function ( error ) {
+      if ( error ) { 
+        console.error( "unmatched subscription: " + data);
+        console.error( "subscrition collection responded: " + error);
+      } else {
+         console.log ( "subscribed to : " + data.hub + " : " + data.topic );
+      }
+   })}, function () { console.log('Failed to bind environment'); }) );
+    
+  self.on ( 'unsubscribe' , Meteor.bindEnvironment( function ( data ) {
+    self.subscriptions.remove( {sourceUrl: data.topic} , function ( error ) { 
+      if ( error ) {
+        console.error( "unmatched removal: " + data);
+        console.error( "subscrition collection responded: " + error);
+      } else console.log( "unsubscribed from : " + data.topic);
+    } )}, function () { console.log('Failed to bind environment'); }) );
+
+  process.stdin.resume();
+
+  process.on( 'EXIT', function(){
+
+    console.log( "stopped, will unsubscribe");
+    self.stopAllSubscriptions();
+    self.on( 'exitOK', function(){
+      process.exit();
+    });
+  });
+
+  process.on( 'SIGINT', function(){
+    
+    console.log( "stopped, will unsubscribe");
+    self.stopAllSubscriptions();
+    self.on( 'exitOK', function(){
+      process.exit();
+    });
+  });
 
 };
 
 utillib.inherits( FeedSubscriber, Stream );
+
+
+FeedSubscriber.prototype.stopAllSubscriptions = function(){
+
+    var self = this;
+    var count = 0;
+    self.subscriptions.find({ subscribed: true }).forEach( function ( sub ){  
+      self.unsubscribe( sub );
+      count++;
+    });
+    self.on( 'unsubscribe', function(){
+      count--;
+      count === 0 && self.emit( 'exitOk', null);
+    });
+};
 
 FeedSubscriber.prototype.onPostRequest = function(req, res){
   var self = this;
@@ -98,31 +143,6 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
       return self._sendError(req, res, 403, "Forbidden");
     }
   }
-/**
-  var feedResult = {};
-  var fp = req.pipe( new feedParser());
-  fp.on('error', function(err ){
-      console.log(" got feedparser error: " + err);
-      res.error = err;
-      })
-  .on ( 'meta', function ( meta ){
-      //console.log( "feedparser emmitted meta for url: " + url );
-      if (meta !== null ){
-      feedResult.meta  = meta;
-      }
-      })
-  .on('readable', function(){
-      var stream = this, item, doc;
-      while ( item = stream.read() ) {
-
-      feedResult.article = item ;
-      }
-      self.emit( 'feed', feedResult);
-      })
-  .on( 'end', function() {
-      //    console.log( feedResult.meta ); 
-      });
-**/
   var fp = req.pipe( new feedParser());
   req.on( 'data', function ( data) {
     hmac.update ( data );
@@ -135,14 +155,14 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
       console.log ( signature );
       return self._sendError(req, res, 403, "Forbidden");
     }
-    self._parseFeed( fp  );
+    self._parseFeed( topic, fp  );
     res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
     res.end();
   }).bind( self ));
 
 };
 
-FeedSubscriber.prototype._parseFeed = function ( fp ){
+FeedSubscriber.prototype._parseFeed = function ( topic, fp ){
   var self = this;
   fp.on('error', function(err ){
       console.log(" got feedparser error: " + err);
@@ -150,13 +170,21 @@ FeedSubscriber.prototype._parseFeed = function ( fp ){
   .on('readable', function(){
       var stream = this, item, feedResult = {};
       while ( item = stream.read() ) {
-        feedResult.meta = item.meta;
-        feedResult.article = item ;
+        item.sourceUrl = topic;
+        var fut = new Future();
+	fut.return ( self.subscriptions.findOne({ sourceUrl: topic }) );
+        var sub = fut.wait();
+        console.log( sub );
+	if ( sub ) item.feed_id = sub._id;
+        
+        self.emit( 'feed', item);      
       }
-      self.emit( 'feed', feedResult);
-   })
+   }
+  );
 
 };
+
+
 
 FeedSubscriber.prototype.onGetRequest = function( req, res ){
 
@@ -187,13 +215,13 @@ lease: Number(params.query["hub.lease_seconds"] || 0) + Math.round(Date.now()/10
     default:
       return self._sendError(req, res, 403, "Forbidden");
   }
-
+  
   self.emit(params.query["hub.mode"], data);
 };
 
 FeedSubscriber.prototype.sendRequest = function( mode, topic, hub, callbackUrl, callback ){
   var self = this;
-  console.log( "subscribing with : " + mode + ", " + topic);  
+//  console.log(  mode + " : " + topic);  
   if(!callback && typeof callbackUrl == "function"){
     callback = callbackUrl;
     callbackUrl = undefined;
@@ -213,7 +241,7 @@ FeedSubscriber.prototype.sendRequest = function( mode, topic, hub, callbackUrl, 
   },
 
       postParams = {
-url: hub,
+      url: hub,
      form: form,
      encoding: "utf-8"
       };
@@ -225,21 +253,21 @@ url: hub,
   request.post(postParams, function(error, response, responseBody){
 
       if(error){
-      if(callback){
-      return callback(error);    
-      }else{
-      return self.emit("denied", {topic: topic, error: error});
-      }
+        if(callback){
+          return callback(error);    
+        } else{
+          return self.emit("denied", {topic: topic, error: error});
+        }
       }
 
       if(response.statusCode != 202 && response.statusCode != 204){
-      var err = new Error("Invalid response status " + response.statusCode);
-      err.responseBody = (responseBody || "").toString();
-      if(callback){
-      return callback(err);
-      }else{
-      return self.emit("denied", {topic: topic, error: err});
-      }
+        var err = new Error("Invalid response status " + response.statusCode);
+        err.responseBody = (responseBody || "").toString();
+        if(callback){
+          return callback(err);
+        } else{
+          return self.emit("denied", {topic: topic, error: err});
+        }
       }
 
       return callback && callback(null, topic);
@@ -247,15 +275,29 @@ url: hub,
 
 };
 
-FeedSubscriber.prototype.subscribe = function ( topic, hub, callbackUrl, callback ){
-  this.sendRequest( "subscribe", topic, hub, callbackUrl, callback );
-
+FeedSubscriber.prototype.subscribe = function ( topic, hub, _id, callbackUrl, callback ){
+  self = this;
+  self.subscriptions.insert ( {_id: _id, sourceUrl: topic, hub: hub }, function( error, id ) {
+    if ( error ) {
+      console.error ( error );
+    } else {
+     self.sendRequest( "subscribe", topic, hub, callback );
+   } 
+  });
 };
 
-FeedSubscriber.prototype.unsubscribe = function ( topic, hub, callbackUrl, callback ){
-   this.sendRequest( "unsubscribe", topic, hub, callbackUrl, callback );
-
+FeedSubscriber.prototype.unsubscribe = function ( sub ){ 
+   var self = this;
+   sub.subscribed = true;
+   var feed = self.subscriptions.findOne( sub );
+   if ( feed ){ 
+      self.sendRequest( "unsubscribe", feed.sourceUrl, feed.hub );
+   }  else {
+      console.error( " No subscription found with  :  " + JSON.stringify( sub )  );
+   }
+   
 };
+
 
 FeedSubscriber.prototype._sendError = function(req, res, code, message){
     res.writeHead( code, {"Content-Type": "text/html"});
@@ -270,80 +312,3 @@ FeedSubscriber.prototype._sendError = function(req, res, code, message){
             "    </body>\n"+
             "</html>");
 };
-
-var feedSubscriber = new FeedSubscriber( options );
-
-feedSubscriber.on( 'subscribe', function ( data ){
-    console.log ("pubsub - subscribe: " + data.topic );
-    return;
-    });
-
-
-feedSubscriber.on("unsubscribe", function(data){
-    console.log("Unsubscribe");
-    console.log(data);
-    });
-
-feedSubscriber.on( 'error', function (err){
-    console.log ("pubsub - error: " + err );
-    return;
-});
-
-feedSubscriber.on( 'feed', function (feed){
-	var article = new Article().fromFeedParserItem( feed.article );
-	article.source = feed.meta && feed.meta.title;
-        if ( subscriptions[ article.source ]){
-	//	console.log( "pubsub - feed: " + JSON.stringify ( feed.meta ) );
-		article.feed_id = subscriptions[ article.source ];
-		tmpStorage.insert( article );  
-	}
-	console.log( "pubsub -feed: " + article.title + " : " + article.source + " : " + article.feed_id);
-    return;  
-});
-
-var subscribe =  function ( feed ){
-  if ( ! subscriptions[ feed.title ] ){
-    feedSubscriber.subscribe(feed.url, feed.hub, function(err, subscription){
-	if(err){
-	//                           console.log("Subscribing failed");
-	console.log("pubsub subscription " + feed.url + " got error " + err);
-	return;
-	}
-
-	if(subscription === feed.url){
-		subscriptions[ feed.title ] =  feed._id;
-                subscriptions[ feed._id ] = { title: feed.title, url: feed.url, hub: feed.hub };
-        }else{
-	  console.log("pubsub - Invalid response: " + subscription + " !== " + feed.url );
-	  return;
-	}
-	});
-  }
-}
-
-subscribeToPubSub = function( feeds ) {
-  while ( feeds.length > 0 ){
-    var ii = feeds.length -1;
-    subscribe ( feeds[ ii ] ); 
-    feeds.splice( ii, 1);
-  }	
-};
-
-unsubscribePubSub = function ( feeds ){
-  feeds.forEach( function ( feed_id ) {
-      var feed = subscriptions[ feed_id ] || null;
-      if (feed){
-      feedSubscriber.unsubscribe ( feed.url, feed.hub, function ( error, data ){
-	if (error){
-	console.log( "pubsub unsubscibe go error " + error );
-	}	
-	else {
-	delete subscriptions[ feed.title ];
-	delete subscriptions[ feed_id ];
-	}
-	});
-      }
-      });
-};
-
-

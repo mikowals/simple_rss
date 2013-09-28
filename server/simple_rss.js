@@ -1,11 +1,11 @@
+var Future = Npm.require('fibers/future');
+var Fiber = Npm.require ( 'fibers' );
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
 keepLimitDate = new Date( new Date() - daysStoreArticles * DAY );
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 150;
-
-tmpStorage = new Meteor.Collection( null );
 
 Accounts.config({sendVerificationEmail: true});
 
@@ -38,19 +38,6 @@ Meteor.publish( "articles", function(){
                                                                                 }
 
                                         });
-              /** 
-	var articleObserver = Articles.find({ feed_id: {$in: feed_ids} }, { sort: {date: -1}, limit: articlePubLimit, 
-		fields: {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1} } ).observe({
-                   added: function( doc ) { 
-			   self.added( "articles", doc._id, doc );
-		   },
-
-		   removed: function ( doc ) { 
-			   self.removed( "articles", doc._id ); 
-		   }
-		});
-
-**/
 
                self.onStop( function() {
                            observer.stop();
@@ -129,7 +116,7 @@ Feeds.deny({
            
     else{
       console.log(doc.url + " not in db - adding");
-      doc.hub = rssResult.hub || null;;
+      doc.hub = rssResult.hub || null;
       doc.title = rssResult.title;  
       doc.last_date = rssResult.date;
       doc.subscribers = [];
@@ -144,26 +131,39 @@ Feeds.deny({
 
 
 Meteor.startup( function(){
-	Meteor.call('findArticles', {} );
-               
-	Meteor.call('removeOldArticles');
-               
-       if ( !intervalProcesses[ "removeOldArticles"] ){
-               var process = Meteor.setInterval(function (){
-			Meteor.call('removeOldArticles'); },
-				DAY);
-               intervalProcesses["removeOldArticles"] = process;
-       }
-               
-       if ( !intervalProcesses[ "findArticles"] ){
-               var process = Meteor.setInterval( function(){
-		 Meteor.call('findArticles', { hub: null});
-		}, 
-		updateInterval);
-	       intervalProcesses[ "findArticles"] = process;
-       }
-});
+    Meteor.call('findArticles', {} );
+
+    Meteor.call('removeOldArticles');
+
+    if ( !intervalProcesses[ "removeOldArticles"] ){
+    var process = Meteor.setInterval(function (){
+      Meteor.call('removeOldArticles'); },
+      DAY);
+    intervalProcesses["removeOldArticles"] = process;
+    }
+
+    if ( !intervalProcesses[ "findArticles"] ){
+    var process = Meteor.setInterval( function(){
+      Meteor.call('findArticles', { hub: null});
+      }, 
+      updateInterval);
+    intervalProcesses[ "findArticles"] = process;
+    }
   
+});
+
+var options = {
+    callbackPath: "hubbub",  //leave slash off since this will be argument to eteor.AbsoluteUrl()
+    secret: Random.id()
+  };
+
+
+//if no ROOT_URL was set assume we are on my server
+  if ( Meteor.absoluteUrl() === "http://localhost:3000/"){
+    options.callbackUrl = "http://localhost:3000/" + options.callbackPath;
+  }
+
+var feedSubscriber = new FeedSubscriber ( options );
 
 //recursively read javascript object tree looking for urls of rss feeds
 var eachRecursive = function (obj, resultArr) {
@@ -185,32 +185,35 @@ var handle = Feeds.find({}, {sort:{_id: 1}}).observeChanges({
   added: function ( id, fields ){
     if ( fields.hub ){
      var feed = {};
-     
-     subscribeToPubSub( [{ _id: id, hub: fields.hub, url: fields.url, title: fields.title } ] );
+    
+        feedSubscriber.subscribe ( fields.url, fields.hub , id, function (error, topic){
+//      console.log( fields.url + " : " + topic );
+    } ); 
     } 
    },
   
   removed: function( id ){
-
+    feedSubscriber.unsubscribe( { _id: id });
+    
     Articles.remove({ feed_id: id });
     console.log("removed all articles from source: " + id );
-    
-    unsubscribePubSub( [ id ] );
     
   }
 });
 
-
-var watcher = tmpStorage.find({}).observeChanges( {
-  added: function ( id, fields ){
-  fields._id = id;
-  var article = new Article( fields ).toDB();
-
-    tmpStorage.remove( id , function( error ) {
-      return null;  
-    });
-
-  }
+feedSubscriber.on( 'feed', function( item ){
+    var article = (new Article).fromFeedParserItem( item );
+    Fiber( function() {
+      if ( article.date > keepLimitDate && article.feed_id){
+        Articles.insert( article, function ( error) {
+          if ( ! error ) console.log( "pubsub : " + article.title + " : " + article.source);
+        });
+        } else {
+        article.toDB();
+      }
+      Fiber.yield();
+    }).run();
+    //console.log( "pubsub -feed: " + article.title + " : " + article.source + " : " + article.feed_id);
 });
 
 
