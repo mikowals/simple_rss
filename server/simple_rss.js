@@ -200,9 +200,23 @@ Meteor.startup( function(){
       feedSubscriber.unsubscribe( id );
       Articles.remove({ feed_id: id });
       console.log("removed all articles from source: " + id );
+    },
+
+    changed: function ( id, fields ){
+      if ( fields.hub ) {
+	feedSubscriber.unsubscribe( id );
+        var feed = Feeds.findOne( id );
+	feedSubscriber.subscribe ( feed.url, feed.hub , id, Meteor.bindEnvironment( function (error, topic){
+	  if ( error ) {
+	    console.error( error );
+	  } else {
+	    console.log( feed.url + " : " + topic );
+	  }
+	}, function ( e) { throw e;}) );
+
+      }
     }
   });
-
 });
 
 var eachRecursive = function (obj, resultArr) {
@@ -245,6 +259,18 @@ Meteor.methods({
   console.timeEnd("findArticles");
 //console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds"); 
   },
+
+findHubs : function(){
+  Feeds.find({}, {fields: {_id:1, url: 1}}).forEach( function( feed ) {
+    var result = syncFP( feed );
+    if ( result.hub ){
+      Feeds.update( {_id: feed._id}, { $set: { hub: result.hub}}, function ( error ){
+        if ( error )  console.error ( error.reason);
+        else console.log( result.title + " updated with hub " + result.hub);
+      });
+    }
+  });
+},
 
 removeOldArticles: function(){
 		     console.log("removeOldArticles method called on server");
