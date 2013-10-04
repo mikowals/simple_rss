@@ -1,5 +1,3 @@
-var Future = Npm.require('fibers/future');
-
 var request = Npm.require( 'request');
 var Stream = Npm.require("stream").Stream;
 var urllib = Npm.require("url");
@@ -17,7 +15,7 @@ FeedSubscriber = function ( options ){
   self.callbackUri = options.callbackUri || "/" + self.callbackPath;
   self.callbackUrl = options.callbackUrl ||  Meteor.absoluteUrl( self.callbackPath );
   self.secret = options.secret || null;
-  self.subscriptions = new Meteor.Collection( null );
+  self.subscriptions = {};
 
   WebApp.connectHandlers.stack.splice(0,0,{
       route: self.callbackUri,
@@ -41,57 +39,36 @@ FeedSubscriber = function ( options ){
     console.error ( "denied request: " + data); 
   });
 
-  self.on ( 'subscribe' , Meteor.bindEnvironment( function ( data ) {
-    self.subscriptions.update( {sourceUrl: data.topic}, {$set: {subscribed: true}}, function ( error ) {
-      if ( error ) { 
-        console.error( "unmatched subscription: " + data);
-        console.error( "subscrition collection responded: " + error);
-      } else {
-         console.log ( "subscribed to : " + data.hub + " : " + data.topic );
-      }
-   })}, function () { console.log('Failed to bind environment'); }) );
+  self.on ( 'subscribe' , function ( data ) {
+
+    if ( self.subscriptions[ data.topic ]){
+      self.subscriptions[ data.topic ]['expiry'] = new Date().getTime() + data.lease * 1000;
+      console.log ( "subscribed to : " + data.hub + " : " + data.topic );
+    } else { 
+        console.error( "unmatched subscription: " + data.topic);
+    }
+   });
     
-  self.on ( 'unsubscribe' , Meteor.bindEnvironment( function ( data ) {
-    self.subscriptions.remove( {sourceUrl: data.topic} , function ( error ) { 
-      if ( error ) {
-        console.error( "unmatched removal: " + data);
-        console.error( "subscrition collection responded: " + error);
-      } else console.log( "unsubscribed from : " + data.topic);
-    } )}, function () { console.log('Failed to bind environment'); }) );
-
-  process.stdin.resume();
-
-  process.on( 'EXIT', function(){
-
-    console.log( "stopped, will unsubscribe");
-    self.stopAllSubscriptions();
-    self.on( 'exitOK', function(){
-      process.exit();
-    });
+  self.on ( 'unsubscribe' , function ( data ) {
+    if ( self.subscriptions[ data.topic ] ){
+     console.log ( " unsubscribed from : " + data.topic); 
+     delete self.subscriptions [ data.topic ];
+    } else {
+        console.error( "unmatched unsubscribe: " + data.topic );
+    }   
   });
-
-  process.on( 'SIGINT', function(){
-    
-    console.log( "stopped, will unsubscribe");
-    self.stopAllSubscriptions();
-    self.on( 'exitOK', function(){
-      process.exit();
-    });
-  });
-
 };
 
 utillib.inherits( FeedSubscriber, Stream );
-
 
 FeedSubscriber.prototype.stopAllSubscriptions = function(){
 
     var self = this;
     var count = 0;
-    self.subscriptions.find({ subscribed: true }).forEach( function ( sub ){  
-      self.unsubscribe( sub );
+    for (var key in self.subscriptions ){
+      self.unsubscribe( self.subscriptions[ key ]._id );
       count++;
-    });
+    };
     self.on( 'unsubscribe', function(){
       count--;
       count === 0 && self.emit( 'exitOk', null);
@@ -137,54 +114,43 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
     signature = (signatureParts.pop() || "").toLowerCase();
 
     try{
-      hmac = crypto.createHmac(algo, crypto.createHmac("sha1", self.secret).update( topic ).digest("hex"));
+      hmac = crypto.createHmac(algo, crypto.createHmac("sha1", self.secret).update(topic).digest("hex") );
     }catch(E){
       console.log( "caught error - line 74 " + E);
-      return self._sendError(req, res, 403, "Forbidden");
+      res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
+      res.end();
+      return;
     }
   }
   var fp = req.pipe( new feedParser());
   req.on( 'data', function ( data) {
     hmac.update ( data );
   });
-  req.on("end", (function(){
+  req.on("end", function(){
     var sig = hmac.digest('hex');
     if( self.secret && sig != signature){
       console.log( topic + " :  did not get matching signatures" );
       console.log( sig );
       console.log ( signature );
-      return self._sendError(req, res, 403, "Forbidden");
+      res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
+      res.end();
+      return;
     }
     self._parseFeed( topic, fp  );
     res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
     res.end();
-  }).bind( self ));
-
+  });
 };
 
 FeedSubscriber.prototype._parseFeed = function ( topic, fp ){
   var self = this;
   fp.on('error', function(err ){
       console.log(" got feedparser error: " + err);
-      })
-  .on('readable', function(){
-      var stream = this, item, feedResult = {};
-      while ( item = stream.read() ) {
-        item.sourceUrl = topic;
-        var fut = new Future();
-	fut.return ( self.subscriptions.findOne({ sourceUrl: topic }) );
-        var sub = fut.wait();
-        console.log( sub );
-	if ( sub ) item.feed_id = sub._id;
-        
-        self.emit( 'feed', item);      
-      }
-   }
-  );
-
+      });
+  var sub = self.subscriptions[ topic ];
+  readAndInsertArticles( fp, sub );
+ 
 };
-
-
 
 FeedSubscriber.prototype.onGetRequest = function( req, res ){
 
@@ -195,27 +161,41 @@ FeedSubscriber.prototype.onGetRequest = function( req, res ){
   if(!params.query["hub.topic"] || !params.query['hub.mode']){
     return self._sendError(req, res, 400, "Bad Request");
   }
-
+  
   switch(params.query['hub.mode']){
     case "denied":
       res.writeHead(200, {'Content-Type': 'text/plain'});
       data = {topic: params.query["hub.topic"], hub: params.query.hub};
       res.end(params.query['hub.challenge'] || "ok");
       break;
-    case "subscribe":
+    case "subscribe": 
+     if ( ! self.subscriptions[ params.query["hub.topic"] ] ){
+         console.error( "subscription verification error for : " + params.query["hub.topic"]); 
+         return self._sendError(req, res, 404, "Not Found");
+        } 
+        res.writeHead(200, {'Content-Type': 'text/plain'});
+        res.end(params.query['hub.challenge']);
+        data = {
+          lease: Number(params.query["hub.lease_seconds"] || 0) + Math.round(Date.now()/1000),
+          topic: params.query["hub.topic"],
+          hub: params.query.hub
+        };
+        break;
     case "unsubscribe":
-      res.writeHead(200, {'Content-Type': 'text/plain'});
-      res.end(params.query['hub.challenge']);
-      data = {
-lease: Number(params.query["hub.lease_seconds"] || 0) + Math.round(Date.now()/1000),
-       topic: params.query["hub.topic"],
-       hub: params.query.hub
-      };
-      break;
+        if ( ! self.subscriptions[ params.query["hub.topic"] ] ||  ! self.subscriptions[ params.query["hub.topic"] ].unsub ){
+          return self._sendError(req, res, 404, "Not Found");
+        }
+        res.writeHead(200, {'Content-Type': 'text/plain'});
+        res.end(params.query['hub.challenge']);
+        data = {
+          lease: Number(params.query["hub.lease_seconds"] || 0) + Math.round(Date.now()/1000),
+          topic: params.query["hub.topic"],
+          hub: params.query.hub
+        };
+        break;
     default:
-      return self._sendError(req, res, 403, "Forbidden");
+      return self._sendError(req, res, 404, "Not Found");
   }
-  
   self.emit(params.query["hub.mode"], data);
 };
 
@@ -277,23 +257,19 @@ FeedSubscriber.prototype.sendRequest = function( mode, topic, hub, callbackUrl, 
 
 FeedSubscriber.prototype.subscribe = function ( topic, hub, _id, callbackUrl, callback ){
   self = this;
-  self.subscriptions.insert ( {_id: _id, sourceUrl: topic, hub: hub }, function( error, id ) {
-    if ( error ) {
-      console.error ( error );
-    } else {
-     self.sendRequest( "subscribe", topic, hub, callback );
-   } 
-  });
+  self.subscriptions[ topic ] = {_id: _id, url: topic, hub: hub};
+  self.sendRequest( "subscribe", topic, hub, callback );
+   
 };
 
-FeedSubscriber.prototype.unsubscribe = function ( sub ){ 
+FeedSubscriber.prototype.unsubscribe = function ( id ){ 
    var self = this;
-   sub.subscribed = true;
-   var feed = self.subscriptions.findOne( sub );
-   if ( feed ){ 
-      self.sendRequest( "unsubscribe", feed.sourceUrl, feed.hub );
+   var sub = getKey ( self.subscriptions, "_id", id );
+   if ( sub ){ 
+     self.sendRequest( "unsubscribe", sub.url, sub.hub );
+     sub.unsub = true; 
    }  else {
-      console.error( " No subscription found with  :  " + JSON.stringify( sub )  );
+      console.error( " No subscription found with id :  " + id );
    }
    
 };
@@ -312,3 +288,10 @@ FeedSubscriber.prototype._sendError = function(req, res, code, message){
             "    </body>\n"+
             "</html>");
 };
+
+var getKey = function( obj, field, value ){
+  for ( var key in obj ) {
+    if ( obj.hasOwnProperty( key) && obj[key][field] === value ) return obj[key];
+  }
+  return null;
+}

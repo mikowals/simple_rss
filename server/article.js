@@ -2,48 +2,26 @@ var Fiber = Npm.require( 'fibers');
 
 Article = function( doc ){
   var self = this;
-  self.title = null;
-  self.author = null;
-  self.source = null;
-  self.feed_id = null;
-  self.date = null;
-  self.link = null;
-
-  var link = null,
-    sourceUrl,
-    summary = null;
-
-  self.getSourceUrl = function(){
-    return self.source;
-  }
 
   self.setSourceUrl = function( sourceUrl ){
-    if (self.sourceUrl && typeof self.sourceUrl === "string" ){
       self.sourceUrl = sourceUrl;
-    }
-    else{
-      self.sourceUrl = null;
-    }
   }
 
-  self.getSummary = function(){
-    return self.summary;
-  }
   self.setSummary = function( summary ){
-    self.summary =  cleanSummary( summary );
+    self.summary = summary && cleanSummary( summary );
   }
   if ( doc ) {
     self.title = doc.title || null;
     self.author = doc.author ||  null;
-    self.source = doc.source || null;
+    self.source = doc.meta.title || null;
+    self.sourceUrl = doc.sourceUrl || doc.meta || doc.meta.xmlurl || doc.source && doc.source.url || null;
     self.feed_id = doc.feed_id || null;
-    self.date = doc.date || null;
-    self.link = doc.link || null;
-    if ( doc.summary ) self.setSummary( doc.summary );
-    if ( doc.sourceUrl ) self.setSourceUrl ( doc.sourceUrl );
+    self.date = new Date( doc.date ) || new Date();
+    self.link = doc.origlink || doc.link || null;
+    self.setSummary( doc.description || doc.summary );
   }
 };
-
+/**
 Article.prototype.toDB = function(){
   if ( this.sourceUrl ) this.setSourceUrl( this.sourceUrl );
 
@@ -101,6 +79,7 @@ date: this.date,
 author: this.author 
 	});
     return true;
+    Feeds.update( { _id: this.feed_id, last_date: {$lt: this.date}}, { $set: { last_date: this.date }}); 
     }
   }
   
@@ -117,9 +96,9 @@ Article.prototype.fromFeedParserItem =  function( item ){
   this.setSourceUrl( item.sourceUrl || item.meta && item.meta.xmlurl );
   if ( this.link === null || this.link === undefined){
     console.log ( "null link from feed: " );
-    console.log ( this.source +" : " + this.sourceUrl );  
+    console.log ( this.source +" : " + this.sourceUrl + " : " + item.link + " : " + item.origlink);  
   }
   return this;
 };
 
-
+**/

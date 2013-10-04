@@ -49,8 +49,8 @@ var _fp = function( fd, kl, forDB ){
       }
 
 
-     r.pipe( new feedParser() )
-      .on('error', function(err ){
+     var fp = r.pipe( new feedParser() );
+     fp.on('error', function(err ){
 	console.log(feed.url + " got feedparser error: " + err);
 	feed.error = err;
 	})
@@ -64,27 +64,12 @@ var _fp = function( fd, kl, forDB ){
 	feed.author = meta.author;
 	}
       })
-      .on('readable',  function(){
-        var stream = this, item, doc;
-        while ( item = stream.read() ) {
-          doc = new Article().fromFeedParserItem( item );
-          doc.sourceUrl = feed.url;
-          doc.feed_id = feed._id;
-          Fiber ( function ( ) {
-             if ( doc.date > keepLimitDate ){
-               Articles.insert( doc, function( error ) {
-                 if ( !error ) console.log( doc.title + " : " + doc.source );
-               }) ;
-               Fiber.yield();
-             }
-          }).run(); 
-        }
-      }
-      )
       .on( 'end', function() {
 	  //console.log( feed.url + " returned in " + ( new Date() -start ) /1000 + " seconds"); 
 	  future.return ( feed );
 	  });
+
+      readAndInsertArticles ( fp, feed );
       }
   }, function ( e ) { throw e;})
   );
@@ -92,6 +77,30 @@ var _fp = function( fd, kl, forDB ){
  // Future.wait( futures );
   return future;
 }
+
+readAndInsertArticles = function ( fp, feed){
+  options = options || {};
+  fp.on( 'readable', function(){
+    var stream = this, item, doc;
+    while ( item = stream.read() ) {
+      doc = new Article( item );
+      doc.sourceUrl = feed.url;
+      doc.feed_id = feed._id;
+      Fiber ( function ( ) {
+        if ( doc.date > keepLimitDate ){
+          Articles.insert( doc, function( error ) {
+            if ( !error ) {
+             console.log( doc.title + " : " + doc.source );
+             Feeds.update( { _id: doc.feed_id, last_date: {$lt: doc.date}}, { $set: { last_date: doc.date }});
+            }
+          });
+          Fiber.yield();
+        }
+     }).run();
+   }
+ });   
+};
+
 
 syncFP = function ( feed ) {
   var retObject = _fp( feed ).wait();
