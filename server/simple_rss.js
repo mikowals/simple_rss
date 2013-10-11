@@ -7,11 +7,6 @@ var articlePubLimit = 150;
 
 Accounts.config({sendVerificationEmail: true});
 
-Feeds = new Meteor.Collection("feeds");
-Articles = new Meteor.Collection("articles");
-//Articles.ensureIndex( {"date": 1} ); //not working with SmartCollections
- 
-
 Meteor.publish("feeds", function () {
   var self = this;
   return Feeds.find({subscribers: self.userId }, {_id: 1, title: 1, url:1, last_date:1});
@@ -73,16 +68,9 @@ Feeds.allow({
   },
 
   remove: function(userId, doc){
-    if(doc.subscribers.length > 1){
-      Feeds.update(doc._id, {$pull: {subscribers: userId}} );
-      return false;
-    }
-    else{
-      return doc.subscribers[0] === userId;
-    }
+      return false; //doc.subscribers.length === 1 && doc.subscribers[0] === userId;
   }
     
-  //fetch: ['owner']
 });
 
 Feeds.deny({
@@ -198,8 +186,6 @@ Meteor.startup( function(){
 
     removed: function( id ){
       feedSubscriber.unsubscribe( id );
-      Articles.remove({ feed_id: id });
-      console.log("removed all articles from source: " + id );
     },
 
     changed: function ( id, fields ){

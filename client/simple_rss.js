@@ -9,8 +9,6 @@ Session.setDefault( "now", new Date() );
 
                    
 var article_sub;
-var Feeds = new Meteor.Collection("feeds");           
-var Articles = new Meteor.Collection("articles");
 
 Meteor.startup( function() {
                           
@@ -135,7 +133,9 @@ Template.modalButtons.events({
 
 Template.feedList.events({                                                   
                          'click #removeFeed': function(){
-                         Feeds.remove(Session.get("selected_feed"));
+                           Meteor.call( 'removeFeed', Session.get("selected_feed"), function( error ){
+                             if ( error === false ) console.error( "could not remove feed"); 
+                           });
                          }
                          
                          });
