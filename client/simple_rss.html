@@ -69,7 +69,7 @@
 <template name="article">
   <div class="section"> 
     <div class="header row-fluid">
-      <h2>{{source}}</h2>
+      <h2>{{source}} </h2><a class='subscribe tooltip' href={{subscribeRss}} data-tip="follow {{source}}!"><i class="fa fa-rss-square"></i></a>
       <span class="spacer"></span>
       {{#isolate}}<time class="visible-desktop time pull-right"> {{timeago date}} </time>{{/isolate}}
     </div>

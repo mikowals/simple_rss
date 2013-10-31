@@ -156,6 +156,21 @@ Template.articleList.loaded = function(){
   return Session.equals( "loaded", true );
 };
 
+Template.articleList.events({
+  'click a': function( e ){
+     Meteor.call( 'markRead', $( e.currentTarget ).attr('href'));
+  }
+
+}); 
+
+Template.article.subscribeRss = function(){
+  if (this.sourceUrl) return this.sourceUrl;
+
+  var feed = Feeds.findOne( {title: this.source});
+  return feed && feed.url;
+  
+}
+
 Template.menubar.loaded = function(){
   return Session.equals( "loaded", true );
 };

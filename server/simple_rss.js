@@ -35,10 +35,9 @@ Meteor.publish( "articles", function(){
                self.onStop( function() {
                            observer.stop();
 			   });
-               
-              //self.ready();
+                    
 
-	var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
+	var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
 	return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: articlePubLimit, fields: visibleFields } );
                
 });
@@ -261,8 +260,7 @@ findHubs : function(){
 removeOldArticles: function(){
 		     console.log("removeOldArticles method called on server");
 
-		     var error = Articles.remove({date:  {$lt: keepLimitDate} }, function(error){ return error;});
-		     commonDuplicates = Articles.find({}, { link: 1}).fetch();
+		     var error = Articles.remove({date:  {$lt: keepLimitDate}, clicks: 0 }, function(error){ return error;});
 		     return error || 'success';
 		   },
 
@@ -336,7 +334,15 @@ lowerCaseUrls: function(){
 			       Articles.update( article._id, {$set: { link: article.link.toLowerCase(), guid: article.guid.toLowerCase()}});
 			});
 
-	       }
+	       },
+
+markRead: function( link ){
+  var self = this;
+  var article = Articles.findOne({link: link});
+  if ( article ){ 
+    Articles.update( article._id,{$push: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}); 
+  }
+}
 
 
 });

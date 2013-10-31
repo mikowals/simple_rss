@@ -40,21 +40,29 @@ FeedSubscriber = function ( options ){
   });
 
   self.on ( 'subscribe' , function ( data ) {
-
-    if ( self.subscriptions[ data.topic ]){
-      self.subscriptions[ data.topic ]['expiry'] = new Date().getTime() + data.lease * 1000;
+    var sub = self.subscriptions[ data.topic ];
+    if ( sub ){
+      sub['expiry'] = new Date().getTime() + data.lease * 1000;
       console.log ( "subscribed to : " + data.hub + " : " + data.topic );
+      setTimeout( function(){
+         self.subscribe( data.topic, data.hub, sub._id );
+      } , (  Math.min(  data.lease - 60 * 60 ) * 1000, 6 * 24 * 60 * 60 * 1000));
     } else { 
-        console.error( "unmatched subscription: " + data.topic);
+      console.error( "unmatched subscription: " + data.topic);
     }
    });
     
   self.on ( 'unsubscribe' , function ( data ) {
-    if ( self.subscriptions[ data.topic ] ){
+    var sub = self.subscriptions[ data.topic ];
+    if ( ! sub ){
+       console.error( "unmatched unsubscribe: " + data.topic );
+    }
+    else if ( sub.unsub ){
      console.log ( " unsubscribed from : " + data.topic); 
-     delete self.subscriptions [ data.topic ];
+     delete sub [ data.topic ];
     } else {
-        console.error( "unmatched unsubscribe: " + data.topic );
+        console.error( "resubscribing to: " + data.topic );
+        self.subscribe( data.topic, data.hub, sub._id );
     }   
   });
 };
@@ -257,7 +265,7 @@ FeedSubscriber.prototype.sendRequest = function( mode, topic, hub, callbackUrl, 
 
 FeedSubscriber.prototype.subscribe = function ( topic, hub, _id, callbackUrl, callback ){
   self = this;
-  self.subscriptions[ topic ] = {_id: _id, url: topic, hub: hub};
+  self.subscriptions[ topic ] = {_id: _id, url: topic, hub: hub, unsub: false};
   self.sendRequest( "subscribe", topic, hub, callback );
    
 };
