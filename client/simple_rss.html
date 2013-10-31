@@ -17,10 +17,10 @@
 </template>
 
 <template name="menubar">
-  <div id="menubar" class="row-fluid">
-    <a id="modal_button" class=" pull-left" href="#feeds_modal" data-toggle="modal" role="button"><i class="icon-chevron-down" /></a>
-    {{#isolate}} {{#unless loaded}}<small class="label">Loading</small>{{/unless}} {{/isolate}}
-    {{#isolate}} {{#if offline}}<small class="label">{{offline}}</small>{{/if}} {{/isolate}}
+  <div id="menubar" class="row">
+    <a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-chevron-down" /></a>
+    {{#isolate}} {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}} {{/isolate}}
+    {{#isolate}} {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}} {{/isolate}}
     <small>{{loginButtons align="right"}}</small>
   </div>
 </template>
@@ -37,7 +37,7 @@
 </template>
 
 <template name="feed">
-  <td class="span4"><small>{{title}}</small>{{#if selected}} <button id="removeFeed" class="btn btn-primary btn-mini pull-right">remove</button>{{/if}}</td>
+  <td class="col-md-4"><small>{{title}}</small>{{#if selected}} <button id="removeFeed" class="btn btn-primary btn-mini pull-right">remove</button>{{/if}}</td>
   <td class="count"><small>{{article_count}}</small></td>
   <td class="lastDate"><small class=" time pull-right">{{>feedTime}}</small></td>
 </template>
@@ -71,12 +71,12 @@
     <div class="header row-fluid">
       <h2>{{source}} </h2><a class='subscribe tooltip' href={{subscribeRss}} data-tip="follow {{source}}!"><i class="fa fa-rss-square"></i></a>
       <span class="spacer"></span>
-      {{#isolate}}<time class="visible-desktop time pull-right"> {{timeago date}} </time>{{/isolate}}
+      {{#isolate}}<time class="visible-md time pull-right"> {{timeago date}} </time>{{/isolate}}
     </div>
     <div class="article">
       <div class="header"><h3><a href="{{{link}}}">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
       <div class="description">{{{summary}}}</div>
-      {{#isolate}}<div class="footer hidden-desktop"><time class="timeago"> {{timeago date}} </time></div>{{/isolate}}
+      {{#isolate}}<div class="footer hidden-md"><time class="timeago"> {{timeago date}} </time></div>{{/isolate}}
     </div>
   </div>
 </template>
@@ -86,8 +86,10 @@
 </template>
 
 <template name="feedModal">
-  <div id="feeds_modal" class="modal hide fade" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-header">
+  <div id="feeds_modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+     <div class="modal-content">
+      <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
       
       <h3 id="myModalLabel">Feeds</h3>
@@ -102,6 +104,8 @@
     </div>
     
   </div>
+  </div>
+  </div>
 </template>
 
 <template name="modalButtons">
@@ -110,13 +114,13 @@
     <a id="importCancel" class="btn btn-link btn-mini pull-left">Cancel</a>
     <span class="pull-right">
       <input id="opmlFile" type="file" class="fileUploader" multiple="multiple" />
-      <a id="opmlUpload" class="btn"><i class="icon-upload"></i></a>
+      <a id="opmlUpload" class="btn"><i class="glyphicon glyphicon-upload"></i></a>
     </span> 
     {{else}}
-    <a id="importToggle" class="btn btn-link btn-mini pull-left">Import</a>
+    <a id="importToggle" class="btn btn-link btn-xs pull-left">Import</a>
     <span class="pull-right">
-      <input type="url" class="input-large" placeholder="Feed url to add" id="feedUrl" />
-      <a id="addFeed" class="btn btn-primary btn-mini">Add</a>
+      <input type="url" class="input-xs" placeholder="Feed url to add" id="feedUrl" />
+      <a id="addFeed" class="btn btn-primary btn-xs">Add</a>
     </span>
     {{/if}}
   </span>

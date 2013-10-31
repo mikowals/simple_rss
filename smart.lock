@@ -2,13 +2,19 @@
   "meteor": {},
   "dependencies": {
     "basePackages": {
-      "font-awesome": {}
+      "font-awesome": {},
+      "bootstrap3-less": {}
     },
     "packages": {
       "font-awesome": {
         "git": "https://github.com/nate-strauser/meteor-font-awesome.git",
         "tag": "v3.2.1",
         "commit": "38bdfff72dfb8857b272f9a9b056045d6a015489"
+      },
+      "bootstrap3-less": {
+        "git": "https://github.com/eprochasson/bootstrap3-less",
+        "tag": "v0.1.4",
+        "commit": "23ec918f8377b15b22cba33e13b717214235c88a"
       }
     }
   }
