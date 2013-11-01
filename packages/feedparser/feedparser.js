@@ -12,28 +12,34 @@ var _fp = function( fd, kl, forDB ){
   var start = new Date();
   var future = new Future();
   var feed = {};
+  if (! fd.url)
+    throw new Error( "_fp called without url");
   feed.url = fd.url;
-  feed._id = fd._id;
-
-  var options = {
-  url: feed.url,
-     headers: {
-       'Accept-Encoding': "gzip, deflate"
-     },
-  timeout: 10000
+  if (fd._id) 
+    feed._id = fd._id;
+  else {
+    var existing = Feeds.findOne( {url : feed.url});
+    feed._id = (existing && existing.Id) || Feeds.insert( {url: feed.url, temp: true} );
   }
+  var options = {
+    url: feed.url,
+      headers: {
+       'Accept-Encoding': "gzip, deflate"
+      },
+    timeout: 7000
+  };
 
   if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString(); // 
   if ( feed.etag ) options.headers['If-None-Match'] =  feed.etag; //
 
   var r = request( options,  Meteor.bindEnvironment( function ( error, response ){
       // return a future for cases where no http response leads to nothing getting piped to feedparser
-
       if ( !response || response.statusCode !== 200 ){
-      if ( error ) console.log( feed.url + " error: " + error + " in " + (new Date() - start )/1000+ " seconds");
-      if ( response  && response.statusCode !== 304 ) console.log( feed.url + " statusCode: " + response.statusCode + " in " + (new Date() - start )/1000+ " seconds");
-      future.return ({url: feed.url, error: error, statusCode: response && response.statusCode} );
-      }
+        if ( error ) 
+          console.log( feed.url + " error: " + error + " in " + (new Date() - start )/1000+ " seconds");
+        if ( response  && response.statusCode !== 304 ) console.log( feed.url + " statusCode: " + response.statusCode + " in " + (new Date() - start )/1000+ " seconds");
+          future.return ({url: feed.url, error: error, statusCode: response && response.statusCode} );
+        }
       }, function ( e ) { throw e;})
   );
 
@@ -68,8 +74,8 @@ var _fp = function( fd, kl, forDB ){
 	  //console.log( feed.url + " returned in " + ( new Date() -start ) /1000 + " seconds"); 
 	  future.return ( feed );
 	  });
-
-      readAndInsertArticles ( fp, feed );
+        
+        readAndInsertArticles ( fp, feed );
       }
   }, function ( e ) { throw e;})
   );
@@ -85,8 +91,8 @@ readAndInsertArticles = function ( fp, feed){
     while ( item = stream.read() ) {
       doc = new Article( item );
       doc.sourceUrl = feed.url;
-      doc.feed_id = feed._id;
       Fiber ( function ( ) {
+        doc.feed_id = feed._id;;
         if ( doc.date > keepLimitDate ){
           Articles.insert( doc, function( error ) {
             if ( !error ) {

@@ -1,3 +1,4 @@
+var Future = Npm.require( "fibers/future" );
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
 keepLimitDate = new Date( new Date() - daysStoreArticles * DAY );
@@ -59,7 +60,7 @@ Articles.allow({
 
 Feeds.allow({
   insert: function (userId, doc) {
-    return doc.subscribers[0] === userId;
+    return false;
   },
 
   update: function (doc, fields, modifier) {
@@ -74,45 +75,41 @@ Feeds.allow({
 
 Feeds.deny({
   insert: function(userId, doc){
-	doc.url = doc.url;    
-	var existingFeed = Feeds.findOne({url: doc.url});
-    if( existingFeed ){
-      console.log(doc.url + " exists in db");
-      Feeds.update(existingFeed._id, { $addToSet: { subscribers: userId }});
-      return true;
-    }
-
-    var rssResult = syncFP( doc );
-    if ( rssResult.error || rssResult.statusCode !== 200 ){
-	console.log(JSON.stringify (rssResult) + " has no data to insert"); 
-	return true;
-
-    }
-    else if (rssResult.url && doc.url !== rssResult.url ) {
-      doc.url = rssResult.url;
-      existingFeed = Feeds.findOne( {url: doc.url} );
-    }
-
-    if( existingFeed ){
-      console.log(doc.url + " exists in db at different url");
-      Feeds.update(existingFeed._id, {$addToSet: {subscribers: userId}});
-      return true;
-    }
-           
-    else{
-      console.log(doc.url + " not in db - adding");
-      doc.hub = rssResult.hub || null;
-      doc.title = rssResult.title;  
-      doc.last_date = rssResult.date;
-      doc.subscribers = [];
-      doc.subscribers.push(userId);
-      doc.lastModified = null;
-      return false;
-    }
-
+    feedInsert( userId, doc);
+  }
+});	
+  
+var feedInsert = function( userId, doc){
+  var existingFeed = Feeds.findOne({url: doc.url});
+  if( existingFeed ){
+    console.log(doc.url + " exists in db");
+    Feeds.update(existingFeed._id, { $addToSet: { subscribers: userId }});
+    return true;
   }
 
-});
+    var rssResult = syncFP( doc )
+    if ( rssResult.error || rssResult.statusCode !== 200 ){
+	console.log(JSON.stringify (rssResult) + " has no data to insert"); 
+	Feeds.remove( {_id: rssResult._id, temp: true});
+        return true;
+    }
+    else{
+      doc.subscribers = doc.subscribers || [];
+      doc.subscribers.push( userId );
+      Feeds.update( rssResult._id, {$set: {
+        hub: rssResult.hub || null,
+        title: rssResult.title,
+        last_date: rssResult.date,
+        subscribers: doc.subscribers,
+        lastModified: doc.lastModified
+      }, $unset: {temp: 1}}
+      , function( error, result){
+        if ( error ) 
+          console.error( error );
+      }); 
+      return true;
+  }
+};
 
 
 Meteor.startup( function(){
@@ -204,21 +201,6 @@ Meteor.startup( function(){
   });
 });
 
-var eachRecursive = function (obj, resultArr) {
-  for (var k in obj) {
-
-    if (typeof obj[k] === "object"){
-      eachRecursive(obj[k], resultArr);
-    }
-    else{
-      if (k === 'xmlUrl'){
-        resultArr.push( obj['xmlUrl'] );
-      }
-    }
-  }
-}
-
-
 Meteor.methods({
 
   findArticles: function( criteria ) {
@@ -290,36 +272,46 @@ cleanUrls: function(){
 		 });
 	   },
 
-importOPML: function(upload){
-	      check (upload, String);
-	      var self = this;
-	      var opml = XML2JS.parse(upload);
-	      var xmlToAdd = [];
-	      eachRecursive(opml, xmlToAdd); 
-	      var fpResults = [];
+  importOPML: function(upload){
+    check (upload, String);
+    var self = this;
+    var opml = XML2JS.parse(upload);
+    var xmlToAdd = [];
+    var feeds = [];
+    eachRecursive(opml, xmlToAdd); 
+     
+    xmlToAdd.forEach( function ( url ){
+      if (url !== null && url !== undefined){
+        var existing = Feeds.findOne( {url: url});
+        if ( ! existing)
+          feeds.push( {url: url });
+        else{ 
+          Feeds.update( {url: url}, {$addToSet: {subscribers: self.userId}}, function( error ){
+            if ( error ) console.error ( error );
+            });
+        }
+      }
+    });
+    feeds = multipleSyncFP( feeds );
+    feeds.forEach( function ( doc ){
+      if ( doc.error || doc.statusCode !== 200 ) 
+         Feeds.remove ( {_id: doc._id} );
+      else if ( ! doc.subscribers ){
+        Feeds.update( doc._id, {$set: {
+          hub: doc.hub || null,
+          title: doc.title,
+          last_date: doc.date,
+          subscribers: [ self.userId ],
+          lastModified: doc.lastModified
+          }, $unset: {temp: 1}}
+          , function( error, result){
+            if ( error ) console.error ( error );
+          });        
+      } else 
+        Feeds.update( doc._id, {$addToSet: {subscribers: self.userId}});
 
-	      xmlToAdd.forEach( function(url){
-		  try{
-		  var feed = { url: url };
-		  if (url !== null && url !== undefined){
-		  fpResults.push( syncFP( feed ) );
-		  }
-		  }
-		  catch(e){
-		  console.log( e + " parsing url " + url);
-		  }
-		  });
-	      console.log( "finished with feedparser");
-	      if ( fpResults ){
-		fpResults.forEach( function (rssResult){
-
-		    var doc = {url: rssResult.url, title: rssResult.title, last_date: rssResult.date, subscribers: [] };
-		    doc.subscribers.push(self.userId);
-
-		    });
-	      }
-
-	    },
+    });
+  },
 
 lowerCaseUrls: function(){
 
@@ -342,7 +334,11 @@ markRead: function( link ){
   if ( article ){ 
     Articles.update( article._id,{$push: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}); 
   }
-}
+},
 
+  XML2JSparse: function ( file ) {
+
+    return XML2JS.parse( file );
+  }
 
 });

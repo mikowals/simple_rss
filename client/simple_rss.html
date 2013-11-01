@@ -18,10 +18,11 @@
 
 <template name="menubar">
   <div id="menubar">
-    <a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-chevron-down" /></a>
+   <h4><a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-cog" /></a>
     {{#isolate}} {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}} {{/isolate}}
     {{#isolate}} {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}} {{/isolate}}
-    <small>{{loginButtons align="right"}}</small>
+    {{loginButtons align="right"}}
+   </h4>
   </div>
 </template>
 
@@ -37,9 +38,9 @@
 </template>
 
 <template name="feed">
-  <td class="col-md-4"><small>{{title}}</small>{{#if selected}} <button id="removeFeed" class="btn btn-primary btn-mini pull-right">remove</button>{{/if}}</td>
-  <td class="count"><small>{{article_count}}</small></td>
-  <td class="lastDate"><small class=" time pull-right">{{>feedTime}}</small></td>
+  <span class="col-md-8"><h5 class="col-md-10">{{#if title}}{{title}}{{else}}{{url}}{{/if}}</h5>{{#if selected}} <h6><button id="removeFeed" class="btn btn-primary btn-xs pull-right">remove</button></h6>{{/if}}</span>
+  <span class="count col-md-1 text-right"><h4>{{article_count}}</h5></span>
+  <span class="lastDate"><h5 class=" time pull-right">{{>feedTime}}</h5></span>
 </template>
 
 <template name="feedTime">
@@ -69,14 +70,17 @@
 <template name="article">
   <div class="section"> 
     <div class="header row-fluid">
-      <h2>{{source}} </h2><a class='subscribe tooltip' href={{subscribeRss}} data-tip="follow {{source}}!"><i class="fa fa-rss-square"></i></a>
+      <h2>{{source}} </h2>
+      {{#unless subscribed}}
+        <a class='subscribe' href={{subscribeRss}} data-toggle="toottip"><h6><i class="glyphicon glyphicon-cloud-download"/></h6></a>
+      {{/unless}}
       <span class="spacer"></span>
-      {{#isolate}}<time class="visible-md time pull-right"> {{timeago date}} </time>{{/isolate}}
+      {{#isolate}}<time class="hidden-xs time pull-right"> {{timeago date}} </time>{{/isolate}}
     </div>
     <div class="article">
       <div class="header"><h3><a href="{{{link}}}">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
       <div class="description">{{{summary}}}</div>
-      {{#isolate}}<div class="footer hidden-md"><time class="timeago"> {{timeago date}} </time></div>{{/isolate}}
+      {{#isolate}}<div class="footer visible-xs"><time class="timeago"> {{timeago date}} </time></div>{{/isolate}}
     </div>
   </div>
 </template>
@@ -92,7 +96,7 @@
       <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
       
-      <h3 id="myModalLabel">Feeds</h3>
+      <span id="myModalLabel">Feeds</span>
       
     </div>
     <div class="modal-body">
@@ -109,21 +113,21 @@
 </template>
 
 <template name="modalButtons">
-  <span class="form-inline">
+  <form class="form-inline">
     {{#if importOPML}}
-    <a id="importCancel" class="btn btn-link btn-mini pull-left">Cancel</a>
-    <span class="pull-right">
+    <a id="importCancel" class="btn btn-link btn-sm col-md-1 pull-left">Cancel</a>
+    <span class="input-group input-group-sm pull-right col-md-2">
       <input id="opmlFile" type="file" class="fileUploader" multiple="multiple" />
-      <a id="opmlUpload" class="btn"><i class="glyphicon glyphicon-upload"></i></a>
+      <a id="opmlUpload" class="input-group-addon btn"><i class="glyphicon glyphicon-upload"/></a>
     </span> 
     {{else}}
-    <a id="importToggle" class="btn btn-link btn-xs pull-left">Import</a>
-    <span class="pull-right">
+    <a id="importToggle" class="btn btn-link btn-sm col-md-1 pull-left">Import</a>
+    <span class="input-group input-group-sm pull-right col-md-2">
       <input type="url" class="input-xs" placeholder="Feed url to add" id="feedUrl" />
-      <a id="addFeed" class="btn btn-primary btn-xs">Add</a>
+      <a id="addFeed" type="submit" class="input-group-addon btn btn-primary">Add</a>
     </span>
     {{/if}}
-  </span>
+  </form>
 </template>
 
 <template name="smallLoader">

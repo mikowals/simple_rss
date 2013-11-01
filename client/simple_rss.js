@@ -93,16 +93,16 @@ Template.modalButtons.importOPML = function(){
 Template.modalButtons.events({
                              
                              //could modify this to verify feed and populate fields for insertion
-                             'click #addFeed': function() {
-                             var url = $("#feedUrl").val();
-                             var regex =/(((f|ht){1}tp|tps:\/\/)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]+)/g;
-                             if ( Match.test ( url, String ) && regex.test(url) ){
-                               Feeds.insert( { url: url } );
-                               $("#feedUrl").val("");
-                             } else{
-                             alert("RSS feed entered is not a valid url");
-                             }
-                                       
+                             'submit, click #addFeed': function() {
+                               var url = $("#feedUrl").val();
+                               var regex =/(((f|ht){1}tp|tps:\/\/)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]+)/g;
+                               if ( Match.test ( url, String ) && regex.test(url) ){
+                                 Meteor.call( 'addFeed', { url: url } );
+                                 $("#feedUrl").val("");
+                               } else{
+                                 alert("RSS feed entered is not a valid url");
+                               }
+                               return false;        
                              },
                              
                              'click #importToggle': function(){
@@ -111,17 +111,26 @@ Template.modalButtons.events({
                              },
                              
                              'click #opmlUpload' : function(){
-                             Session.set("importOPML", false);
+                               Session.set("importOPML", false);
                              
-                             var opmlFile = $("#opmlFile")[0].files[0];
-                             console.log(JSON.stringify(opmlFile));
-                             var fr = new FileReader();
-                             fr.readAsText(opmlFile);
-                             fr.onloadend = function(evt) {
-                             if (evt.target.readyState === FileReader.DONE) { // DONE == 2
-                             Meteor.call('importOPML', evt.target.result);
-                             }
-                             }
+                               var opmlFile = $("#opmlFile")[0].files[0];
+                               console.log(JSON.stringify(opmlFile));
+                               var fr = new FileReader();
+                               fr.readAsText(opmlFile);
+                               fr.onloadend = function(evt) {
+                                 if (evt.target.readyState === FileReader.DONE) { // DONE == 2
+                                   Meteor.call( 'XML2JSparse', evt.target.result, function ( error, result ){
+                                     var xmlToAdd = [];
+                                     eachRecursive(result, xmlToAdd);
+                                     xmlToAdd.forEach( function ( url ){
+                                       Meteor.call('addFeed', {url: url}, function ( error ){
+                                         if (error) console.error( error );
+                                       });
+                                     });
+                                     //Meteor.call('importOPML', evt.target.result);
+                                   });
+                                 }
+                               }
                              },
                           
                              'click #importCancel' : function(){
@@ -162,6 +171,9 @@ Template.articleList.events({
   }
 
 }); 
+Template.article.subscribed = function(){
+  return Feeds.findOne({title: this.source}) !==null;
+};
 
 Template.article.subscribeRss = function(){
   if (this.sourceUrl) return this.sourceUrl;
@@ -169,7 +181,7 @@ Template.article.subscribeRss = function(){
   var feed = Feeds.findOne( {title: this.source});
   return feed && feed.url;
   
-}
+};
 
 Template.menubar.loaded = function(){
   return Session.equals( "loaded", true );
