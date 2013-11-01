@@ -17,7 +17,7 @@
 </template>
 
 <template name="menubar">
-  <div id="menubar" class="row">
+  <div id="menubar">
     <a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-chevron-down" /></a>
     {{#isolate}} {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}} {{/isolate}}
     {{#isolate}} {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}} {{/isolate}}
