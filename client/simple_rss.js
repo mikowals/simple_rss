@@ -144,7 +144,8 @@ Template.feedList.events({
                          'click #removeFeed': function(){
                            Meteor.call( 'removeFeed', Session.get("selected_feed"), function( error ){
                              if ( error === false ) console.error( "could not remove feed"); 
-                           });
+                             else Session.set( "selected_feed", null);
+                             });
                          }
                          
                          });

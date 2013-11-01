@@ -27,20 +27,20 @@
 </template>
 
 <template name="feedList">
-    <table class="table">
-      
-      <tbody>
+    <div>
         {{#each feeds}}
-        <tr class="feed">{{>feed}}</tr>
+        <div class="feed row">{{>feed}}</div>
         {{/each}}
-      </tbody>
-    </table>
+    </div>
 </template>
 
 <template name="feed">
-  <span class="col-md-8"><h5 class="col-md-10">{{#if title}}{{title}}{{else}}{{url}}{{/if}}</h5>{{#if selected}} <h6><button id="removeFeed" class="btn btn-primary btn-xs pull-right">remove</button></h6>{{/if}}</span>
-  <span class="count col-md-1 text-right"><h4>{{article_count}}</h5></span>
-  <span class="lastDate"><h5 class=" time pull-right">{{>feedTime}}</h5></span>
+  <span class="col-xs-7 col-md-8">
+    <h5 class="col-xs-10 col-md-10">{{#if title}}{{title}}{{else}}{{url}}{{/if}}</h5>
+    {{#if selected}} <h6><button id="removeFeed" class="btn btn-primary btn-xs pull-right">x</button></h6>{{/if}}
+  </span>
+  <span class="count col-xs-1 col-md-1 text-right"><h4>{{article_count}}</h5></span>
+  <span class="lastDate"><h5 class="time col-xs-3 col-md-2 text-right pull-right">{{>feedTime}}</h5></span>
 </template>
 
 <template name="feedTime">
@@ -115,13 +115,13 @@
 <template name="modalButtons">
   <form class="form-inline">
     {{#if importOPML}}
-    <a id="importCancel" class="btn btn-link btn-sm col-md-1 pull-left">Cancel</a>
+    <a id="importCancel" class="btn btn-link btn-sm col-md-1 pull-left hidden-xs">Cancel</a>
     <span class="input-group input-group-sm pull-right col-md-2">
       <input id="opmlFile" type="file" class="fileUploader" multiple="multiple" />
       <a id="opmlUpload" class="input-group-addon btn"><i class="glyphicon glyphicon-upload"/></a>
     </span> 
     {{else}}
-    <a id="importToggle" class="btn btn-link btn-sm col-md-1 pull-left">Import</a>
+    <a id="importToggle" class="btn btn-link btn-sm col-md-1 pull-left hidden-xs">Import</a>
     <span class="input-group input-group-sm pull-right col-md-2">
       <input type="url" class="input-xs" placeholder="Feed url to add" id="feedUrl" />
       <a id="addFeed" type="submit" class="input-group-addon btn btn-primary">Add</a>
