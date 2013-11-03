@@ -145,8 +145,8 @@ Template.modalButtons.events({
                                                "<body>\n";
                                Feeds.find().forEach( function( feed ) {
                                  exportOPML += "<outline\n" +
-                                               "text=\"" + feed.title + "\"\n" +
-                                               "title=\"" + feed.title + "\"\n" +
+                                               "text=\"" + feed.title.replace( /\"/g, "&quot;") + "\"\n" +
+                                               "title=\"" + feed.title.replace( /\"/g, "&quot;") + "\"\n" +
                                                "type=\"rss\"\n" +
                                                "xmlUrl=\"" + feed.url + "\"/>\n";
 
