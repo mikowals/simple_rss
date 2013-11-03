@@ -17,7 +17,7 @@ Article = function( doc ){
     self.sourceUrl = doc.sourceUrl || doc.meta || doc.meta.xmlurl || doc.source && doc.source.url || null;
     self.feed_id = doc.feed_id || null;
     self.date = new Date( doc.date ) || new Date();
-    self.link = doc.origlink || doc.link || null;
+    self.link = doc.link || doc.origlink || null;
     self.setSummary( doc.description || doc.summary );
   }
 };
