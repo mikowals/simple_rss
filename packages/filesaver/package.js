@@ -1,5 +1,5 @@
 
 Package.on_use(function (api) {
 	       api.add_files(["filesaver.js"], 'client');
-               api.export( 'saveAs' );	       
+               api.export( 'saveAs', 'client' );	       
 });

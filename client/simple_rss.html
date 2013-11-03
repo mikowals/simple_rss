@@ -35,12 +35,14 @@
 </template>
 
 <template name="feed">
-  <span class="col-xs-7 col-md-8">
-    <h5 class="col-xs-10 col-md-10">{{#if title}}{{title}}{{else}}{{url}}{{/if}}</h5>
-    {{#if selected}} <h6><button id="removeFeed" class="btn btn-primary btn-xs pull-right">x</button></h6>{{/if}}
+  <span class="col-xs-8 col-md-8">
+    <h5 class="col-xs-9 col-md-9 pull-left">
+      {{#if title}}{{title}}{{else}}{{url}}{{/if}} 
+    </h5>
+      {{#if selected}}<h6><button id="removeFeed" class="btn btn-xs btn-primary pull-right"><i class="glyphicon glyphicon-remove"/></button></h6>{{/if}}
   </span>
-  <span class="count col-xs-1 col-md-1 text-right"><h4>{{article_count}}</h5></span>
-  <span class="lastDate"><h5 class="time col-xs-3 col-md-2 text-right pull-right">{{>feedTime}}</h5></span>
+  <h5 class="count col-xs-1 col-md-1 text-right" >{{article_count}}</h5>
+  <h5 class="lastDate time col-xs-2 col-md-3 text-right pull-right">{{>feedTime}}</h5>
 </template>
 
 <template name="feedTime">
@@ -115,18 +117,18 @@
 <template name="modalButtons">
   <form class="form-inline">
     {{#if importOPML}}
-    <a id="importCancel" class="btn btn-link btn-sm col-md-1 pull-left hidden-xs">Cancel</a>
-    <span class="input-group input-group-sm pull-right col-md-2">
-      <input id="opmlFile" type="file" class="fileUploader" multiple="multiple" />
-      <a id="opmlUpload" class="input-group-addon btn"><i class="glyphicon glyphicon-upload"/></a>
-    </span> 
-    {{else}}
-    <a id="importToggle" class="btn btn-link btn-sm col-md-1 pull-left hidden-xs">Import</a>
-  <a id="exportOPML" class="btn btn-link btn-sm col-md-1 pull-left hidden-xs">Export</a>
- <span class="input-group input-group-sm pull-right col-md-2">
-      <input type="url" class="input-xs" placeholder="Feed url to add" id="feedUrl" />
-      <a id="addFeed" type="submit" class="input-group-addon btn btn-primary">Add</a>
+     <a id="importCancel" class="btn btn-link btn-sm col-sm-1 hidden-xs">Cancel</a>
+    <span class="input-group input-group-sm col-xs-12 col-sm-11 pull-right">
+      <input id="opmlFile" type="file" class="fileUploader col-xs-12" multiple="multiple" />
+      <a id="opmlUpload" class="input-group-addon btn btn-primary btn-sm"><i class="glyphicon glyphicon-upload"/></a>
     </span>
+    {{else}}
+    <a id="importToggle" class="btn btn-link btn-sm col-sm-1 hidden-xs">Import</a>
+    <a id="exportOPML" class="btn btn-link btn-sm col-sm-1 hidden-xs">Export</a>
+  <span class="input-group input-group-sm col-xs-12 col-sm-9 pull-right">
+   <input type="url" class="input-sm col-xs-12" placeholder="Feed url to add" id="feedUrl" />
+  <a id="addFeed" type="submit" class="input-group-addon btn btn-primary btn-sm">Add</a>
+</span>
     {{/if}}
   </form>
 </template>
