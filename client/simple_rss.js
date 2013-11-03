@@ -137,21 +137,21 @@ Template.modalButtons.events({
                              },
                              
                              'click #exportOPML': function(){
-                               var exportOPML ="<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                                               "<opml version=\"1.0\">" +
-                                                "<head>" +
-                                                 "<title>" + Meteor.user.username + " subscriptions from New-River</title>" +
-                                                 "</head>" +
-                                               "<body>";
+                               var exportOPML ="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+                                               "<opml version=\"1.0\">\n" +
+                                                "<head>\n" +
+                                                 "<title>\n" + Meteor.user.username + " subscriptions from New-River\n</title>\n" +
+                                                 "</head>\n" +
+                                               "<body>\n";
                                Feeds.find().forEach( function( feed ) {
-                                 exportOPML += "<outline " +
-                                               "text=\"" + feed.title + "\" " +
-                                               "title=\"" + feed.title + "\" " +
-                                               "type=\"rss\" " +
-                                               "xmlUrl=\"" + feed.url + "\"/>";
+                                 exportOPML += "<outline\n" +
+                                               "text=\"" + feed.title + "\"\n" +
+                                               "title=\"" + feed.title + "\"\n" +
+                                               "type=\"rss\"\n" +
+                                               "xmlUrl=\"" + feed.url + "\"/>\n";
 
                                });
-                                exportOPML += "</body></opml>";
+                                exportOPML += "</body>\n</opml>\n";
                                 var blob = new Blob([exportOPML], {type: "application/xml"});
                                // window.saveAs = window.saveAs || window.webkitSaveAs || window.mozSaveAs || window.msSaveAs;
                                 saveAs ( blob, "new-river.export.opml");
