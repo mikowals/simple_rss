@@ -114,7 +114,6 @@ Template.modalButtons.events({
                                Session.set("importOPML", false);
                              
                                var opmlFile = $("#opmlFile")[0].files[0];
-                               console.log(JSON.stringify(opmlFile));
                                var fr = new FileReader();
                                fr.readAsText(opmlFile);
                                fr.onloadend = function(evt) {
@@ -135,8 +134,28 @@ Template.modalButtons.events({
                           
                              'click #importCancel' : function(){
                              Session.set("importOPML", false);
+                             },
+                             
+                             'click #exportOPML': function(){
+                               var exportOPML ="<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                                               "<opml version=\"1.0\">" +
+                                                "<head>" +
+                                                 "<title>" + Meteor.user.username + " subscriptions from New-River</title>" +
+                                                 "</head>" +
+                                               "<body>";
+                               Feeds.find().forEach( function( feed ) {
+                                 exportOPML += "<outline " +
+                                               "text=\"" + feed.title + "\" " +
+                                               "title=\"" + feed.title + "\" " +
+                                               "type=\"rss\" " +
+                                               "xmlUrl=\"" + feed.url + "\"/>";
+
+                               });
+                                exportOPML += "</body></opml>";
+                                var blob = new Blob([exportOPML], {type: "application/xml"});
+                               // window.saveAs = window.saveAs || window.webkitSaveAs || window.mozSaveAs || window.msSaveAs;
+                                saveAs ( blob, "new-river.export.opml");
                              }
-                          
                          
                              });
 

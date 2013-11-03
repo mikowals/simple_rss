@@ -272,61 +272,6 @@ cleanUrls: function(){
 		 });
 	   },
 
-  importOPML: function(upload){
-    check (upload, String);
-    var self = this;
-    var opml = XML2JS.parse(upload);
-    var xmlToAdd = [];
-    var feeds = [];
-    eachRecursive(opml, xmlToAdd); 
-     
-    xmlToAdd.forEach( function ( url ){
-      if (url !== null && url !== undefined){
-        var existing = Feeds.findOne( {url: url});
-        if ( ! existing)
-          feeds.push( {url: url });
-        else{ 
-          Feeds.update( {url: url}, {$addToSet: {subscribers: self.userId}}, function( error ){
-            if ( error ) console.error ( error );
-            });
-        }
-      }
-    });
-    feeds = multipleSyncFP( feeds );
-    feeds.forEach( function ( doc ){
-      if ( doc.error || doc.statusCode !== 200 ) 
-         Feeds.remove ( {_id: doc._id} );
-      else if ( ! doc.subscribers ){
-        Feeds.update( doc._id, {$set: {
-          hub: doc.hub || null,
-          title: doc.title,
-          last_date: doc.date,
-          subscribers: [ self.userId ],
-          lastModified: doc.lastModified
-          }, $unset: {temp: 1}}
-          , function( error, result){
-            if ( error ) console.error ( error );
-          });        
-      } else 
-        Feeds.update( doc._id, {$addToSet: {subscribers: self.userId}});
-
-    });
-  },
-
-lowerCaseUrls: function(){
-
-
-		       Feeds.find({}).forEach( function (feed){
-				       Feeds.update(feed._id, {$set:{url: feed.url.toLowerCase()}});
-				       });
-
-		       Articles.find({}).forEach( function ( article) {
-				Articles.remove( {_id: {$ne: article._id},link: article.link});
-				article.guid = article.guid || article.link;
-			       Articles.update( article._id, {$set: { link: article.link.toLowerCase(), guid: article.guid.toLowerCase()}});
-			});
-
-	       },
 
 markRead: function( link ){
   var self = this;
@@ -337,7 +282,7 @@ markRead: function( link ){
 },
 
   XML2JSparse: function ( file ) {
-
+    check( file, String);
     return XML2JS.parse( file );
   }
 
