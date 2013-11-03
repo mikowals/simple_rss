@@ -153,8 +153,8 @@ Template.modalButtons.events({
                                });
                                 exportOPML += "</body>\n</opml>\n";
                                 var blob = new Blob([exportOPML], {type: "application/xml"});
-                               // window.saveAs = window.saveAs || window.webkitSaveAs || window.mozSaveAs || window.msSaveAs;
-                                saveAs ( blob, "new-river.export.opml");
+                                var fname = Meteor.absoluteUrl().split( "//" )[1];
+                                saveAs ( blob, fname + ".opml");
                              }
                          
                              });
