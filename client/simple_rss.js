@@ -7,63 +7,60 @@ Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
 Session.setDefault( "now", new Date() );
 
+var cleanForXml = function ( string ){
+  string = string.replace ( /\"/g, "&quot;");
+  string = string.replace ( /\'/g, "&apos;");
+  string = string.replace ( /\&/g, "&amp;");
+  string = string.replace ( /\>/g, "&gt;");
+  
+  return  string.replace ( /\</g, "&lt;");
+}
                    
 var article_sub;
 
 Meteor.startup( function() {
                           
-               Meteor.subscribe( "feeds" );
-               article_sub = Meteor.subscribe("articles", function(){
-                                              Session.set("loaded", true);
-                                              });
-               
-               intervalProcesses['updateNow'] = intervalProcesses['updateNow'] || Meteor.setInterval( function() {
-                                                                                                     Session.set( "now", new Date() );
-                                                                                                     },
-                                                                                                     updateNowFreq );
-               Session.set( "offline", "");
-                          
-               });
+    Meteor.subscribe( "feeds" );
+    article_sub = Meteor.subscribe("articles", function(){
+      Session.set("loaded", true);
+      });
 
-  //always keep localStorage up to date with most recent articles
-  //not too efficient currently - every change rewrites all articles in localStorage
+    intervalProcesses['updateNow'] = intervalProcesses['updateNow'] || Meteor.setInterval( function() {
+      Session.set( "now", new Date() );
+      },
+      updateNowFreq );
+    Session.set( "offline", "");
+
+    });
+
+//always keep localStorage up to date with most recent articles
+//not too efficient currently - every change rewrites all articles in localStorage
 Deps.autorun( function(){
-             if ( Session.equals( "loaded", true ) ){ // make sure collection is ready otherwise every database item passes through quickArticles as it loads
-             
-             amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
-             Session.set( "now" , new Date() );
-             
-             
-            }
-             });
- 
+    if ( Session.equals( "loaded", true ) ){ // make sure collection is ready otherwise every database item passes through quickArticles as it loads
+
+      amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
+      Session.set( "now" , new Date() );
+
+    }
+});
+
 Deps.autorun( function(){
-             if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
-             console.log( "Meteor.status().connected = " + Meteor.status().connected );
-               Session.set ("offline", "offline" );
-              /**
-               if ( ! intervalProcesses[ "reconnect" ] ) {
-             
-                intervalProcesses[ "reconnect" ] = Meteor.setInterval ( function() {
-                  Meteor.reconnect();
-                  },
-                  15 * 1000 );
-               }
-               **/
-             }
-             else if ( article_sub && article_sub.ready() ){
-              Session.set("offline", "");
-             //if ( intervalProcesses[ "reconnect" ] ) Meteor.clearInterval ( intervalProcesses[ "reconnect" ] );
-             }
-             });
+    if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
+      console.log( "Meteor.status().connected = " + Meteor.status().connected );
+      Session.set ("offline", "offline" );
+    }
+    else if ( article_sub && article_sub.ready() ){
+      Session.set("offline", "");
+    }
+});
 
 
 var timeago = function( some_date ){
   var now = new Date( Session.get( "now" ) );
   var referenceDate = new Date( some_date );
-  
+
   var timeago = ( now -  referenceDate ) / DAY;
-  
+
   if (Math.floor(timeago )  >= 2) return Math.floor(timeago ) + " days ago";
   else if (Math.floor(timeago )  >= 1) return Math.floor(timeago ) + " day ago";
   else if (Math.floor(timeago  * 24)  >= 2 ) return Math.floor(timeago * 24) + " hours ago";
@@ -118,15 +115,11 @@ Template.modalButtons.events({
                                fr.readAsText(opmlFile);
                                fr.onloadend = function(evt) {
                                  if (evt.target.readyState === FileReader.DONE) { // DONE == 2
-                                   Meteor.call( 'XML2JSparse', evt.target.result, function ( error, result ){
-                                     var xmlToAdd = [];
-                                     eachRecursive(result, xmlToAdd);
-                                     xmlToAdd.forEach( function ( url ){
-                                       Meteor.call('addFeed', {url: url}, function ( error ){
-                                         if (error) console.error( error );
-                                       });
-                                     });
-                                     //Meteor.call('importOPML', evt.target.result);
+                                   //Meteor.call( 'XML2JSparse', evt.target.result, function ( error, result ){
+                                   $(  evt.target.result ).find( 'outline').each( function( ){
+                                      var url = $( this ).attr("xmlUrl");
+                                      if ( url )
+                                        Meteor.call('addFeed', {url: url} );
                                    });
                                  }
                                }
@@ -137,21 +130,22 @@ Template.modalButtons.events({
                              },
                              
                              'click #exportOPML': function(){
-                               var exportOPML ="<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-                                               "<opml version=\"1.0\">\n" +
-                                                "<head>\n" +
-                                                 "<title>\n" + Meteor.user.username + " subscriptions from New-River\n</title>\n" +
-                                                 "</head>\n" +
-                                               "<body>\n";
+                               var exportOPML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                                               "<opml version=\"1.0\">" +
+                                                "<head>" +
+                                                 "<title>" + Meteor.user.username + " subscriptions from New-River</title>" +
+                                                 "</head>" +
+                                               "<body>";
                                Feeds.find().forEach( function( feed ) {
-                                 exportOPML += "<outline\n" +
-                                               "text=\"" + feed.title.replace( /\"/g, "&quot;") + "\"\n" +
-                                               "title=\"" + feed.title.replace( /\"/g, "&quot;") + "\"\n" +
-                                               "type=\"rss\"\n" +
-                                               "xmlUrl=\"" + feed.url + "\"/>\n";
-
+                                 exportOPML += "<outline " +
+                                               "text=\"" + cleanForXml( feed.title ) + "\" " +
+                                               "title=\"" + cleanForXml( feed.title ) + "\" " +
+                                               "type=\"rss\" " +
+                                               "xmlUrl=\"" + cleanForXml( feed.url ) + "\"/>";
                                });
-                                exportOPML += "</body>\n</opml>\n";
+                                exportOPML += "</body></opml>";
+                                //exportOPML = ( new window.DOMParser() ).parseFromString( exportOPML, "text/xml");
+                                //exportOPML = (new XMLSerializer()).serializeToString( exportOPML );
                                 var blob = new Blob([exportOPML], {type: "application/xml"});
                                 var fname = Meteor.absoluteUrl().split( "//" )[1];
                                 saveAs ( blob, fname + ".opml");
