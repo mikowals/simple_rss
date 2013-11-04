@@ -21,7 +21,7 @@
    <h4><a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-cog" /></a>
     {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}}
     {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}}
-    {{loginButtons align="right"}}
+    {{> loginButtons}}
    </h4>
   </div>
 </template>
@@ -80,7 +80,7 @@
       <time class="hidden-xs time pull-right"> {{timeago date}} </time>
     </div>
     <div class="article">
-      <div class="header"><h3><a href="{{{link}}}">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
+      <div class="header"><h3><a href="">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
       <div class="description">{{{summary}}}</div>
       <div class="footer visible-xs"><time class="timeago"> {{timeago date}} </time></div>
     </div>
