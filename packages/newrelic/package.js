@@ -1,7 +1,7 @@
 
 
 Npm.depends({
-            "newrelic": "1.0.0",
+            "newrelic": "1.0.1",
             "bunyan" : "0.22.0",
             "continuation-local-storage" : "2.4.3"
 

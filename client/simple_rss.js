@@ -14,24 +14,32 @@ var cleanForXml = function ( string ){
   string = string.replace ( /\>/g, "&gt;");
   
   return  string.replace ( /\</g, "&lt;");
-}
+};
                    
-var article_sub;
+var articleSub;
 
 Meteor.startup( function() {
                           
-    Meteor.subscribe( "feeds" );
-    article_sub = Meteor.subscribe("articles", function(){
-      Session.set("loaded", true);
-      });
-
     intervalProcesses['updateNow'] = intervalProcesses['updateNow'] || Meteor.setInterval( function() {
       Session.set( "now", new Date() );
       },
       updateNowFreq );
-    Session.set( "offline", "");
+    Session.set( "offline", null);
 
+});
+
+Deps.autorun ( function(){
+  
+  if ( Session.equals( "loaded", true)  ){
+    articleSub = Meteor.subscribe("articles");
+    Meteor.subscribe( "feeds"); 
+  } else {  
+    articleSub = Meteor.subscribe("articles", function( articlesOnLoad ){
+      Session.set("loaded", true);
     });
+  }  
+  
+});
 
 //always keep localStorage up to date with most recent articles
 //not too efficient currently - every change rewrites all articles in localStorage
@@ -49,8 +57,8 @@ Deps.autorun( function(){
       console.log( "Meteor.status().connected = " + Meteor.status().connected );
       Session.set ("offline", "offline" );
     }
-    else if ( article_sub && article_sub.ready() ){
-      Session.set("offline", "");
+    else if ( articleSub && articleSub.ready() ){
+      Session.set("offline", null);
     }
 });
 

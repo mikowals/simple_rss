@@ -10,13 +10,15 @@ Accounts.config({sendVerificationEmail: true});
 
 Meteor.publish("feeds", function () {
   var self = this;
-  return Feeds.find({subscribers: self.userId }, {_id: 1, title: 1, url:1, last_date:1});
+  return Feeds.find({subscribers: self.userId }, {fields: {_id: 1, title: 1, url:1, last_date:1}});
 });
 
-Meteor.publish( "articles", function(){
+Meteor.publish( "articles", function( userLimit ){
                var self= this;
                var subscriptions = [];
-               
+               if ( userLimit ) 
+                 check( userLimit, Number);
+               var limit = userLimit || articlePubLimit;
                
                var observer = Feeds.find({ subscribers: self.userId }, {_id: 1}).observeChanges({
                                                                                 added: function (id){
@@ -39,7 +41,7 @@ Meteor.publish( "articles", function(){
                     
 
 	var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-	return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: articlePubLimit, fields: visibleFields } );
+	return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: limit, fields: visibleFields } );
                
 });
 
