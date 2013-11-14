@@ -82,9 +82,9 @@ var timeago = function( some_date ){
   }
 };
 
-Handlebars.registerHelper('timeago', function(some_date){
-                          return timeago(some_date);
-                          });
+UI.body.timeago = function(some_date){
+  return timeago(some_date);
+};
 
 Template.feedList.feeds= function () {
   return Feeds.find({}, {sort: {title: 1}});

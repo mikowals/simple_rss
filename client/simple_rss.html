@@ -19,9 +19,9 @@
 <template name="menubar">
   <div id="menubar">
    <h4><a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-cog" /></a>
-    {{#isolate}} {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}} {{/isolate}}
-    {{#isolate}} {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}} {{/isolate}}
-    {{loginButtons align="right"}}
+    {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}}
+    {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}}
+    {{> loginButtons}}
    </h4>
   </div>
 </template>
@@ -77,12 +77,12 @@
         <a class='subscribe' href={{subscribeRss}} data-toggle="toottip"><h6><i class="glyphicon glyphicon-cloud-download"/></h6></a>
       {{/unless}}
       <span class="spacer"></span>
-      {{#isolate}}<time class="hidden-xs time pull-right"> {{timeago date}} </time>{{/isolate}}
+      <time class="hidden-xs time pull-right"> {{timeago date}} </time>
     </div>
     <div class="article">
-      <div class="header"><h3><a href="{{{link}}}">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
+      <div class="header"><h3><a href="{{link}}">{{#if title}} {{title}} {{else}} Link {{/if}} </a></h3></div>
       <div class="description">{{{summary}}}</div>
-      {{#isolate}}<div class="footer visible-xs"><time class="timeago"> {{timeago date}} </time></div>{{/isolate}}
+      <div class="footer visible-xs"><time class="timeago"> {{timeago date}} </time></div>
     </div>
   </div>
 </template>
@@ -98,10 +98,19 @@
       <div class="modal-header">
       <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
       
-      <span id="myModalLabel">Feeds</span>
+      <span id="myModalLabel">Reading List</span>
       
     </div>
     <div class="modal-body">
+       <span class="col-xs-8 col-md-8">
+         <h4><strong>Title</strong></h4>
+       </span>
+       <span class="col-xs-1 text-right">
+         <h4><strong>Count</strong></h4>
+       </span>
+       <span class="col-xs-2 pull-right">
+         <h4><strong>Last update</strong></h4>
+       </span>
       {{>feedList}}
     </div>
     
