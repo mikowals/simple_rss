@@ -31,10 +31,13 @@ Meteor.startup( function() {
 Deps.autorun ( function(){
   
   if ( Session.equals( "loaded", true)  ){
-    articleSub = Meteor.subscribe("articles");
+    articleSub = Meteor.subscribe("articles", function(){
+      console.log( new Date());
+    });
     Meteor.subscribe( "feeds"); 
   } else {  
-    articleSub = Meteor.subscribe("articles", function( articlesOnLoad ){
+    articleSub = Meteor.subscribe("articles", articlesOnLoad, function( ){
+      console.log( new Date());
       Session.set("loaded", true);
     });
   }  
