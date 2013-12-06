@@ -277,9 +277,10 @@ cleanUrls: function(){
 
 markRead: function( link ){
   var self = this;
+  check( link, String );
   var article = Articles.findOne({link: link});
   if ( article ){ 
-    Articles.update( article._id,{$push: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}); 
+    Articles.update( article._id,{$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}); 
   }
 },
 

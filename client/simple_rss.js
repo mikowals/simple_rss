@@ -178,7 +178,7 @@ Template.feedList.events({
 Template.articleList.articles = function() {
   
  if ( Session.equals( "loaded", true ) ) { 
-            return Articles.find( {}, { sort: { date: -1 } } );;
+   return Articles.find( {}, { sort: { date: -1 } } );
  }
  else{
   console.log("articles from QuickArticles");
@@ -191,11 +191,12 @@ Template.articleList.loaded = function(){
 };
 
 Template.articleList.events({
-  'click a': function( e ){
+  'mousedown a': function( e ){
      Meteor.call( 'markRead', $( e.currentTarget ).attr('href'));
   }
 
 }); 
+
 Template.article.subscribed = function(){
   return Feeds.findOne({title: this.source}) !==null;
 };
