@@ -191,9 +191,8 @@ Template.articleList.loaded = function(){
 };
 
 Template.articleList.events({
-  'click a, tap a, mousedown a': function( e ){
+  'click a, contextmenu a': function( e ){
      Meteor.call( 'markRead', $( e.currentTarget ).attr('href'));
-    e.stopImmediatePropogation();
   }
 
 }); 

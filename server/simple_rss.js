@@ -282,6 +282,7 @@ markRead: function( link ){
   if ( article ){ 
     Articles.update( article._id,{$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}); 
   }
+  console.log( "marked as read: " + link);
 },
 
   XML2JSparse: function ( file ) {
