@@ -192,9 +192,24 @@ Template.articleList.loaded = function(){
 
 Template.articleList.events({
   'click a, contextmenu a': function( e ){
-     Meteor.call( 'markRead', $( e.currentTarget ).attr('href'));
-  }
+     if ( ! Session.equals( "handleTap", true)){
+       Meteor.call( 'markRead', $( e.currentTarget ).attr('href'));
+     } else{
+       e.preventDefault();
+       e.stopImmediatePropagation();
+     }
+  },
+  
+  'tap a':  function( e ){
+    Session.set( "handleTap", true);
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    var dest = $( e.currentTarget ).attr('href');
+    Meteor.call( 'markRead', dest, function(){
+      window.location.href = dest;
+    });
 
+  }
 }); 
 
 Template.article.subscribed = function(){
