@@ -82,7 +82,12 @@ var timeago = function( some_date ){
   }
 };
 
-UI.body.timeago = function(some_date){
+Template.feedList.timeago = function(some_date){
+  return timeago(some_date);
+};
+
+
+Template.articleList.timeago = function(some_date){
   return timeago(some_date);
 };
 
