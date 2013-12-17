@@ -18,7 +18,7 @@
 
 <template name="menubar">
   <div id="menubar">
-   <h4><a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-cog" /></a>
+   <h4><a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-cog"></i></a>
     {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}}
     {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}}
     {{> loginButtons}}
@@ -39,7 +39,7 @@
     <h5 class="col-xs-9 col-md-9 pull-left">
       {{#if title}}{{title}}{{else}}{{url}}{{/if}} 
     </h5>
-      {{#if selected}}<h6><button id="removeFeed" class="btn btn-xs btn-primary pull-right"><i class="glyphicon glyphicon-remove"/></button></h6>{{/if}}
+      {{#if selected}}<h6><button id="removeFeed" class="btn btn-xs btn-primary pull-right"><i class="glyphicon glyphicon-remove"></i></button></h6>{{/if}}
   </span>
   <h5 class="count col-xs-1 col-md-1 text-right" >{{article_count}}</h5>
   <h5 class="lastDate time col-xs-2 col-md-3 text-right pull-right">{{>feedTime}}</h5>
@@ -61,11 +61,11 @@
       
     </div>
   
-  <footer id="footer">
+  <div id="footer">
     <p>The CSS layout of this page was taken entirely from Dave Winer's <a href="http://river2.newsriver.org/">River2</a> template.</p>
     <p>The River2 template is based on the beautiful river project ( <a href="http://beautriver1.blorkmark.com/">Credits</a> ) and I had no involvment with it.</p>
-    
-	</footer>
+   
+  </div>
   
 </template>
 
@@ -74,7 +74,7 @@
     <div class="header row-fluid">
       <h2>{{source}} </h2>
       {{#unless subscribed}}
-        <a class='subscribe' href={{subscribeRss}} data-toggle="toottip"><h6><i class="glyphicon glyphicon-cloud-download"/></h6></a>
+        <a class='subscribe' href={{subscribeRss}} data-toggle="toottip"><h6><i class="glyphicon glyphicon-cloud-download"></i></h6></a>
       {{/unless}}
       <span class="spacer"></span>
       <time class="hidden-xs time pull-right"> {{timeago date}} </time>
@@ -128,14 +128,14 @@
     {{#if importOPML}}
      <a id="importCancel" class="btn btn-link btn-sm col-sm-1 hidden-xs">Cancel</a>
     <span class="input-group input-group-sm col-xs-12 col-sm-11 pull-right">
-      <input id="opmlFile" type="file" class="fileUploader col-xs-12" multiple="multiple" />
-      <a id="opmlUpload" class="input-group-addon btn btn-primary btn-sm"><i class="glyphicon glyphicon-upload"/></a>
+      <input id="opmlFile" type="file" class="fileUploader col-xs-12" multiple="multiple">
+      <a id="opmlUpload" class="input-group-addon btn btn-primary btn-sm"><i class="glyphicon glyphicon-upload"></i></a>
     </span>
     {{else}}
     <a id="importToggle" class="btn btn-link btn-sm col-sm-1 hidden-xs">Import</a>
     <a id="exportOPML" class="btn btn-link btn-sm col-sm-1 hidden-xs">Export</a>
   <span class="input-group input-group-sm col-xs-12 col-sm-9 pull-right">
-   <input type="url" class="input-sm col-xs-12" placeholder="Feed url to add" id="feedUrl" />
+   <input type="url" class="input-sm col-xs-12" placeholder="Feed url to add" id="feedUrl">
   <a id="addFeed" type="submit" class="input-group-addon btn btn-primary btn-sm">Add</a>
 </span>
     {{/if}}
@@ -143,7 +143,7 @@
 </template>
 
 <template name="smallLoader">
-  <div class="pull-left small-loader" />
+  <div class="pull-left small-loader"></div>
 </template>
 
 <template name="updated">
