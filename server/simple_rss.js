@@ -8,6 +8,8 @@ var articlePubLimit = 150;
 
 Accounts.config({sendVerificationEmail: true});
 
+Facts.setUserIdFilter(function () { return true; });
+
 Meteor.publish("feeds", function () {
   var self = this;
   return Feeds.find({subscribers: self.userId }, {fields: {_id: 1, title: 1, url:1, last_date:1}});

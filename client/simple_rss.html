@@ -66,7 +66,7 @@
     <p>The River2 template is based on the beautiful river project ( <a href="http://beautriver1.blorkmark.com/">Credits</a> ) and I had no involvment with it.</p>
    
   </div>
-  
+{{> serverFacts}}  
 </template>
 
 <template name="article">
@@ -111,7 +111,7 @@
        <span class="col-xs-2 pull-right">
          <h4><strong>Last update</strong></h4>
        </span>
-      {{>feedList}}
+     {{#if modal}} {{>feedList}}{{/if}}
     </div>
     
     <div class="modal-footer">

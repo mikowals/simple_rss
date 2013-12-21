@@ -6,6 +6,7 @@ var intervalProcesses = []; //hold interval process id to start and stop with di
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
 Session.setDefault( "now", new Date() );
+Session.setDefault( "modal", false );
 
 var cleanForXml = function ( string ){
   string = string.replace ( /\"/g, "&quot;");
@@ -16,7 +17,7 @@ var cleanForXml = function ( string ){
   return  string.replace ( /\</g, "&lt;");
 };
                    
-var articleSub;
+var articleSub, feedHandle;
 
 Meteor.startup( function() {
                           
@@ -32,12 +33,9 @@ Deps.autorun ( function(){
   
   if ( Session.equals( "loaded", true)  ){
     articleSub = Meteor.subscribe("articles", function(){
-      console.log( new Date());
     });
-    Meteor.subscribe( "feeds"); 
   } else {  
     articleSub = Meteor.subscribe("articles", articlesOnLoad, function( ){
-      console.log( new Date());
       Session.set("loaded", true);
     });
   }  
@@ -90,12 +88,28 @@ Template.feedList.feeds= function () {
   return Feeds.find({}, {sort: {title: 1}});
 };
 
+Template.menubar.events({
+  'click #modal_button': function(){
+    Session.set( "modal", true);
+  }
+});
+
 Template.feedList.flash = function(){
   return Session.get("feedListFlash");
 };
 
 Template.modalButtons.importOPML = function(){
   return Session.equals("importOPML", true);
+};
+
+Template.feedModal.events({
+  'click .close': function(){
+     Session.set( "modal", false);
+  }
+});
+
+Template.feedModal.modal = function(){
+  return Session.equals( "modal", true);
 };
 
 Template.modalButtons.events({
@@ -174,6 +188,13 @@ Template.feedList.events({
                          
                          });
                            
+Template.feedList.created = function(){
+   feedHandle = Meteor.subscribe( "feeds");
+};
+
+Template.feedList.destroyed = function(){
+   feedHandle.stop();
+};
 
 Template.articleList.articles = function() {
   
@@ -197,7 +218,9 @@ Template.articleList.events({
      } else{
        e.preventDefault();
        e.stopImmediatePropagation();
+       return false;
      }
+     return true;
   },
   
   'tap a':  function( e ){
@@ -208,7 +231,7 @@ Template.articleList.events({
     Meteor.call( 'markRead', dest, function(){
       window.location.href = dest;
     });
-
+    return false;
   }
 }); 
 
