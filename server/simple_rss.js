@@ -10,40 +10,38 @@ Accounts.config({sendVerificationEmail: true});
 
 Facts.setUserIdFilter(function () { return true; });
 
-Meteor.publish("feeds", function () {
-  var self = this;
-  return Feeds.find({subscribers: self.userId }, {fields: {_id: 1, title: 1, url:1, last_date:1}});
-});
-
 Meteor.publish( "articles", function( userLimit ){
-               var self= this;
-               var subscriptions = [];
-               if ( userLimit ) 
-                 check( userLimit, Number);
-               var limit = userLimit || articlePubLimit;
-               
-               var observer = Feeds.find({ subscribers: self.userId }, {_id: 1}).observeChanges({
-                                                                                added: function (id){
-                                                                                  subscriptions.push(id);                                       
-                                                                                },
-                                        
-                                                                                removed: function (id){
-                                                                                  var ax;
-                                                                                  while (( ax = subscriptions.indexOf(id)) !== -1) {
-                                                                                  subscriptions.splice(ax, 1);
-                                                                                }
-                                        
-                                                                                }
+  var self= this;
+  var subscriptions = [];
+  if ( userLimit ) 
+    check( userLimit, Number);
+  var limit = userLimit || articlePubLimit;
 
-                                        });
+  var observer = Feeds.find({ subscribers: self.userId },  {fields: {_id: 1, title: 1, url:1, last_date:1}}).observeChanges({
+    added: function (id, fields){
+      subscriptions.push(id);  
+      self.added( "feeds", id, fields);              
+    },
 
-               self.onStop( function() {
-                           observer.stop();
-			   });
+    removed: function (id){
+      self.removed( "feeds", id);
+      var ax;
+      while (( ax = subscriptions.indexOf(id)) !== -1) {
+	subscriptions.splice(ax, 1);
+      } 
+    },
+    
+    changed: function ( id, fields){
+      self.changed( "feeds", id, fields);
+    }
+  });
+
+  self.onStop( function() {
+    observer.stop();
+  });
                     
-
-	var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-	return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: limit, fields: visibleFields } );
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
+  return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: limit, fields: visibleFields } );
                
 });
 
@@ -72,69 +70,30 @@ Feeds.allow({
   },
 
   remove: function(userId, doc){
-      return false; //doc.subscribers.length === 1 && doc.subscribers[0] === userId;
+    return false; //doc.subscribers.length === 1 && doc.subscribers[0] === userId;
   }
     
 });
 
-Feeds.deny({
-  insert: function(userId, doc){
-    feedInsert( userId, doc);
-  }
-});	
-  
-var feedInsert = function( userId, doc){
-  var existingFeed = Feeds.findOne({url: doc.url});
-  if( existingFeed ){
-    console.log(doc.url + " exists in db");
-    Feeds.update(existingFeed._id, { $addToSet: { subscribers: userId }});
-    return true;
-  }
-
-    var rssResult = syncFP( doc )
-    if ( rssResult.error || rssResult.statusCode !== 200 ){
-	console.log(JSON.stringify (rssResult) + " has no data to insert"); 
-	Feeds.remove( {_id: rssResult._id, temp: true});
-        return true;
-    }
-    else{
-      doc.subscribers = doc.subscribers || [];
-      doc.subscribers.push( userId );
-      Feeds.update( rssResult._id, {$set: {
-        hub: rssResult.hub || null,
-        title: rssResult.title,
-        last_date: rssResult.date,
-        subscribers: doc.subscribers,
-        lastModified: doc.lastModified
-      }, $unset: {temp: 1}}
-      , function( error, result){
-        if ( error ) 
-          console.error( error );
-      }); 
-      return true;
-  }
-};
-
-
 Meteor.startup( function(){
-    Meteor.call('findArticles', {} );
+  Meteor.call('findArticles', {} );
 
-    Meteor.call('removeOldArticles');
+  Meteor.call('removeOldArticles');
 
-    if ( !intervalProcesses[ "removeOldArticles"] ){
+  if ( !intervalProcesses[ "removeOldArticles"] ){
     var pro = Meteor.setInterval(function (){
       Meteor.call('removeOldArticles'); },
       DAY);
     intervalProcesses["removeOldArticles"] = pro;
-    }
+  }
 
-    if ( !intervalProcesses[ "findArticles"] ){
+  if ( !intervalProcesses[ "findArticles"] ){
     var pro = Meteor.setInterval( function(){
       Meteor.call('findArticles', { hub: null});
       }, 
       updateInterval);
     intervalProcesses[ "findArticles"] = pro;
-    }
+  }
   
 
 
@@ -231,63 +190,63 @@ Meteor.methods({
 //console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds"); 
   },
 
-findHubs : function(){
-  Feeds.find({}, {fields: {_id:1, url: 1}}).forEach( function( feed ) {
-    var result = syncFP( feed );
-    if ( result.hub ){
-      Feeds.update( {_id: feed._id}, { $set: { hub: result.hub}}, function ( error ){
-        if ( error )  console.error ( error.reason);
-        else console.log( result.title + " updated with hub " + result.hub);
-      });
+  findHubs : function(){
+    Feeds.find({}, {fields: {_id:1, url: 1}}).forEach( function( feed ) {
+      var result = syncFP( feed );
+      if ( result.hub ){
+	Feeds.update( {_id: feed._id}, { $set: { hub: result.hub}}, function ( error ){
+	  if ( error )  console.error ( error.reason);
+	  else console.log( result.title + " updated with hub " + result.hub);
+	});
+      }
+    });
+  },
+
+  removeOldArticles: function(){
+    console.log("removeOldArticles method called on server");
+
+    var error = Articles.remove({date:  {$lt: keepLimitDate}, clicks: 0 }, function(error){ return error;});
+    return error || 'success';
+  },
+
+  addSubscriberToFeeds: function(){
+    var self = this;
+    Feeds.find({}).forEach( function ( feed ){
+      console.log("adding subscriber " + self.userId);
+      Feeds.update( feed._id,{ $addToSet: { subscribers: self.userId }});
+    });
+  },
+
+  addFeed_idToArticles: function(){
+    Articles.find({}).forEach( function (article){
+      var feed_id = Feeds.findOne({title: article.source})._id;
+      Articles.update(article._id,{$set: {feed_id: feed_id}});
+    });
+
+  },
+
+  cleanUrls: function(){
+    Feeds.find({}).forEach( function(feed){
+      var result = syncFP( feed );
+      if (result && result.url && feed.url !== result.url ){
+	console.log("changing url " + feed.url + " to " + result.url);
+	Feeds.update(feed._id, {$set: {url: result.url }});
+     }
+    });
+  },
+
+
+  markRead: function( link ){
+    var self = this;
+    check( link, String );
+    var article = Articles.findOne({link: link});
+    if ( article ){ 
+      Articles.update( article._id,{$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}, function( error, result){
+	//make update async since client might be waiting to navigate
+      }); 
     }
-  });
-},
-
-removeOldArticles: function(){
-		     console.log("removeOldArticles method called on server");
-
-		     var error = Articles.remove({date:  {$lt: keepLimitDate}, clicks: 0 }, function(error){ return error;});
-		     return error || 'success';
-		   },
-
-addSubscriberToFeeds: function(){
-			var self = this;
-			Feeds.find({}).forEach( function ( feed ){
-			    console.log("adding subscriber " + self.userId);
-			    Feeds.update( feed._id,{ $addToSet: { subscribers: self.userId }});
-			    });
-		      },
-
-addFeed_idToArticles: function(){
-			Articles.find({}).forEach( function (article){
-			    var feed_id = Feeds.findOne({title: article.source})._id;
-			    Articles.update(article._id,{$set: {feed_id: feed_id}});
-			    });
-
-		      },
-
-cleanUrls: function(){
-	     Feeds.find({}).forEach( function(feed){
-		 var result = syncFP( feed );
-		 if (result && result.url && feed.url !== result.url ){
-		 console.log("changing url " + feed.url + " to " + result.url);
-		 Feeds.update(feed._id, {$set: {url: result.url }});
-		 }
-		 });
-	   },
-
-
-markRead: function( link ){
-  var self = this;
-  check( link, String );
-  var article = Articles.findOne({link: link});
-  if ( article ){ 
-    Articles.update( article._id,{$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}, function( error, result){
-      //make update async since client might be waiting to navigate
-    }); 
-  }
-  console.log( "marked as read: " + link);
-},
+    console.log( "marked as read: " + link);
+  },
 
   XML2JSparse: function ( file ) {
     check( file, String);

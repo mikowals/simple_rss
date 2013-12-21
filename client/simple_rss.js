@@ -6,7 +6,6 @@ var intervalProcesses = []; //hold interval process id to start and stop with di
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
 Session.setDefault( "now", new Date() );
-Session.setDefault( "modal", false );
 
 var cleanForXml = function ( string ){
   string = string.replace ( /\"/g, "&quot;");
@@ -88,12 +87,6 @@ Template.feedList.feeds= function () {
   return Feeds.find({}, {sort: {title: 1}});
 };
 
-Template.menubar.events({
-  'click #modal_button': function(){
-    Session.set( "modal", true);
-  }
-});
-
 Template.feedList.flash = function(){
   return Session.get("feedListFlash");
 };
@@ -102,20 +95,12 @@ Template.modalButtons.importOPML = function(){
   return Session.equals("importOPML", true);
 };
 
-Template.feedModal.events({
-  'click .close': function(){
-     Session.set( "modal", false);
-  }
-});
-
-Template.feedModal.modal = function(){
-  return Session.equals( "modal", true);
-};
-
 Template.modalButtons.events({
                              
                              //could modify this to verify feed and populate fields for insertion
-                             'submit, click #addFeed': function() {
+                             'submit, click #addFeed': function(e) {
+                               e.stopImmediatePropagation();
+                               e.preventDefault();
                                var url = $("#feedUrl").val();
                                var regex =/(((f|ht){1}tp|tps:\/\/)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]+)/g;
                                if ( Match.test ( url, String ) && regex.test(url) ){
@@ -188,14 +173,6 @@ Template.feedList.events({
                          
                          });
                            
-Template.feedList.created = function(){
-   feedHandle = Meteor.subscribe( "feeds");
-};
-
-Template.feedList.destroyed = function(){
-   feedHandle.stop();
-};
-
 Template.articleList.articles = function() {
   
  if ( Session.equals( "loaded", true ) ) { 
