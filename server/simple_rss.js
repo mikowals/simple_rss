@@ -8,7 +8,10 @@ var articlePubLimit = 150;
 
 Accounts.config({sendVerificationEmail: true});
 
-Facts.setUserIdFilter(function () { return true; });
+Facts.setUserIdFilter(function ( userId ) {
+  var user = Meteor.users.findOne(userId);
+  return user && user.admin;
+});
 
 Meteor.publish( "articles", function( userLimit ){
   var self= this;
@@ -16,11 +19,11 @@ Meteor.publish( "articles", function( userLimit ){
   if ( userLimit ) 
     check( userLimit, Number);
   var limit = userLimit || articlePubLimit;
-
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
   var observer = Feeds.find({ subscribers: self.userId },  {fields: {_id: 1, title: 1, url:1, last_date:1}}).observeChanges({
     added: function (id, fields){
       subscriptions.push(id);  
-      self.added( "feeds", id, fields);              
+      self.added( "feeds", id, fields);
     },
 
     removed: function (id){
@@ -39,10 +42,9 @@ Meteor.publish( "articles", function( userLimit ){
   self.onStop( function() {
     observer.stop();
   });
-                    
+
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
   return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: limit, fields: visibleFields } );
-               
 });
 
 Articles.allow({
@@ -251,6 +253,11 @@ Meteor.methods({
   XML2JSparse: function ( file ) {
     check( file, String);
     return XML2JS.parse( file );
+  },
+
+  checkAdmin: function(){
+    var user = Meteor.users.findOne( {_id: this.userId} );
+    return user && user.admin;
   }
 
 });

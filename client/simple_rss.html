@@ -12,7 +12,7 @@
   
     {{>menubar}}
     {{>articleList}}
-  
+    {{#if admin}} {{> serverFacts}} {{/if}}
   </div>
 </template>
 
@@ -66,7 +66,6 @@
     <p>The River2 template is based on the beautiful river project ( <a href="http://beautriver1.blorkmark.com/">Credits</a> ) and I had no involvment with it.</p>
    
   </div>
-{{> serverFacts}}  
 </template>
 
 <template name="article">

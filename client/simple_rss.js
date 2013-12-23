@@ -53,6 +53,17 @@ Deps.autorun( function(){
 });
 
 Deps.autorun( function(){
+  if ( Meteor.user() ){
+    Meteor.call( "checkAdmin", function( error, result){
+      if ( result )
+        Session.set( "admin", result );
+      console.log( error );
+      console.log( result );
+    }); 
+  }
+});
+
+Deps.autorun( function(){
     if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
       console.log( "Meteor.status().connected = " + Meteor.status().connected );
       Session.set ("offline", "offline" );
@@ -61,6 +72,7 @@ Deps.autorun( function(){
       Session.set("offline", null);
     }
 });
+
 
 
 var timeago = function( some_date ){
@@ -81,6 +93,10 @@ var timeago = function( some_date ){
 
 UI.body.timeago = function(some_date){
   return timeago(some_date);
+};
+
+UI.body.admin = function(){
+  return Meteor.userId() && Session.get( "admin");
 };
 
 Template.feedList.feeds= function () {
