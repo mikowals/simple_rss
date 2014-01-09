@@ -22,6 +22,8 @@ xml2js
 less
 bootstrap3-less
 filesaver
+<<<<<<< HEAD
 spacebars
 facts
-nodetime
+=======
+>>>>>>> master
