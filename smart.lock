@@ -2,15 +2,9 @@
   "meteor": {},
   "dependencies": {
     "basePackages": {
-      "font-awesome": {
-        "version": "4.0.3"
-      },
-      "bootstrap3-less": {
-        "version": "0.1.8"
-      },
-      "nodetime": {
-        "version": "0.2.0"
-      }
+      "font-awesome": {},
+      "bootstrap3-less": {},
+      "nodetime": {}
     },
     "packages": {
       "font-awesome": {
