@@ -1,3 +1,8 @@
+Nodetime.profile({
+    accountKey: '4ff940073fb1fea22322e4d9ed687e4b1ef00f5d', 
+    appName: 'New River'
+});
+
 var Future = Npm.require( "fibers/future" );
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
