@@ -7,7 +7,6 @@ meteor
 ui
 session
 jquery
-amplify
 http
 accounts-ui
 accounts-password

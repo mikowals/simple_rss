@@ -34,14 +34,6 @@ Meteor.startup( function() {
 
 //always keep localStorage up to date with most recent articles
 //not too efficient currently - every change rewrites all articles in localStorage
-Deps.autorun( function(){
-    if ( Session.equals( "loaded", true ) ){ // make sure collection is ready otherwise every database item passes through quickArticles as it loads
-
-      amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
-      Session.set( "now" , new Date() );
-
-    }
-});
 
 Deps.autorun( function(){
     if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
@@ -166,13 +158,7 @@ Template.feedList.events({
                            
 Template.articleList.articles = function() {
   
- if ( articleSub.ready() ) { 
    return Articles.find( {}, { sort: { date: -1 } } );
- }
- else{
-  console.log("articles from QuickArticles");
-  return amplify.store("quickArticles");
- }
 };
 
 Template.articleList.loaded = function(){
