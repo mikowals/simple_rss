@@ -13,6 +13,15 @@ Facts.setUserIdFilter(function ( userId ) {
   return user && user.admin;
 });
 
+FastRender.onAllRoutes(function(path) {
+  var self = this;
+  var feed_ids = _.pluck( Feeds.find({ subscribers: self.userId },  {fields: {_id: 1}}).fetch(), "_id");
+  console.log( "userId: " +  self.userId + ", feed_ids: " + feed_ids);
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
+  self.find( Articles,{ feed_id: {$in: feed_ids} }, { sort: {date: -1}, limit: articlePubLimit, fields: visibleFields } );
+  self.completeSubscriptions(['articles']);
+});
+
 Meteor.publish( "articles", function( userLimit ){
   var self= this;
   var subscriptions = [];

@@ -17,6 +17,10 @@ var cleanForXml = function ( string ){
 };
                    
 var articleSub, feedHandle;
+articleSub = Meteor.subscribe("articles", function( ){
+  Session.set("loaded", true);
+});
+
 
 Meteor.startup( function() {
                           
@@ -26,18 +30,6 @@ Meteor.startup( function() {
     updateNowFreq );
   Session.set( "offline", null);
 
-});
-
-Deps.autorun ( function(){
-  if ( Session.equals( "loaded", true)  ){
-    articleSub = Meteor.subscribe("articles", function(){
-    });
-  } else {  
-    articleSub = Meteor.subscribe("articles", articlesOnLoad, function( ){
-      Session.set("loaded", true);
-    });
-  }  
-  
 });
 
 //always keep localStorage up to date with most recent articles
@@ -174,7 +166,7 @@ Template.feedList.events({
                            
 Template.articleList.articles = function() {
   
- if ( Session.equals( "loaded", true ) ) { 
+ if ( articleSub.ready() ) { 
    return Articles.find( {}, { sort: { date: -1 } } );
  }
  else{

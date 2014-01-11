@@ -1,6 +1,7 @@
 {
   "packages": {
     "font-awesome": {},
-    "bootstrap3-less": {}
+    "bootstrap3-less": {},
+    "fast-render": {}
   }
 }
