@@ -1,7 +1,6 @@
 var Future = Npm.require( "fibers/future" );
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
-keepLimitDate = new Date( new Date() - daysStoreArticles * DAY );
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 150;
@@ -16,44 +15,24 @@ Facts.setUserIdFilter(function ( userId ) {
 FastRender.onAllRoutes( function() {
   var self = this;
   var feed_ids = _.pluck( Feeds.find({ subscribers: self.userId },  {fields: {_id: 1}}).fetch(), "_id");
-  console.log( "userId: " +  self.userId + ", feed_ids: " + feed_ids);
+  
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
+  self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}});
   self.find( Articles,{ feed_id: {$in: feed_ids} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
-  self.completeSubscriptions(['articles']);
+  self.completeSubscriptions(['articles', 'feeds']);
 });
 
-Meteor.publish( "articles", function( userLimit ){
+Meteor.publish("feeds", function(){
+  return Feeds.find({ subscribers: this.userId },  {fields: {_id: 1, title: 1, url:1, last_date:1}})
+});
+
+
+Meteor.publish( "articles", function( subscriptions ){
   var self= this;
-  var subscriptions = [];
-  if ( userLimit ) 
-    check( userLimit, Number);
-  var limit = userLimit || articlePubLimit;
+  check( subscriptions, Array );
+  var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-  var observer = Feeds.find({ subscribers: self.userId },  {fields: {_id: 1, title: 1, url:1, last_date:1}}).observeChanges({
-    added: function (id, fields){
-      subscriptions.push(id);  
-      self.added( "feeds", id, fields);
-    },
-
-    removed: function (id){
-      self.removed( "feeds", id);
-      var ax;
-      while (( ax = subscriptions.indexOf(id)) !== -1) {
-	subscriptions.splice(ax, 1);
-      } 
-    },
-    
-    changed: function ( id, fields){
-      self.changed( "feeds", id, fields);
-    }
-  });
-
-  self.onStop( function() {
-    observer.stop();
-  });
-
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-  return Articles.find({ feed_id: {$in: subscriptions} }, { sort: {date: -1}, limit: limit, fields: visibleFields } );
+  return Articles.find({ feed_id: {$in: subscriptions}, date: {$gt: keepLimitDate}}, { sort: {date: -1}, fields: visibleFields } );
 });
 
 Articles.allow({
@@ -215,7 +194,7 @@ Meteor.methods({
 
   removeOldArticles: function(){
     console.log("removeOldArticles method called on server");
-
+    var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
     var error = Articles.remove({date:  {$lt: keepLimitDate}, clicks: 0 }, function(error){ return error;});
     return error || 'success';
   },

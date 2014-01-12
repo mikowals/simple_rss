@@ -4,6 +4,8 @@ var request = Npm.require('request');
 var Future = Npm.require('fibers/future');
 var zlib = Npm.require('zlib');
 var cheerio = Npm.require( 'cheerio');
+var DAY = 1000 * 60 * 60 * 24;
+var daysStoreArticles = 2;
 //var http = Npm.require('http');
 //http.globalAgent.maxSockets = 200;
 //var URL = Npm.require('url');
@@ -92,7 +94,8 @@ readAndInsertArticles = function ( fp, feed){
       doc = new Article( item );
       doc.sourceUrl = feed.url;
       Fiber ( function ( ) {
-        doc.feed_id = feed._id;;
+        doc.feed_id = feed._id;
+        var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
         if ( doc.date > keepLimitDate ){
           Articles.insert( doc, function( error ) {
             if ( !error ) {

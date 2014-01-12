@@ -16,9 +16,11 @@ var cleanForXml = function ( string ){
   return  string.replace ( /\</g, "&lt;");
 };
                    
-var articleSub, feedHandle;
-articleSub = Meteor.subscribe("articles", function( ){
-  Session.set("loaded", true);
+var articleSub, feedHandle = Meteor.subscribe( "feeds" );
+Deps.autorun( function(){
+  articleSub = Meteor.subscribe("articles", _.pluck( Feeds.find({}).fetch(), '_id'),function(){
+    Session.set("loaded", true);
+  });
 });
 
 
