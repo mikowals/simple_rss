@@ -4,6 +4,7 @@ var daysStoreArticles = 2;
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 150;
+var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
 
 Accounts.config({sendVerificationEmail: true});
 
@@ -18,7 +19,7 @@ FastRender.onAllRoutes( function() {
   
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
   self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}});
-  self.find( Articles,{ feed_id: {$in: feed_ids} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
+  self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
   self.completeSubscriptions(['articles', 'feeds']);
 });
 
@@ -30,7 +31,6 @@ Meteor.publish("feeds", function(){
 Meteor.publish( "articles", function( subscriptions ){
   var self= this;
   check( subscriptions, Array );
-  var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
   return Articles.find({ feed_id: {$in: subscriptions}, date: {$gt: keepLimitDate}}, { sort: {date: -1}, fields: visibleFields } );
 });
@@ -194,7 +194,6 @@ Meteor.methods({
 
   removeOldArticles: function(){
     console.log("removeOldArticles method called on server");
-    var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
     var error = Articles.remove({date:  {$lt: keepLimitDate}, clicks: 0 }, function(error){ return error;});
     return error || 'success';
   },

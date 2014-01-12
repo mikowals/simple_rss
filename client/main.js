@@ -18,7 +18,7 @@ var cleanForXml = function ( string ){
                    
 var articleSub, feedHandle = Meteor.subscribe( "feeds" );
 Deps.autorun( function(){
-  articleSub = Meteor.subscribe("articles", _.pluck( Feeds.find({}).fetch(), '_id'),function(){
+  articleSub = Meteor.subscribe("articles", _.pluck( Feeds.find({}).fetch(), '_id'), function(){
     Session.set("loaded", true);
   });
 });
@@ -33,9 +33,6 @@ Meteor.startup( function() {
   Session.set( "offline", null);
 
 });
-
-//always keep localStorage up to date with most recent articles
-//not too efficient currently - every change rewrites all articles in localStorage
 
 Deps.autorun( function(){
     if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
