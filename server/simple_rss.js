@@ -4,8 +4,9 @@ var daysStoreArticles = 2;
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 150;
-var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
-
+var keepLimitDate = function(){
+  return new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
+};
 Accounts.config({sendVerificationEmail: true});
 
 Facts.setUserIdFilter(function ( userId ) {
@@ -18,8 +19,8 @@ FastRender.onAllRoutes( function() {
   var feed_ids = _.pluck( Feeds.find({ subscribers: self.userId },  {fields: {_id: 1}}).fetch(), "_id");
   
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-  self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}});
-  self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
+  //self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}});
+  self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
   self.completeSubscriptions(['articles', 'feeds']);
 });
 
@@ -32,7 +33,72 @@ Meteor.publish( "articles", function( subscriptions ){
   var self= this;
   check( subscriptions, Array );
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-  return Articles.find({ feed_id: {$in: subscriptions}, date: {$gt: keepLimitDate}}, { sort: {date: -1}, fields: visibleFields } );
+  return Articles.find({ feed_id: {$in: subscriptions}, date: {$gt: keepLimitDate()}}, { sort: {date: -1}, fields: visibleFields } );
+});
+
+Meteor.publish( "feedsWithArticles", function(){
+  var self = this;
+  var subscriptions = [];
+  var initialising = true;
+  var articleHandle;
+  var startDate = keepLimitDate();
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
+
+  var startArticleObserver = function(){
+    var handle = Articles.find({feed_id: {$in: subscriptions}, date: {$gt: startDate}}, {fields: visibleFields}).observeChanges({
+      _suppress_initial: true,
+      added: function( id, doc){
+         self.added( "articles", id, doc );
+      },
+      removed: function( id ) {
+        self.removed( "articles", id );
+      },
+      changed: function( id, doc){
+        self.changed( "articles", id, doc );
+      }
+    });
+    return handle; 
+  };
+
+  var feedHandle = Feeds.find( {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}}).observeChanges({
+    added: function( id, doc){
+      if ( articleHandle )
+        articleHandle.stop();
+      Articles.find({feed_id: id, date: {$gt: startDate}}, {fields: visibleFields}).forEach( function (article){
+        self.added( "articles", article._id, article);
+      });
+      self.added( "feeds", id, doc);
+      subscriptions.push( id );
+      if (! initialising)
+        articleHandle = startArticleObserver();
+    },
+    removed: function( id ){
+      if ( articleHandle )
+        articleHandle.stop();
+      Articles.find({feed_id: id, date: {$gt: startDate}}, {fields: {_id: 1}}).forEach( function (article){
+        self.removed( "articles", article._id);
+      });
+      self.removed( "feeds", id);      
+      subscriptions.splice( subscriptions.indexOf( id ), 1);
+      if ( ! initialising )
+        articleHandle = startArticleObserver();
+    },
+    changed: function( id, doc){
+      self.changed( "feeds", id, doc);  
+    }
+  });
+
+  self.ready();
+  
+  if ( initialising )
+    articleHandle = startArticleObserver();
+  
+  initialising = false;
+
+  self.onStop( function(){
+    feedHandle.stop();
+    articleHandle.stop();
+  });
 });
 
 Articles.allow({
@@ -194,7 +260,7 @@ Meteor.methods({
 
   removeOldArticles: function(){
     console.log("removeOldArticles method called on server");
-    var error = Articles.remove({date:  {$lt: keepLimitDate}, clicks: 0 }, function(error){ return error;});
+    var error = Articles.remove({date:  {$lt: keepLimitDate()}, clicks: 0 }, function(error){ return error;});
     return error || 'success';
   },
 

@@ -16,13 +16,9 @@ var cleanForXml = function ( string ){
   return  string.replace ( /\</g, "&lt;");
 };
                    
-var articleSub, feedHandle = Meteor.subscribe( "feeds" );
-Deps.autorun( function(){
-  articleSub = Meteor.subscribe("articles", _.pluck( Feeds.find({}).fetch(), '_id'), function(){
-    Session.set("loaded", true);
-  });
+var articleSub = Meteor.subscribe( "feedsWithArticles", function(){
+  Session.set("loaded", true);
 });
-
 
 Meteor.startup( function() {
                           
@@ -157,7 +153,7 @@ Template.feedList.events({
                            
 Template.articleList.articles = function() {
   
-   return Articles.find( {}, { sort: { date: -1 } } );
+   return Articles.find( {}, { sort: { date: -1, _id: 1} } );
 };
 
 Template.articleList.loaded = function(){
