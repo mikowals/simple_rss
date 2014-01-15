@@ -19,8 +19,8 @@
       },
       "fast-render": {
         "git": "https://github.com/arunoda/meteor-fast-render.git",
-        "tag": "v0.1.2",
-        "commit": "4cf58793f50f7f99e08b894cbda4085433019e6a"
+        "tag": "v0.1.7",
+        "commit": "4bc146c8e8b879cbb0a7059f38793839da015fa4"
       }
     }
   }

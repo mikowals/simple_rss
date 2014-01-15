@@ -1,12 +1,16 @@
-var Future = Npm.require( "fibers/future" );
 var DAY = 1000 * 60 * 60 * 24;
-var daysStoreArticles = 2;
+var daysStoreArticles = 3.0;
 var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 150;
+var maxArticlesFromSource = 25;
 var keepLimitDate = function(){
   return new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
 };
+
+//need to find where eval or similar code is happening.
+BrowserPolicy.content.allowEval();
+
 Accounts.config({sendVerificationEmail: true});
 
 Facts.setUserIdFilter(function ( userId ) {
@@ -14,14 +18,16 @@ Facts.setUserIdFilter(function ( userId ) {
   return user && user.admin;
 });
 
-FastRender.onAllRoutes( function() {
-  var self = this;
-  var feed_ids = _.pluck( Feeds.find({ subscribers: self.userId },  {fields: {_id: 1}}).fetch(), "_id");
+FastRender.onAllRoutes( function( path ) {
   
+  var self = this;
+  console.log( this.userId );
+  var feed_ids = Feeds.find({ subscribers: self.userId },  {fields: {_id: 1}}).map( function( doc ) {return doc._id;});
+  console.log( "path: " + path + " : " + self.userId + " : " + JSON.stringify( feed_ids ));
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
   //self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}});
   self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
-  self.completeSubscriptions(['articles', 'feeds']);
+  self.completeSubscriptions(['feedsWithArticles']);
 });
 
 Meteor.publish("feeds", function(){
@@ -42,13 +48,22 @@ Meteor.publish( "feedsWithArticles", function(){
   var initialising = true;
   var articleHandle;
   var startDate = keepLimitDate();
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1, feed_id: 1};
 
-  var startArticleObserver = function(){
-    var handle = Articles.find({feed_id: {$in: subscriptions}, date: {$gt: startDate}}, {fields: visibleFields}).observeChanges({
-      _suppress_initial: true,
+  var startArticleObserver = function( addAfterDate ){
+    var pubCount = 0;
+    var countId;
+    var handle = Articles.find({feed_id: {$in: subscriptions}, date: {$gt: startDate}}, {sort: { feed_id: 1, date: -1}, fields: visibleFields}).observeChanges({
+      //_suppress_initial: true,
       added: function( id, doc){
-         self.added( "articles", id, doc );
+         if ( countId !== doc.feed_id){
+           countId = doc.feed_id;
+           pubCount =0;
+         }
+         if ( (! initialising && doc.date > addAfterDate ) || pubCount < maxArticlesFromSource)
+           self.added( "articles", id, doc );
+         pubCount++;
+         //console.log( "initialising: " + initialising + " : " + doc.title+ " : " + doc.feed_id + " : " + pubCount);
       },
       removed: function( id ) {
         self.removed( "articles", id );
@@ -64,34 +79,37 @@ Meteor.publish( "feedsWithArticles", function(){
     added: function( id, doc){
       if ( articleHandle )
         articleHandle.stop();
-      Articles.find({feed_id: id, date: {$gt: startDate}}, {fields: visibleFields}).forEach( function (article){
-        self.added( "articles", article._id, article);
-      });
+
       self.added( "feeds", id, doc);
       subscriptions.push( id );
-      if (! initialising)
-        articleHandle = startArticleObserver();
+      if (! initialising){
+        Articles.find({feed_id: id, date: {$gt: startDate}}, {sort: {date: -1}, limit: maxArticlesFromSource, fields: visibleFields}).forEach( function( article) {
+          self.added( "articles", article._id, article );
+        });
+      
+        articleHandle = startArticleObserver( new Date() );
+      }
     },
     removed: function( id ){
       if ( articleHandle )
         articleHandle.stop();
-      Articles.find({feed_id: id, date: {$gt: startDate}}, {fields: {_id: 1}}).forEach( function (article){
+      Articles.find({feed_id: id, _id: {$in: _.keys( self._documents.articles) }}, {fields: {_id: 1}}).forEach( function (article){
         self.removed( "articles", article._id);
       });
       self.removed( "feeds", id);      
       subscriptions.splice( subscriptions.indexOf( id ), 1);
       if ( ! initialising )
-        articleHandle = startArticleObserver();
+        articleHandle = startArticleObserver( new Date() );
     },
     changed: function( id, doc){
       self.changed( "feeds", id, doc);  
     }
   });
-
-  self.ready();
-  
-  if ( initialising )
-    articleHandle = startArticleObserver();
+ 
+  if ( initialising ){
+    articleHandle = startArticleObserver( startDate );
+    self.ready();
+  }
   
   initialising = false;
 
