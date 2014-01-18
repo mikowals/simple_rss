@@ -8,9 +8,6 @@ var keepLimitDate = function(){
   return new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
 };
 
-//need to find where eval or similar code is happening.
-BrowserPolicy.content.allowEval();
-
 Accounts.config({sendVerificationEmail: true});
 
 Facts.setUserIdFilter(function ( userId ) {
@@ -18,41 +15,31 @@ Facts.setUserIdFilter(function ( userId ) {
   return user && user.admin;
 });
 
-FastRender.onAllRoutes( function( path ) {
+FastRender.onAllRoutes( function( ) {
   
   var self = this;
-  console.log( this.userId );
+  console.log( "fastrender userId: " + self.userId );
   var feed_ids = Feeds.find({ subscribers: self.userId },  {fields: {_id: 1}}).map( function( doc ) {return doc._id;});
-  console.log( "path: " + path + " : " + self.userId + " : " + JSON.stringify( feed_ids ));
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-  //self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}});
+  //self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}}); 
   self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
-  self.completeSubscriptions(['feedsWithArticles']);
+  //self.completeSubscriptions(['feedsWithArticles']);
 });
 
-Meteor.publish("feeds", function(){
-  return Feeds.find({ subscribers: this.userId },  {fields: {_id: 1, title: 1, url:1, last_date:1}})
-});
-
-
-Meteor.publish( "articles", function( subscriptions ){
-  var self= this;
-  check( subscriptions, Array );
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-  return Articles.find({ feed_id: {$in: subscriptions}, date: {$gt: keepLimitDate()}}, { sort: {date: -1}, fields: visibleFields } );
-});
 
 Meteor.publish( "feedsWithArticles", function(){
   var self = this;
   var subscriptions = [];
   var initialising = true;
+  var init = true;
   var articleHandle;
   var startDate = keepLimitDate();
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1, feed_id: 1};
 
-  var startArticleObserver = function( addAfterDate ){
+  var startArticleObserver = function( ){
     var pubCount = 0;
     var countId;
+    init = true;
     var handle = Articles.find({feed_id: {$in: subscriptions}, date: {$gt: startDate}}, {sort: { feed_id: 1, date: -1}, fields: visibleFields}).observeChanges({
       //_suppress_initial: true,
       added: function( id, doc){
@@ -60,18 +47,21 @@ Meteor.publish( "feedsWithArticles", function(){
            countId = doc.feed_id;
            pubCount =0;
          }
-         if ( (! initialising && doc.date > addAfterDate ) || pubCount < maxArticlesFromSource)
+         if ( ! init || ( initialising && pubCount < maxArticlesFromSource))
            self.added( "articles", id, doc );
          pubCount++;
          //console.log( "initialising: " + initialising + " : " + doc.title+ " : " + doc.feed_id + " : " + pubCount);
       },
       removed: function( id ) {
-        self.removed( "articles", id );
+        if ( _.keys( self._documents.articles).indexOf( id ) > 0)
+          self.removed( "articles", id );
       },
       changed: function( id, doc){
-        self.changed( "articles", id, doc );
+        if ( _.keys( self._documents.articles).indexOf( id ) > 0)
+          self.changed( "articles", id, doc );
       }
     });
+    init = false;
     return handle; 
   };
 
@@ -87,7 +77,7 @@ Meteor.publish( "feedsWithArticles", function(){
           self.added( "articles", article._id, article );
         });
       
-        articleHandle = startArticleObserver( new Date() );
+        articleHandle = startArticleObserver( );
       }
     },
     removed: function( id ){
@@ -99,7 +89,7 @@ Meteor.publish( "feedsWithArticles", function(){
       self.removed( "feeds", id);      
       subscriptions.splice( subscriptions.indexOf( id ), 1);
       if ( ! initialising )
-        articleHandle = startArticleObserver( new Date() );
+        articleHandle = startArticleObserver( );
     },
     changed: function( id, doc){
       self.changed( "feeds", id, doc);  
@@ -107,7 +97,7 @@ Meteor.publish( "feedsWithArticles", function(){
   });
  
   if ( initialising ){
-    articleHandle = startArticleObserver( startDate );
+    articleHandle = startArticleObserver( );
     self.ready();
   }
   
@@ -150,6 +140,9 @@ Feeds.allow({
 });
 
 Meteor.startup( function(){
+  //unsafe eval in FastRender.
+  BrowserPolicy.content.allowEval();
+  
   Meteor.call('findArticles', {} );
 
   Meteor.call('removeOldArticles');
