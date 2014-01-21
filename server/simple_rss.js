@@ -23,40 +23,33 @@ FastRender.onAllRoutes( function( ) {
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
   //self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}}); 
   self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
-  //self.completeSubscriptions(['feedsWithArticles']);
+  self.completeSubscriptions(['feedsWithArticles']);
 });
 
 
-Meteor.publish( "feedsWithArticles", function(){
+Meteor.publish( "feedsWithArticles", function( articleLimit ){
   var self = this;
+  articleLimit = articleLimit || articlePubLimit;
+  check( articleLimit, Number );
+  
   var initialising = true;
   var articleHandle;
   var startDate = keepLimitDate();
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
 
   function startArticleObserver() {
     //when limit is working again, uncomment code and simplify publish so article observer publishes all articles it finds and removes any articles it doesn't find.
     // no longer need feed_id in visible fields, no more counting, feedobserver manages feeds and article observer manages articles.
-    //this may also give a mechanisim to catch fast-rendered articles and keep them from beings sent again.  but then publish might not have them in merge box.
     if ( articleHandle ) articleHandle.stop();
     var publishedArticles = _.clone( self._documents.articles || {} );
-    var pubCount = 0;
-    var countId;
     var init = true;
-    var handle = Articles.find({feed_id: {$in: _.keys( self._documents.feeds )}, date: {$gt: startDate}}, {sort: { feed_id: 1, date: -1}, fields: visibleFields}).observeChanges({
-      //_suppress_initial: true,
+    var criteria = {feed_id: {$in: _.keys( self._documents.feeds )}, date: {$gt: startDate}};
+    var options = {limit: articleLimit, sort: { date: -1}, fields: visibleFields};
+    var handle = Articles.find( criteria, options ).observeChanges({
       added: function( id, doc){
-         //if ( initialising || ! init || ! publishedArticles[ id ] )
-         //  self.added( "articles", id, doc );
-         //else delete publishedArticles[ id ];
-         if ( countId !== doc.feed_id){
-           countId = doc.feed_id;
-           pubCount =0;
-         }
-         if ( ! init || ( initialising && pubCount < maxArticlesFromSource))
-           self.added( "articles", id, doc );
-         pubCount++;
-         //console.log( "initialising: " + initialising + " : " + doc.title+ " : " + doc.feed_id + " : " + pubCount);
+        if ( ! init || ! publishedArticles[ id ] )
+          self.added( "articles", id, doc );
+        else delete publishedArticles[ id ];
       },
       removed: function( id ) {
         if ( self._documents.articles[ id ])
@@ -68,9 +61,10 @@ Meteor.publish( "feedsWithArticles", function(){
       }
     });
 
-    //_.keys( publishedArticles ).forEach( function ( id ){
-    //  self.removed( "articles", id );
-    //}); 
+    _.keys( publishedArticles ).forEach( function ( id ){
+      self.removed( "articles", id );
+    }); 
+    
     init = false;
     return handle; 
   };
@@ -79,17 +73,10 @@ Meteor.publish( "feedsWithArticles", function(){
     added: function( id, doc){
       self.added( "feeds", id, doc);
       if (! initialising){
-        Articles.find({feed_id: id, date: {$gt: startDate}}, {sort: {date: -1}, limit: maxArticlesFromSource, fields: visibleFields}).forEach( function( article) {
-          self.added( "articles", article._id, article );
-        });
-      
         articleHandle = startArticleObserver( );
       }
     },
     removed: function( id ){
-      Articles.find({feed_id: id, _id: {$in: _.keys( self._documents.articles) }}, {fields: {_id: 1}}).forEach( function (article){
-        self.removed( "articles", article._id);
-      });
       self.removed( "feeds", id);      
       if ( ! initialising )
         articleHandle = startArticleObserver( );

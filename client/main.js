@@ -6,6 +6,7 @@ var intervalProcesses = []; //hold interval process id to start and stop with di
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
 Session.setDefault( "now", new Date() );
+Session.setDefault("articleLimit", articlesOnLoad );
 
 var cleanForXml = function ( string ){
   string = string.replace ( /\"/g, "&quot;");
@@ -16,8 +17,16 @@ var cleanForXml = function ( string ){
   return  string.replace ( /\</g, "&lt;");
 };
                    
-var articleSub = Meteor.subscribe( "feedsWithArticles", function(){
-  Session.set("loaded", true);
+var articleSub;
+
+Deps.autorun( function(){
+  console.log( Session.get( "articleLimit" ) );
+  articleSub = Meteor.subscribe( "feedsWithArticles", + Session.get( "articleLimit" ) );
+});
+
+Deps.autorun( function(){
+  if ( articleSub && articleSub.ready()) 
+    Session.set( "loaded",  true);
 });
 
 Meteor.startup( function() {
@@ -223,4 +232,11 @@ Template.feed.events({
                      });
 
 
+Template.articleList.rendered = function(){
 
+  $('#footer').waypoint( function( evt, dir) {
+    if ( dir === 'down' )
+      Session.set( "articleLimit", Session.get( "articleLimit" ) + 20 );
+    },
+    { offset: '110%'}); 
+};
