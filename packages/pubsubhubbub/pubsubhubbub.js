@@ -19,7 +19,7 @@ FeedSubscriber = function ( options ){
 
   WebApp.connectHandlers.stack.splice(0,0,{
       route: self.callbackUri,
-      handle: Meteor.bindEnvironment( function(req, res, next) {
+      handle: function(req, res, next) {
        if(req.method === 'POST') {
          return  self.onPostRequest( req, res);
        }
@@ -28,7 +28,7 @@ FeedSubscriber = function ( options ){
      } else {
          return self._sendError(req, res, 405, "Method Not Allowed");
      }
-    })
+    }
    });
   self.emit( "listen", { uri: self.callbackUri });
 
@@ -156,7 +156,7 @@ FeedSubscriber.prototype._parseFeed = function ( topic, fp ){
       console.log(" got feedparser error: " + err);
       });
   var sub = self.subscriptions[ topic ];
-  readAndInsertArticles( fp, sub );
+  self.emit( 'liveFeed',  fp, sub );
  
 };
 
