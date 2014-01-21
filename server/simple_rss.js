@@ -29,20 +29,26 @@ FastRender.onAllRoutes( function( ) {
 
 Meteor.publish( "feedsWithArticles", function(){
   var self = this;
-  var subscriptions = [];
   var initialising = true;
-  var init = true;
   var articleHandle;
   var startDate = keepLimitDate();
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1, feed_id: 1};
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
 
-  var startArticleObserver = function( ){
+  function startArticleObserver() {
+    //when limit is working again, uncomment code and simplify publish so article observer publishes all articles it finds and removes any articles it doesn't find.
+    // no longer need feed_id in visible fields, no more counting, feedobserver manages feeds and article observer manages articles.
+    //this may also give a mechanisim to catch fast-rendered articles and keep them from beings sent again.  but then publish might not have them in merge box.
+    if ( articleHandle ) articleHandle.stop();
+    var publishedArticles = _.clone( self._documents.articles || {} );
     var pubCount = 0;
     var countId;
-    init = true;
-    var handle = Articles.find({feed_id: {$in: subscriptions}, date: {$gt: startDate}}, {sort: { feed_id: 1, date: -1}, fields: visibleFields}).observeChanges({
+    var init = true;
+    var handle = Articles.find({feed_id: {$in: _.keys( self._documents.feeds )}, date: {$gt: startDate}}, {sort: { feed_id: 1, date: -1}, fields: visibleFields}).observeChanges({
       //_suppress_initial: true,
       added: function( id, doc){
+         //if ( initialising || ! init || ! publishedArticles[ id ] )
+         //  self.added( "articles", id, doc );
+         //else delete publishedArticles[ id ];
          if ( countId !== doc.feed_id){
            countId = doc.feed_id;
            pubCount =0;
@@ -53,25 +59,25 @@ Meteor.publish( "feedsWithArticles", function(){
          //console.log( "initialising: " + initialising + " : " + doc.title+ " : " + doc.feed_id + " : " + pubCount);
       },
       removed: function( id ) {
-        if ( _.keys( self._documents.articles).indexOf( id ) > 0)
+        if ( self._documents.articles[ id ])
           self.removed( "articles", id );
       },
       changed: function( id, doc){
-        if ( _.keys( self._documents.articles).indexOf( id ) > 0)
+        if ( self._documents.articles[ id ] )
           self.changed( "articles", id, doc );
       }
     });
+
+    //_.keys( publishedArticles ).forEach( function ( id ){
+    //  self.removed( "articles", id );
+    //}); 
     init = false;
     return handle; 
   };
 
   var feedHandle = Feeds.find( {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}}).observeChanges({
     added: function( id, doc){
-      if ( articleHandle )
-        articleHandle.stop();
-
       self.added( "feeds", id, doc);
-      subscriptions.push( id );
       if (! initialising){
         Articles.find({feed_id: id, date: {$gt: startDate}}, {sort: {date: -1}, limit: maxArticlesFromSource, fields: visibleFields}).forEach( function( article) {
           self.added( "articles", article._id, article );
@@ -81,13 +87,10 @@ Meteor.publish( "feedsWithArticles", function(){
       }
     },
     removed: function( id ){
-      if ( articleHandle )
-        articleHandle.stop();
       Articles.find({feed_id: id, _id: {$in: _.keys( self._documents.articles) }}, {fields: {_id: 1}}).forEach( function (article){
         self.removed( "articles", article._id);
       });
       self.removed( "feeds", id);      
-      subscriptions.splice( subscriptions.indexOf( id ), 1);
       if ( ! initialising )
         articleHandle = startArticleObserver( );
     },
