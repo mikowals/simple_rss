@@ -175,7 +175,7 @@ Meteor.startup( function(){
   }
 
   var feedSubscriber = new FeedSubscriber ( options );
-  
+  feedSubscriber.on( 'liveFeed', Meteor.bindEnvironment( readAndInsertArticles, function( error ) { console.log( error ); } ));
 
   process.on('exit', Meteor.bindEnvironment ( function (){
     feedSubscriber.stopAllSubscriptions();
