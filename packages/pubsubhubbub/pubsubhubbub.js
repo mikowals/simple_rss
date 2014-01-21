@@ -19,7 +19,7 @@ FeedSubscriber = function ( options ){
 
   WebApp.connectHandlers.stack.splice(0,0,{
       route: self.callbackUri,
-      handle: function(req, res, next) {
+      handle: Meteor.bindEnvironment( function(req, res, next) {
        if(req.method === 'POST') {
          return  self.onPostRequest( req, res);
        }
@@ -28,7 +28,7 @@ FeedSubscriber = function ( options ){
      } else {
          return self._sendError(req, res, 405, "Method Not Allowed");
      }
-    }
+    })
    });
   self.emit( "listen", { uri: self.callbackUri });
 
@@ -36,7 +36,7 @@ FeedSubscriber = function ( options ){
   console.log ( "started a feed subscriber with url : " + self.callbackUrl);
   
   self.on( 'denied', function ( data ){
-    console.error ( "denied request: " + data); 
+    console.error ( "denied request: " + JSON.stringify( data ) ); 
   });
 
   self.on ( 'subscribe' , function ( data ) {
