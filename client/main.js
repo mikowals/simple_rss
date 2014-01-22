@@ -231,14 +231,27 @@ Template.article.subscribeRss = function(){
   return feed && feed.url;
   
 };
+Template.menubar.events({
+  'click #page': function(){
+    var newPage = Session.equals( "page", "feedList") ? "articleList" : "feedList";
+    Session.set( "page", newPage );
+    return false;
+  }
+});
 
-Template.menubar.loaded = function(){
-  return Session.equals( "loaded", true );
-};
+Template.menubar.helpers({ 
+  loaded: function(){
+    return Session.equals( "loaded", true );
+  },
+  
+  offline: function(){
+    return Session.get("offline");
+  },
 
-Template.menubar.offline = function(){
-  return Session.get("offline");
-}
+  pageButton: function(){
+    return Session.equals( "page", "feedList") ? "glyphicon glyphicon-list" : "glyphicon glyphicon-cog";
+  }
+});
 
 Template.updated.updated = function(){
   return Session.get( "updated" );

@@ -18,7 +18,7 @@
 
 <template name="menubar">
   <div id="menubar">
-   <h4><a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-cog"></i></a>
+   <h4><a id="page" class="pull-left" role="button"><i class={{pageButton}}></i></a>
     {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}}
     {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}}
     {{> loginButtons}}
@@ -51,8 +51,6 @@
 
 <template name="articleList">
   
-    {{>feedModal}}
-   
     <div id="stream">
       
       {{#each articles}}
