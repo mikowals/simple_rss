@@ -20,14 +20,26 @@ var cleanForXml = function ( string ){
 var articleSub;
 
 Deps.autorun( function(){
-  console.log( Session.get( "articleLimit" ) );
-  articleSub = Meteor.subscribe( "feedsWithArticles", + Session.get( "articleLimit" ) );
+    Session.set( "loaded", false);
+    articleSub = Meteor.subscribe( "feedsWithArticles", + Session.get( "articleLimit" ), function(){
+      Session.set("loaded", true);
+    });
 });
 
 Deps.autorun( function(){
-  if ( articleSub && articleSub.ready()) 
-    Session.set( "loaded",  true);
-});
+  var lastArticle = Articles.findOne({}, { sort: {date: 1}});
+  if ( Session.equals( "articleListDisplayed", true) && Session.equals( "loaded", true)  && lastArticle && ! Session.equals( "lastArticleId", lastArticle._id)) {
+    Session.set( "lastArticleId", lastArticle._id);
+    $("#" + lastArticle._id).waypoint({
+      handler: function( evt, dir ){  
+        if ( dir === 'down' )
+          Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
+      }   
+      ,offset: '100%'     //offset percentage must be a string
+      ,triggerOnce: true
+    });    
+  }   
+}); 
 
 Meteor.startup( function() {
                           
@@ -36,7 +48,22 @@ Meteor.startup( function() {
     },
     updateNowFreq );
   Session.set( "offline", null);
-
+  
+  Deps.autorun( function(){
+    var lastArticle = Articles.findOne({}, { sort: {date: 1}});
+    if ( Session.equals( "articleListDisplayed", true) && Session.equals( "loaded", true)  && lastArticle && ! Session.equals( "lastArticleId", lastArticle._id)) {
+      Session.set( "lastArticleId", lastArticle._id);
+      $("#" + lastArticle._id).waypoint({
+          handler: function( evt, dir ){ 
+            if ( dir === 'down' )
+              Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
+          }
+          ,offset: '100%'
+          ,triggerOnce: true
+        }); 
+      
+    }   
+  });
 });
 
 Deps.autorun( function(){
@@ -231,12 +258,10 @@ Template.feed.events({
                      }
                      });
 
-
 Template.articleList.rendered = function(){
+  Session.set( "articleListDisplayed", true);
+};
 
-  $('#footer').waypoint( function( evt, dir) {
-    if ( dir === 'down' )
-      Session.set( "articleLimit", Session.get( "articleLimit" ) + 20 );
-    },
-    { offset: '110%'}); 
+Template.articleList.destroyed = function(){
+  Session.set( "articleListDisplayed", false);
 };
