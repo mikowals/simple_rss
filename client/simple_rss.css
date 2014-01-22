@@ -17,6 +17,8 @@ body {
 }
 
 .container {
+  /*border: 1px solid #1E68A6;
+  border-radius: 5px;*/
   max-width: 540px;
   margin: 0px auto;
 }
@@ -135,6 +137,16 @@ time {
   height: 23px;
 }
 
+.feedListButtons {
+  background: #F0FFFF;
+  border-radius: 9px;
+  border: 1px solid #428bca;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  padding-top: 15px;
+  paddig-bottom: 15px;
+  min-height: 60px;
+}
 
 #progress 
 {
@@ -187,7 +199,7 @@ time {
 
 @media screen and (max-width : 480px) {
 
-#feeds_modal {
+#feedList {
   font-size: 0.75em;
  }
 

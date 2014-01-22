@@ -88,7 +88,6 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
  
   if ( initialising ){
     articleHandle = startArticleObserver( );
-    self.ready();
   }
   
   initialising = false;
@@ -97,6 +96,8 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     feedHandle.stop();
     articleHandle.stop();
   });
+ 
+  return Meteor.users.find( {_id: self.userId}, {fields: {admin: 1}});
 });
 
 Articles.allow({
