@@ -11,14 +11,14 @@
   <div class="container">
   
     {{>menubar}}
-    {{>articleList}}
-    {{> serverFacts}}
+    {{> currentPage}}
+    {{#if admin}}{{> serverFacts}}{{/if}}
   </div>
 </template>
 
 <template name="menubar">
   <div id="menubar">
-   <h4><a id="modal_button" class="pull-left" data-target="#feeds_modal" data-toggle="modal" role="button"><i class="glyphicon glyphicon-cog"></i></a>
+   <h4><a id="page" class="pull-left" role="button"><i class={{pageButton}}></i></a>
     {{#unless loaded}}<small class="label label-warning">Loading</small>{{/unless}}
     {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}}
     {{> loginButtons}}
@@ -27,11 +27,25 @@
 </template>
 
 <template name="feedList">
-    <div>
-        {{#each feeds}}
-        <div class="feed row">{{>feed}}</div>
-        {{/each}}
-    </div>
+   <div class="feedListButtons">
+    {{> feedListButtons}}
+   </div>
+   <div>
+     <span class="col-xs-7 col-md-7">
+       <h4><strong>Feed Title</strong></h4>
+     </span>
+     <span class="col-xs-2 col-md-2 text-right">
+       <h4><strong>Count</strong></h4>
+     </span>
+     <span class="col-xs-2 text-right pull-right">
+       <h4><strong>Last update</strong></h4>
+     </span>
+   </div>
+   <div>
+    {{#each feeds}}
+      <div class="feed row">{{>feed}}</div>
+    {{/each}}
+   </div>
 </template>
 
 <template name="feed">
@@ -51,8 +65,6 @@
 
 <template name="articleList">
   
-    {{>feedModal}}
-   
     <div id="stream">
       
       {{#each articles}}
@@ -90,44 +102,12 @@
   {{timeago date}}
 </template>
 
-<template name="feedModal">
-  <div id="feeds_modal" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-     <div class="modal-content">
-      <div class="modal-header">
-      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-      
-      <span id="myModalLabel">Reading List</span>
-      
-    </div>
-    <div class="modal-body">
-       <span class="col-xs-8 col-md-8">
-         <h4><strong>Title</strong></h4>
-       </span>
-       <span class="col-xs-1 text-right">
-         <h4><strong>Count</strong></h4>
-       </span>
-       <span class="col-xs-2 pull-right">
-         <h4><strong>Last update</strong></h4>
-       </span>
-       {{>feedList}}
-    </div>
-    
-    <div class="modal-footer">
-      {{>modalButtons}}
-    </div>
-    
-  </div>
-  </div>
-  </div>
-</template>
-
-<template name="modalButtons">
+<template name="feedListButtons">
   <form class="form-inline">
     {{#if importOPML}}
      <a id="importCancel" class="btn btn-link btn-sm col-sm-1 hidden-xs">Cancel</a>
     <span class="input-group input-group-sm col-xs-12 col-sm-11 pull-right">
-      <input id="opmlFile" type="file" class="fileUploader col-xs-12" multiple="multiple">
+      <input id="opmlFile" type="file" class="col-xs-12" multiple="multiple">
       <a id="opmlUpload" class="input-group-addon btn btn-primary btn-sm"><i class="glyphicon glyphicon-upload"></i></a>
     </span>
     {{else}}

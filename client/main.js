@@ -7,6 +7,7 @@ Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
 Session.setDefault( "now", new Date() );
 Session.setDefault("articleLimit", articlesOnLoad );
+Session.setDefault( "page", "articleList" );
 
 var cleanForXml = function ( string ){
   string = string.replace ( /\"/g, "&quot;");
@@ -28,10 +29,10 @@ Deps.autorun( function(){
 
 Deps.autorun( function(){
   var lastArticle = Articles.findOne({}, { sort: {date: 1}});
-  if ( Session.equals( "articleListDisplayed", true) && Session.equals( "loaded", true)  && lastArticle && ! Session.equals( "lastArticleId", lastArticle._id)) {
+  if ( Session.equals( "page", "articleList" ) && Session.equals( "loaded", true)  && lastArticle && ! Session.equals( "lastArticleId", lastArticle._id)) {
     Session.set( "lastArticleId", lastArticle._id);
     $("#" + lastArticle._id).waypoint({
-      handler: function( evt, dir ){  
+      handler: function( dir ){  
         if ( dir === 'down' )
           Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
       }   
@@ -97,19 +98,23 @@ Handlebars.registerHelper('timeago',  function(some_date){
   return timeago(some_date);
 });
 
-Template.feedList.feeds= function () {
-  return Feeds.find({}, {sort: {title: 1}});
-};
+Template.feedList.helpers({
+  feeds: function () {
+    return Feeds.find({}, {sort: {title: 1}});
+  },
 
-Template.feedList.flash = function(){
-  return Session.get("feedListFlash");
-};
+  importOPML: function(){
+    return Session.equals("importOPML", true);
+  },
+   
+  flash: function(){
+    return Session.get("feedListFlash");
+  }
 
-Template.modalButtons.importOPML = function(){
-  return Session.equals("importOPML", true);
-};
 
-Template.modalButtons.events({
+});
+
+Template.feedList.events({
                              
                              //could modify this to verify feed and populate fields for insertion
                              'submit, click #addFeed': function(e) {
@@ -173,27 +178,20 @@ Template.modalButtons.events({
                                 var blob = new Blob([exportOPML], {type: "application/xml"});
                                 var fname = Meteor.absoluteUrl().split( "//" )[1];
                                 saveAs ( blob, fname + ".opml");
-                             }
-                         
-                             });
+                             },
 
-Template.feedList.events({                                                   
-                         'click #removeFeed': function(){
-                           Meteor.call( 'removeFeed', Session.get("selected_feed"), function( error ){
-                             if ( error === false ) console.error( "could not remove feed"); 
-                             else Session.set( "selected_feed", null);
-                             });
-                         }
+                             'click #removeFeed': function(){
+                               Meteor.call( 'removeFeed', Session.get("selected_feed"), function( error ){
+                                 if ( error === false ) console.error( "could not remove feed");
+                                 else Session.set( "selected_feed", null);
+                               }); 
+                             }   
                          
-                         });
-                           
+});
+
 Template.articleList.articles = function() {
-  
+  //must sort by _id or order can flicker where dates are equal and the query updates 
    return Articles.find( {}, { sort: { date: -1, _id: 1} } );
-};
-
-Template.articleList.loaded = function(){
-  return Session.equals( "loaded", true );
 };
 
 Template.articleList.events({
@@ -220,25 +218,54 @@ Template.articleList.events({
   }
 }); 
 
-Template.article.subscribed = function(){
-  return Feeds.findOne({title: this.source}) !==null;
-};
+Template.article.helpers({
+  subscribed: function(){
+    return Feeds.findOne({title: this.source}) !==null;
+  },
 
-Template.article.subscribeRss = function(){
-  if (this.sourceUrl) return this.sourceUrl;
+  subscribeRss: function(){
+    if (this.sourceUrl) return this.sourceUrl;
 
-  var feed = Feeds.findOne( {title: this.source});
-  return feed && feed.url;
+    var feed = Feeds.findOne( {title: this.source});
+    return feed && feed.url;
+  }
+});
+
+Template.newriver.helpers({
+  currentPage: function(){
+    return Template[ Session.get( "page" ) ];
+  },
+  admin: function() {
+    var user = Meteor.user();
+    return user && user.admin;
+  }
+});
+
+Template.menubar.events({
+  'click #page,  tap #page': function( e ){
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    var newPage = Session.equals( "page", "feedList") ? "articleList" : "feedList";
+    Session.set( "page", newPage );
+    if ( newPage === "articleList" ) 
+      Session.set( "lastArticleId", null );
+    return false;
+  }
+});
+
+Template.menubar.helpers({ 
+  loaded: function(){
+    return Session.equals( "loaded", true );
+  },
   
-};
+  offline: function(){
+    return Session.get("offline");
+  },
 
-Template.menubar.loaded = function(){
-  return Session.equals( "loaded", true );
-};
-
-Template.menubar.offline = function(){
-  return Session.get("offline");
-}
+  pageButton: function(){
+    return Session.equals( "page", "feedList") ? "glyphicon glyphicon-list" : "glyphicon glyphicon-cog";
+  }
+});
 
 Template.updated.updated = function(){
   return Session.get( "updated" );
