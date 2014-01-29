@@ -32,7 +32,7 @@ Deps.autorun( function(){
   if ( Session.equals( "page", "articleList" ) && Session.equals( "loaded", true)  && lastArticle && ! Session.equals( "lastArticleId", lastArticle._id)) {
     Session.set( "lastArticleId", lastArticle._id);
     $("#" + lastArticle._id).waypoint({
-      handler: function( evt, dir ){  
+      handler: function( dir ){  
         if ( dir === 'down' )
           Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
       }   
