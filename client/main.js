@@ -18,29 +18,18 @@ var cleanForXml = function ( string ){
   return  string.replace ( /\</g, "&lt;");
 };
                    
-var articleSub;
+var articleSub, timeoutHandle;
 
 Deps.autorun( function(){
-    Session.set( "loaded", false);
-    articleSub = Meteor.subscribe( "feedsWithArticles", + Session.get( "articleLimit" ), function(){
-      Session.set("loaded", true);
-    });
+  Session.set( "loaded", false);
+  console.log("subscribing to feeds with articles (" + Session.get( "articleLimit" ) + ")");
+   
+  articleSub = Meteor.subscribe( "feedsWithArticles", + Session.get( "articleLimit" ), function(){
+    Session.set("loaded", true);
+    if ( timeoutHandle ) Meteor.clearTimeout( timeoutHandle );
+    timeoutHandle = Meteor.setTimeout( setLastArticleWaypoint, 1000);
+  });
 });
-
-Deps.autorun( function(){
-  var lastArticle = Articles.findOne({}, { sort: {date: 1}});
-  if ( Session.equals( "page", "articleList" ) && Session.equals( "loaded", true)  && lastArticle && ! Session.equals( "lastArticleId", lastArticle._id)) {
-    Session.set( "lastArticleId", lastArticle._id);
-    $("#" + lastArticle._id).waypoint({
-      handler: function( dir ){  
-        if ( dir === 'down' )
-          Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
-      }   
-      ,offset: '100%'     //offset percentage must be a string
-      ,triggerOnce: true
-    });    
-  }   
-}); 
 
 Meteor.startup( function() {
                           
@@ -50,21 +39,6 @@ Meteor.startup( function() {
     updateNowFreq );
   Session.set( "offline", null);
   
-  Deps.autorun( function(){
-    var lastArticle = Articles.findOne({}, { sort: {date: 1}});
-    if ( Session.equals( "articleListDisplayed", true) && Session.equals( "loaded", true)  && lastArticle && ! Session.equals( "lastArticleId", lastArticle._id)) {
-      Session.set( "lastArticleId", lastArticle._id);
-      $("#" + lastArticle._id).waypoint({
-          handler: function( evt, dir ){ 
-            if ( dir === 'down' )
-              Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
-          }
-          ,offset: '100%'
-          ,triggerOnce: true
-        }); 
-      
-    }   
-  });
 });
 
 Deps.autorun( function(){
@@ -286,9 +260,22 @@ Template.feed.events({
                      });
 
 Template.articleList.rendered = function(){
-  Session.set( "articleListDisplayed", true);
+  setLastArticleWaypoint();
 };
 
 Template.articleList.destroyed = function(){
-  Session.set( "articleListDisplayed", false);
+  $.waypoints('destroy');
+  console.log( $.waypoints());
+};
+
+function setLastArticleWaypoint(){
+  $.waypoints('destroy');
+  $(".section").last().waypoint({
+    handler: function( dir ){
+      if ( dir === 'down' ) 
+        Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
+    } 
+    ,offset: '100%'     //offset percentage must be a string
+    ,triggerOnce: true
+  });
 };
