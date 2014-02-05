@@ -8,6 +8,8 @@ var keepLimitDate = function(){
   return new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
 };
 
+Articles._ensureIndex( { feed_id: 1, date: -1} );
+
 Accounts.config({sendVerificationEmail: true});
 
 Facts.setUserIdFilter(function ( userId ) {
