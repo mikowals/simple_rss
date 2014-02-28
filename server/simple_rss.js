@@ -29,6 +29,10 @@ FastRender.onAllRoutes( function( ) {
   self.completeSubscriptions(['feedsWithArticles']);
 });
 
+Meteor.publish( 'feeds', function(){
+  
+  return Feeds.find( {subscribers: this.userId }, { fields: {_id: 1, title: 1, url: 1, last_date:1}});
+});
 
 Meteor.publish( "feedsWithArticles", function( articleLimit ){
   var self = this;
@@ -36,7 +40,7 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   check( articleLimit, Number );
   
   var initialising = true;
-  var articleHandle;
+  var articleHandle, feedList;
   var startDate = keepLimitDate();
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
 
@@ -46,7 +50,9 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     if ( articleHandle ) articleHandle.stop();
     var publishedArticles = _.clone( self._documents.articles || {} );
     var init = true;
-    var criteria = {feed_id: {$in: _.keys( self._documents.feeds )}, date: {$gt: startDate}};
+    var criteria = {date: {$gt: startDate}};
+    if ( feedList )
+      _.extend( criteria, {feed_id: {$in: feedList }});
     var options = {limit: articleLimit, sort: { date: -1}, fields: visibleFields};
     var handle = Articles.find( criteria, options ).observeChanges({
       added: function( id, doc){
@@ -72,34 +78,23 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     return handle; 
   };
 
-  var feedHandle = Feeds.find( {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}}).observeChanges({
-    added: function( id, doc){
-      self.added( "feeds", id, doc);
-      if (! initialising){
-        articleHandle = startArticleObserver( );
-      }
-    },
-    removed: function( id ){
-      self.removed( "feeds", id);      
-      if ( ! initialising )
-        articleHandle = startArticleObserver( );
-    },
-    changed: function( id, doc){
-      self.changed( "feeds", id, doc);  
-    }
-  });
- 
-  if ( initialising ){
-    articleHandle = startArticleObserver( );
-  }
-  
-  initialising = false;
-
   self.onStop( function(){
-    feedHandle.stop();
-    articleHandle.stop();
+    if ( articleHandle ) 
+      articleHandle.stop();
   });
  
+  var userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
+
+    added: function( id, doc ){
+      feedList = doc.feedList || null;
+      articleHandle = startArticleObserver();
+    },
+    changed: function( id, doc ){
+      feedList =  doc.feedList || null;
+      articleHandle = startArticleObserver();
+    }
+  }); 
+
   return Meteor.users.find( {_id: self.userId}, {fields: {admin: 1}});
 });
 
@@ -313,9 +308,17 @@ Meteor.methods({
     return XML2JS.parse( file );
   },
 
+  createFeedListByUser: function(){
+    Meteor.users.find( {}, {_id:1} ).forEach( function ( user ){
+      var feedList = Feeds.find( {subscribers: user._id}, {_id: 1} ).map( function( feed ) { return feed._id });
+      Meteor.users.update( user._id, {$set: {feedList: feedList}});
+    });
+  },
+
   checkAdmin: function(){
     var user = Meteor.users.findOne( {_id: this.userId} );
     return user && user.admin;
   }
 
+  
 });

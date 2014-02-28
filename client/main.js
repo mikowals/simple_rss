@@ -20,6 +20,8 @@ var cleanForXml = function ( string ){
                    
 var articleSub, timeoutHandle;
 
+Meteor.subscribe( "feeds" );
+
 Deps.autorun( function(){
   Session.set( "loaded", false);
   console.log("subscribing to feeds with articles (" + Session.get( "articleLimit" ) + ")");
