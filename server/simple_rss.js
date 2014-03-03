@@ -79,6 +79,8 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   };
 
   self.onStop( function(){
+    if ( userHandle )
+      userHandle.stop();
     if ( articleHandle ) 
       articleHandle.stop();
   });
