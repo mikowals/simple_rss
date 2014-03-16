@@ -30,7 +30,6 @@ FastRender.onAllRoutes( function( ) {
 });
 
 Meteor.publish( 'feeds', function(){
-  
   return Feeds.find( {subscribers: this.userId }, { fields: {_id: 1, title: 1, url: 1, last_date:1}});
 });
 
@@ -40,7 +39,8 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   check( articleLimit, Number );
   
   var initialising = true;
-  var articleHandle, feedList;
+  var articleHandle;
+  var feedList = [];
   var startDate = keepLimitDate();
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
 
@@ -85,17 +85,35 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
       articleHandle.stop();
   });
  
-  var userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
+  if ( self.userId ){
+    var userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
 
-    added: function( id, doc ){
-      feedList = doc.feedList || null;
-      articleHandle = startArticleObserver();
-    },
-    changed: function( id, doc ){
-      feedList =  doc.feedList || null;
-      articleHandle = startArticleObserver();
-    }
-  }); 
+      added: function( id, doc ){
+	feedList = doc.feedList || null;
+	articleHandle = startArticleObserver();
+      },
+      changed: function( id, doc ){
+	feedList =  doc.feedList || null;
+	articleHandle = startArticleObserver();
+      }
+    });
+  } else {
+    var initialising = true;
+    Feeds.find( {subscribers: null}, {fields:{ _id: 1}}).observeChanges({
+      added: function ( doc ){
+        feedList.push( doc._id );
+        if ( ! initialising ) articleHandle = startArticleObserver();
+      },
+      removed : function( id ){
+        feedList.splice( feedList.indexOf( id ), 1 ); 
+        if ( ! initialising ) articleHandle = startArticleObserver();
+      }
+    });
+    
+    articleHandle = startArticleObserver();
+    initialising = false;
+   
+  } 
 
   return Meteor.users.find( {_id: self.userId}, {fields: {admin: 1}});
 });
