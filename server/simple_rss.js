@@ -39,7 +39,7 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   check( articleLimit, Number );
   
   var initialising = true;
-  var articleHandle;
+  var articleHandle, userHandle;
   var feedList = [];
   var startDate = keepLimitDate();
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
@@ -73,7 +73,6 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     _.keys( publishedArticles ).forEach( function ( id ){
       self.removed( "articles", id );
     }); 
-    
     init = false;
     return handle; 
   };
@@ -86,7 +85,7 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   });
  
   if ( self.userId ){
-    var userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
+    userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
 
       added: function( id, doc ){
 	feedList = doc.feedList || null;
@@ -98,10 +97,9 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
       }
     });
   } else {
-    var initialising = true;
-    Feeds.find( {subscribers: null}, {fields:{ _id: 1}}).observeChanges({
-      added: function ( doc ){
-        feedList.push( doc._id );
+    userHandle =  Feeds.find( {subscribers: null}, {fields:{ _id: 1}}).observeChanges({
+      added: function ( id ){
+        feedList.push( id );
         if ( ! initialising ) articleHandle = startArticleObserver();
       },
       removed : function( id ){
@@ -109,11 +107,11 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
         if ( ! initialising ) articleHandle = startArticleObserver();
       }
     });
-    
     articleHandle = startArticleObserver();
-    initialising = false;
    
   } 
+
+  initialising = false;
 
   return Meteor.users.find( {_id: self.userId}, {fields: {admin: 1}});
 });
