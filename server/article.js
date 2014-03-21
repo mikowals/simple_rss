@@ -1,5 +1,6 @@
 var Fiber = Npm.require( 'fibers');
 
+
 Article = function( doc ){
   var self = this;
 
