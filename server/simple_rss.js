@@ -21,7 +21,6 @@ Facts.setUserIdFilter(function ( userId ) {
 FastRender.onAllRoutes( function( ) {
   
   var self = this;
-  console.log( "fastrender userId: " + self.userId );
   var feed_ids = Feeds.find({ subscribers: self.userId },  {fields: {_id: 1}}).map( function( doc ) {return doc._id;});
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
   //self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}}); 

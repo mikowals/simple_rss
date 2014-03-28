@@ -18,18 +18,13 @@ var cleanForXml = function ( string ){
   return  string.replace ( /\</g, "&lt;");
 };
                    
-var articleSub, timeoutHandle;
+var articleSub;
 
 Meteor.subscribe( "feeds" );
 
 Deps.autorun( function(){
-  Session.set( "loaded", false);
-  console.log("subscribing to feeds with articles (" + Session.get( "articleLimit" ) + ")");
-   
   articleSub = Meteor.subscribe( "feedsWithArticles", + Session.get( "articleLimit" ), function(){
     Session.set("loaded", true);
-    if ( timeoutHandle ) Meteor.clearTimeout( timeoutHandle );
-    timeoutHandle = Meteor.setTimeout( setLastArticleWaypoint, 1000);
   });
 });
 
@@ -260,24 +255,25 @@ Template.feed.events({
                      Session.set("selected_feed", this._id);
                      }
                      });
-
-Template.articleList.rendered = function(){
-  setLastArticleWaypoint();
+Template.article.rendered = function(){
+  setLastArticleWaypoint( this );
 };
 
 Template.articleList.destroyed = function(){
   $.waypoints('destroy');
-  console.log( $.waypoints());
+  Session.set( "articleLimit", 20 );
 };
 
-function setLastArticleWaypoint(){
-  $.waypoints('destroy');
-  $(".section").last().waypoint({
-    handler: function( dir ){
+var setLastArticleWaypoint = _.debounce( function( target ){
+  if ( Session.get( "articleLimit" ) <= Articles.find().count() ){
+    $( target.lastNode ).waypoint({
+      handler: function( dir ){
       if ( dir === 'down' ) 
         Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
-    } 
-    ,offset: '100%'     //offset percentage must be a string
-    ,triggerOnce: true
-  });
-};
+      } 
+      ,offset: '110%'     //offset percentage must be a string
+      ,triggerOnce: true
+    });
+  }
+  }, 100
+);
