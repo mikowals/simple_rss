@@ -264,7 +264,9 @@ Template.articleList.destroyed = function(){
   Session.set( "articleLimit", 20 );
 };
 
+var oldTarget;
 var setLastArticleWaypoint = _.debounce( function( target ){
+  oldTarget && $ ( oldTarget.lastNode ).waypoint( 'destroy' );
   if ( Session.get( "articleLimit" ) <= Articles.find().count() ){
     $( target.lastNode ).waypoint({
       handler: function( dir ){
@@ -274,6 +276,7 @@ var setLastArticleWaypoint = _.debounce( function( target ){
       ,offset: '110%'     //offset percentage must be a string
       ,triggerOnce: true
     });
+    oldTarget = target;
   }
   }, 100
 );
