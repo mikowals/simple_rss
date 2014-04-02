@@ -162,7 +162,7 @@ Template.feedList.events({
 
 Template.articleList.articles = function() {
   //must sort by _id or order can flicker where dates are equal and the query updates 
-   return Articles.find( {}, { sort: { date: -1, _id: 1} } );
+   return Articles.find( {}, { sort: { date: -1, _id: 1}});
 };
 
 Template.articleList.events({
@@ -256,7 +256,7 @@ Template.feed.events({
                      }
                      });
 Template.article.rendered = function(){
-  setLastArticleWaypoint( this );
+  setLastArticleWaypoint( $( this.lastNode ) );
 };
 
 Template.articleList.destroyed = function(){
@@ -266,9 +266,9 @@ Template.articleList.destroyed = function(){
 
 var oldTarget;
 var setLastArticleWaypoint = _.debounce( function( target ){
-  oldTarget && $ ( oldTarget.lastNode ).waypoint( 'destroy' );
+  oldTarget && oldTarget.waypoint( 'destroy' );
   if ( Session.get( "articleLimit" ) <= Articles.find().count() ){
-    $( target.lastNode ).waypoint({
+    target.waypoint({
       handler: function( dir ){
       if ( dir === 'down' ) 
         Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);

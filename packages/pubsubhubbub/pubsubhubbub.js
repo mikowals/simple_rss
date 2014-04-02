@@ -44,9 +44,12 @@ FeedSubscriber = function ( options ){
     if ( sub ){
       sub['expiry'] = new Date().getTime() + data.lease * 1000;
       console.log ( "subscribed to : " + data.hub + " : " + data.topic );
-      setTimeout( function(){
-         self.subscribe( data.topic, data.hub, sub._id );
-      } , (  Math.min(  data.lease - 60 * 60 ) * 1000, 6 * 24 * 60 * 60 * 1000));
+      var resubInterval = Math.min( ( data.lease - 60 * 60 ) * 1000, 6 * 24 * 60 * 60 * 1000 );      
+      var resubscribe = function(){
+        self.subscribe( data.topic, data.hub, sub._id );
+      };
+ 
+      Meteor.setTimeOut( resubscribe(), resubInterval );
     } else { 
       console.error( "unmatched subscription: " + data.topic);
     }
@@ -184,7 +187,7 @@ FeedSubscriber.prototype.onGetRequest = function( req, res ){
         res.writeHead(200, {'Content-Type': 'text/plain'});
         res.end(params.query['hub.challenge']);
         data = {
-          lease: Number(params.query["hub.lease_seconds"] || 0) + Math.round(Date.now()/1000),
+          lease: Number( params.query["hub.lease_seconds"] || 0 ),
           topic: params.query["hub.topic"],
           hub: params.query.hub
         };
@@ -196,7 +199,7 @@ FeedSubscriber.prototype.onGetRequest = function( req, res ){
         res.writeHead(200, {'Content-Type': 'text/plain'});
         res.end(params.query['hub.challenge']);
         data = {
-          lease: Number(params.query["hub.lease_seconds"] || 0) + Math.round(Date.now()/1000),
+          lease: Number( params.query["hub.lease_seconds"] || 0 ),
           topic: params.query["hub.topic"],
           hub: params.query.hub
         };
