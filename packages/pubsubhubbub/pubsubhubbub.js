@@ -40,20 +40,21 @@ FeedSubscriber = function ( options ){
   });
 
   self.on ( 'subscribe' , function ( data ) {
-    var sub = self.subscriptions[ data.topic ];
+    var interval,
+        fn, 
+        sub = self.subscriptions[ data.topic ];
     if ( sub ){
       sub['expiry'] = new Date().getTime() + data.lease * 1000;
       console.log ( "subscribed to : " + data.hub + " : " + data.topic );
-      var resubInterval = Math.min( ( data.lease - 60 * 60 ) * 1000, 6 * 24 * 60 * 60 * 1000 );      
-      var resubscribe = function(){
+      interval = Math.min( ( data.lease - 60 * 60 ) * 1000, 6 * 24 * 60 * 60 * 1000 );      
+      fn = function(){
         self.subscribe( data.topic, data.hub, sub._id );
       };
- 
-      Meteor.setTimeOut( resubscribe(), resubInterval );
+      _.delay( fn, interval );
     } else { 
       console.error( "unmatched subscription: " + data.topic);
     }
-   });
+ });
     
   self.on ( 'unsubscribe' , function ( data ) {
     var sub = self.subscriptions[ data.topic ];
