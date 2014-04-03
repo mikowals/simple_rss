@@ -43,18 +43,21 @@ FeedSubscriber = function ( options ){
     var interval,
         fn, 
         sub = self.subscriptions[ data.topic ];
+
     if ( sub ){
-      sub['expiry'] = new Date().getTime() + data.lease * 1000;
+      sub.expiry = new Date().getTime() + data.lease * 1000;
+      sub.resub && clearTimeout( sub.resub );
       console.log ( "subscribed to : " + data.hub + " : " + data.topic );
       interval = Math.max( ( data.lease - 60 * 60 ) * 1000, 9 * 24 * 60 * 60 * 1000 );      
       fn = function(){
+        self.unsubscribe( sub._id );
         self.subscribe( data.topic, data.hub, sub._id );
       };
-      _.delay( fn, interval );
+      sub.resub = setTimeout( fn, interval );
     } else { 
       console.error( "unmatched subscription: " + data.topic);
     }
- });
+  });
     
   self.on ( 'unsubscribe' , function ( data ) {
     var sub = self.subscriptions[ data.topic ];
@@ -63,7 +66,7 @@ FeedSubscriber = function ( options ){
     }
     else if ( sub.unsub ){
      console.log ( " unsubscribed from : " + data.topic); 
-     delete sub [ data.topic ];
+     delete self.subscriptions[ data.topic ];
     } else {
         console.error( "resubscribing to: " + data.topic );
         self.subscribe( data.topic, data.hub, sub._id );
@@ -182,7 +185,9 @@ FeedSubscriber.prototype.onGetRequest = function( req, res ){
       break;
     case "subscribe": 
      if ( ! self.subscriptions[ params.query["hub.topic"] ] ){
-         console.error( "subscription verification error for : " + params.query["hub.topic"]); 
+         console.error( "subscription verification error for : " + params.query["hub.topic"]);
+         self.sendRequest( "unsubscribe", params.query["hub.topic"], params.query.hub);  
+         self.subscriptions[ params.query["hub.topic"] ] ={ unsub: true};
          return self._sendError(req, res, 404, "Not Found");
         } 
         res.writeHead(200, {'Content-Type': 'text/plain'});
@@ -268,7 +273,7 @@ FeedSubscriber.prototype.sendRequest = function( mode, topic, hub, callbackUrl, 
 };
 
 FeedSubscriber.prototype.subscribe = function ( topic, hub, _id, callbackUrl, callback ){
-  self = this;
+  var self = this;
   self.subscriptions[ topic ] = {_id: _id, url: topic, hub: hub, unsub: false};
   self.sendRequest( "subscribe", topic, hub, callback );
    
