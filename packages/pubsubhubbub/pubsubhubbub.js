@@ -46,7 +46,7 @@ FeedSubscriber = function ( options ){
     if ( sub ){
       sub['expiry'] = new Date().getTime() + data.lease * 1000;
       console.log ( "subscribed to : " + data.hub + " : " + data.topic );
-      interval = Math.min( ( data.lease - 60 * 60 ) * 1000, 6 * 24 * 60 * 60 * 1000 );      
+      interval = Math.max( ( data.lease - 60 * 60 ) * 1000, 9 * 24 * 60 * 60 * 1000 );      
       fn = function(){
         self.subscribe( data.topic, data.hub, sub._id );
       };
