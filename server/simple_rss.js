@@ -9,7 +9,6 @@ var keepLimitDate = function(){
 };
 
 Articles._ensureIndex( { feed_id: 1, date: -1} );
-Feeds._ensureIndex( { subscribers: 1 }, {sparse: true});
 
 Accounts.config({sendVerificationEmail: true});
 
@@ -20,16 +19,28 @@ Facts.setUserIdFilter(function ( userId ) {
 
 FastRender.onAllRoutes( function( ) {
   
-  var self = this;
-  var feed_ids = Feeds.find({ subscribers: self.userId },  {fields: {_id: 1}}).map( function( doc ) {return doc._id;});
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-  //self.find( Feeds, {subscribers: self.userId}, {fields: {_id: 1, title: 1, url:1, last_date:1}}); 
+  var self = this,
+      feed_ids,
+      visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
+  
+  if ( self.userId ){
+    feed_ids = Meteor.users.findOne( self.userId, {fields: {feedList: 1}} ).feedList;
+  } else{
+    feed_ids = Feeds.find( {subscribers: null}, {fields: {_id: 1}}).map ( function( feed ) { return feed._id;});
+  }
+  
   self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
   self.completeSubscriptions(['feedsWithArticles']);
 });
 
 Meteor.publish( 'feeds', function(){
-  return Feeds.find( {subscribers: this.userId }, { fields: {_id: 1, title: 1, url: 1, last_date:1}});
+  var self = this;
+  var fields = {_id: 1, title: 1, url: 1, last_date:1};
+  if ( ! self.userId ) 
+    return Feeds.find( {subscribers: null }, { fields: fields });
+
+  var feedList = Meteor.users.findOne( self.userId, {fields: {feedList: 1}} ).feedList;
+  return Feeds.find( { _id: {$in: feedList }}, { fields: fields });
 });
 
 Meteor.publish( "feedsWithArticles", function( articleLimit ){
