@@ -36,11 +36,36 @@ FastRender.onAllRoutes( function( ) {
 Meteor.publish( 'feeds', function(){
   var self = this;
   var fields = {_id: 1, title: 1, url: 1, last_date:1};
-  if ( ! self.userId ) 
+  if ( ! self.userId ){ 
+    feedHandle && feedHandle.stop();
     return Feeds.find( {subscribers: null }, { fields: fields });
+  }
+  var feedHandle = Meteor.users.find( self.userId, {fields: {feedList: 1}} ).observeChanges({
+    added: function( id, user ){
+      var feedList = user.feedList;
+      Feeds.find( { _id: {$in: feedList }}, { fields: fields }).forEach( function( feed ){
+        self.added( "feeds", feed._id, feed );
+      });
+    },
 
-  var feedList = Meteor.users.findOne( self.userId, {fields: {feedList: 1}} ).feedList;
-  return Feeds.find( { _id: {$in: feedList }}, { fields: fields });
+    changed: function( id, user ){ 
+      var feedList = user.feedList || {};
+      _.difference( feedList, _.keys( self._documents.feeds ) ).forEach( function( newId ){
+        var feed = Feeds.findOne( newId );
+        feed && self.added( "feeds", feed._id, feed );
+      });
+      
+      _.difference( _.keys( self._documents.feeds ), feedList ).forEach( function( removedId ){
+        self.removed( "feeds", removedId );
+      });
+    }
+ 
+  });
+
+  self.onStop( function(){
+    feedHandle && feedHandle.stop();
+  });
+  return self.ready();
 });
 
 Meteor.publish( "feedsWithArticles", function( articleLimit ){
