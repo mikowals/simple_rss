@@ -20,8 +20,6 @@ var cleanForXml = function ( string ){
                    
 var articleSub;
 
-Meteor.subscribe( "feeds" );
-
 Deps.autorun( function(){
   articleSub = Meteor.subscribe( "feedsWithArticles", + Session.get( "articleLimit" ), function(){
     Session.set("loaded", true);

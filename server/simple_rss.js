@@ -33,41 +33,6 @@ FastRender.onAllRoutes( function( ) {
   self.completeSubscriptions(['feedsWithArticles']);
 });
 
-Meteor.publish( 'feeds', function(){
-  var self = this;
-  var fields = {_id: 1, title: 1, url: 1, last_date:1};
-  if ( ! self.userId ){ 
-    feedHandle && feedHandle.stop();
-    return Feeds.find( {subscribers: null }, { fields: fields });
-  }
-  var feedHandle = Meteor.users.find( self.userId, {fields: {feedList: 1}} ).observeChanges({
-    added: function( id, user ){
-      var feedList = user.feedList;
-      Feeds.find( { _id: {$in: feedList }}, { fields: fields }).forEach( function( feed ){
-        self.added( "feeds", feed._id, feed );
-      });
-    },
-
-    changed: function( id, user ){ 
-      var feedList = user.feedList || {};
-      _.difference( feedList, _.keys( self._documents.feeds ) ).forEach( function( newId ){
-        var feed = Feeds.findOne( newId );
-        feed && self.added( "feeds", feed._id, feed );
-      });
-      
-      _.difference( _.keys( self._documents.feeds ), feedList ).forEach( function( removedId ){
-        self.removed( "feeds", removedId );
-      });
-    }
- 
-  });
-
-  self.onStop( function(){
-    feedHandle && feedHandle.stop();
-  });
-  return self.ready();
-});
-
 Meteor.publish( "feedsWithArticles", function( articleLimit ){
   var self = this;
   articleLimit = articleLimit || articlePubLimit;
@@ -75,17 +40,18 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   
   var initialising = true;
   var articleHandle, userHandle;
-  var feedList = [];
   var startDate = keepLimitDate();
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
-
+  var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
+  
   function startArticleObserver() {
     //when limit is working again, uncomment code and simplify publish so article observer publishes all articles it finds and removes any articles it doesn't find.
     // no longer need feed_id in visible fields, no more counting, feedobserver manages feeds and article observer manages articles.
-    if ( articleHandle ) articleHandle.stop();
+    articleHandle && articleHandle.stop();
     var publishedArticles = _.clone( self._documents.articles || {} );
     var init = true;
     var criteria = {date: {$gt: startDate}};
+    var feedList = _.keys( self._documents.feeds || {} );
     if ( feedList )
       _.extend( criteria, {feed_id: {$in: feedList }});
     var options = {limit: articleLimit, sort: { date: -1}, fields: visibleFields};
@@ -113,37 +79,48 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   };
 
   self.onStop( function(){
-    if ( userHandle )
-      userHandle.stop();
-    if ( articleHandle ) 
-      articleHandle.stop();
+    userHandle &&  userHandle.stop();
+    articleHandle && articleHandle.stop();
   });
  
   if ( self.userId ){
     userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
 
       added: function( id, doc ){
-	feedList = doc.feedList || null;
-	articleHandle = startArticleObserver();
+        Feeds.find( { _id: {$in: doc.feedList }}, { fields: feedFields }).forEach( function( feed ){
+          self.added( "feeds", feed._id, feed );
+        });
+        articleHandle = startArticleObserver();
       },
       changed: function( id, doc ){
-	feedList =  doc.feedList || null;
-	articleHandle = startArticleObserver();
+        _.difference( doc.feedList, _.keys( self._documents.feeds ) ).forEach( function( newId ){
+          var feed = Feeds.findOne( newId, {fields: feedFields} );
+          feed && self.added( "feeds", feed._id, feed );
+        });
+
+        _.difference( _.keys( self._documents.feeds ), doc.feedList ).forEach( function( removedId ){
+          self.removed( "feeds", removedId );
+        });
+
+        articleHandle = startArticleObserver();
       }
     });
   } else {
-    userHandle =  Feeds.find( {subscribers: null}, {fields:{ _id: 1}}).observeChanges({
-      added: function ( id ){
-        feedList.push( id );
-        if ( ! initialising ) articleHandle = startArticleObserver();
+    userHandle =  Feeds.find( {subscribers: null}, {fields: feedFields }).observeChanges({
+      added: function ( id, feed ){
+        self.added( 'feeds', id, feed);
+        ! initialising && ( articleHandle = startArticleObserver() );
       },
       removed : function( id ){
-        feedList.splice( feedList.indexOf( id ), 1 ); 
-        if ( ! initialising ) articleHandle = startArticleObserver();
+        self.removed( 'feeds', id);
+        (! initialising) && ( articleHandle = startArticleObserver() );
+      },
+      changed : function( id, feed){
+        self.changed( 'feeds', id, feed);
       }
     });
     articleHandle = startArticleObserver();
-   
+
   } 
 
   initialising = false;
