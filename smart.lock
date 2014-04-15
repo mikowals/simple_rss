@@ -1,11 +1,15 @@
 {
-  "meteor": {
-    "git": "https://github.com/meteor/meteor.git",
-    "branch": "shark",
-    "commit": "295268fb8c98d53e8a7c9bcb87a6f3b69c7d22c0"
-  },
+  "meteor": {},
   "dependencies": {
-    "basePackages": {},
-    "packages": {}
+    "basePackages": {
+      "lodash": {}
+    },
+    "packages": {
+      "lodash": {
+        "git": "https://github.com/alethes/meteor-lodash.git",
+        "tag": "v0.7.0",
+        "commit": "0d4d8b43728f3ad1b54268148e61de398a3a4840"
+      }
+    }
   }
 }
