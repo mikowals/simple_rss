@@ -1,6 +1,5 @@
 .DS_Store
-**/.npm/**
-**/.build/**
+node_modules
 *~
 *.swo
 *.swp
