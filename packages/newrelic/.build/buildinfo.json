@@ -1,0 +1,41 @@
+{
+  "builtBy": "meteor/10",
+  "sliceDependencies": {
+    "browser.json": {
+      "files": {
+        "/home/mikowals/simple_rss/packages/newrelic/package.js": "debe35043b275b182ed115d9923439ce8e1d2a49"
+      },
+      "directories": []
+    },
+    "os.json": {
+      "files": {
+        "/home/mikowals/simple_rss/packages/newrelic/package.js": "debe35043b275b182ed115d9923439ce8e1d2a49",
+        "/home/mikowals/simple_rss/packages/newrelic/newrelic.js": "55e1e9c2924e362b102041410785dac672500483"
+      },
+      "directories": []
+    },
+    "tests.browser.json": {
+      "files": {
+        "/home/mikowals/simple_rss/packages/newrelic/package.js": "debe35043b275b182ed115d9923439ce8e1d2a49"
+      },
+      "directories": []
+    },
+    "tests.os.json": {
+      "files": {
+        "/home/mikowals/simple_rss/packages/newrelic/package.js": "debe35043b275b182ed115d9923439ce8e1d2a49"
+      },
+      "directories": []
+    }
+  },
+  "pluginDependencies": {
+    "files": {
+      "/home/mikowals/simple_rss/packages/newrelic/package.js": "debe35043b275b182ed115d9923439ce8e1d2a49"
+    },
+    "directories": []
+  },
+  "pluginProviderPackages": {
+    "newrelic": "/home/mikowals/simple_rss/packages/newrelic",
+    "meteor": "/home/mikowals/.meteor/packages/meteor/c91bc503fa"
+  },
+  "source": "/home/mikowals/simple_rss/packages/newrelic"
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"/packages/newrelic.js","sources":["newrelic/newrelic.js"],"names":[],"mappings":";;;;;;;;AAAA,wB","sourcesContent":["Npm.require(\"newrelic\");\n"]}
