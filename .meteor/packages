@@ -21,8 +21,7 @@ filesaver
 spacebars
 facts
 bootstrap3-less
-fast-render
 browser-policy
 jquery-waypoints
 accounts-ui
-lodash
+fast-render
