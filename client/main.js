@@ -9,14 +9,6 @@ Session.setDefault( "now", new Date() );
 Session.setDefault("articleLimit", articlesOnLoad );
 Session.setDefault( "page", "articleList" );
 
-var cleanForXml = function ( string ){
-  string = string.replace ( /\"/g, "&quot;");
-  string = string.replace ( /\'/g, "&apos;");
-  string = string.replace ( /\&/g, "&amp;");
-  string = string.replace ( /\>/g, "&gt;");
-  
-  return  string.replace ( /\</g, "&lt;");
-};
                    
 var articleSub;
 
@@ -86,14 +78,15 @@ Template.feedList.helpers({
 Template.feedList.events({
                              
                              //could modify this to verify feed and populate fields for insertion
-                             'submit, click #addFeed': function(e) {
+                             'submit, click #addFeed': function(e,t) {
                                e.stopImmediatePropagation();
                                e.preventDefault();
-                               var url = $("#feedUrl").val();
+                               var $feedUrl = t.$("#feedUrl");
+                               var url = $feedUrl.val();
                                var regex =/(((f|ht){1}tp|tps:\/\/)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]+)/g;
                                if ( Match.test ( url, String ) && regex.test(url) ){
                                  Meteor.call( 'addFeed', { url: url } );
-                                 $("#feedUrl").val("");
+                                 $feedUrl.val("");
                                } else{
                                  alert("RSS feed entered is not a valid url");
                                }
@@ -105,10 +98,10 @@ Template.feedList.events({
                              console.log(Session.equals("importOPML", true));
                              },
                              
-                             'click #opmlUpload' : function(){
+                             'click #opmlUpload' : function(e,t){
                                Session.set("importOPML", false);
                              
-                               var opmlFile = $("#opmlFile")[0].files[0];
+                               var opmlFile = t.$("#opmlFile")[0].files[0];
                                var fr = new FileReader();
                                fr.readAsText(opmlFile);
                                fr.onloadend = function(evt) {
@@ -136,10 +129,10 @@ Template.feedList.events({
                                                "<body>";
                                Feeds.find().forEach( function( feed ) {
                                  exportOPML += "<outline " +
-                                               "text=\"" + cleanForXml( feed.title ) + "\" " +
-                                               "title=\"" + cleanForXml( feed.title ) + "\" " +
+                                               "text=\"" + _( feed.title ).escape() + "\" " +
+                                               "title=\"" + _( feed.title ).escape() + "\" " +
                                                "type=\"rss\" " +
-                                               "xmlUrl=\"" + cleanForXml( feed.url ) + "\"/>";
+                                               "xmlUrl=\"" + _( feed.url ).escape() + "\"/>";
                                });
                                 exportOPML += "</body></opml>";
                                 //exportOPML = ( new window.DOMParser() ).parseFromString( exportOPML, "text/xml");
@@ -175,11 +168,11 @@ Template.articleList.events({
      return true;
   },
   
-  'tap a':  function( e ){
+  'tap a':  function( e, t){
     Session.set( "handleTap", true);
     e.preventDefault();
     e.stopImmediatePropagation();
-    var dest = $( e.currentTarget ).attr('href');
+    var dest = t.$( e.currentTarget ).attr('href');
     Meteor.call( 'markRead', dest, function(){
       window.location.href = dest;
     });

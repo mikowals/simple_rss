@@ -2,8 +2,12 @@
   "meteor": {},
   "dependencies": {
     "basePackages": {
-      "fast-render": {},
-      "bootstrap3-less": {}
+      "fast-render": {
+        "version": "0.2.2"
+      },
+      "bootstrap3-less": {
+        "version": "0.1.9"
+      }
     },
     "packages": {
       "fast-render": {

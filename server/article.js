@@ -13,6 +13,7 @@ Article = function( doc ){
   }
   if ( doc ) {
     self.title = doc.title || null;
+    self.title = _( self.title ).unescape();
     self.author = doc.author ||  null;
     self.source = doc.meta.title || null;
     self.sourceUrl = doc.sourceUrl || doc.meta || doc.meta.xmlurl || doc.source && doc.source.url || null;
