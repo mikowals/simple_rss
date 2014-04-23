@@ -3,7 +3,7 @@ var Stream = Npm.require("stream").Stream;
 var urllib = Npm.require("url");
 var utillib = Npm.require("util")
 var crypto = Npm.require("crypto");
-var TransformStream = require('stream').Transform;
+var TransformStream = Npm.require('stream').Transform;
 var Future = Npm.require( 'fibers/future');
 
 FeedSubscriber = function ( options ){
