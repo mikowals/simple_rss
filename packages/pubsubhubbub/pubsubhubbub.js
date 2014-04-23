@@ -10,7 +10,7 @@ FeedSubscriber = function ( options ){
   Stream.call( self );
 
   options = options || {};
-  
+
   self.callbackPath = options.callbackPath || "";
   self.callbackUri = options.callbackUri || "/" + self.callbackPath;
   self.callbackUrl = options.callbackUrl ||  Meteor.absoluteUrl( self.callbackPath );
@@ -34,43 +34,43 @@ FeedSubscriber = function ( options ){
 
   self.listening = true;
   console.log ( "started a feed subscriber with url : " + self.callbackUrl);
-  
+
   self.on( 'denied', function ( data ){
-    console.error ( "denied request: " + JSON.stringify( data ) ); 
+    console.error ( "denied request: ", data );
   });
 
   self.on ( 'subscribe' , function ( data ) {
     var interval,
-        fn, 
+        fn,
         sub = self.subscriptions[ data.topic ];
 
     if ( sub ){
       sub.expiry = new Date().getTime() + data.lease * 1000;
       sub.resub && clearTimeout( sub.resub );
       console.log ( "subscribed to : " + data.hub + " : " + data.topic );
-      interval = Math.max( ( data.lease - 60 * 60 ) * 1000, 9 * 24 * 60 * 60 * 1000 );      
+      interval = Math.max( ( data.lease - 60 * 60 ) * 1000, 9 * 24 * 60 * 60 * 1000 );
       fn = function(){
         self.unsubscribe( sub._id );
         self.subscribe( data.topic, data.hub, sub._id );
       };
       sub.resub = setTimeout( fn, interval );
-    } else { 
+    } else {
       console.error( "unmatched subscription: " + data.topic);
     }
   });
-    
+
   self.on ( 'unsubscribe' , function ( data ) {
     var sub = self.subscriptions[ data.topic ];
     if ( ! sub ){
        console.error( "unmatched unsubscribe: " + data.topic );
     }
     else if ( sub.unsub ){
-     console.log ( " unsubscribed from : " + data.topic); 
+     console.log ( " unsubscribed from : " + data.topic);
      delete self.subscriptions[ data.topic ];
     } else {
         console.error( "resubscribing to: " + data.topic );
         self.subscribe( data.topic, data.hub, sub._id );
-    }   
+    }
   });
 };
 
@@ -96,23 +96,24 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
   var bodyChunks = [],
       params = urllib.parse(req.url, true, true),
       topic = params && params.query && params.query.topic,
+      sub = self.subscriptions[ topic ],
       hub = params && params.query && params.query.hub,
       bodyLen = 0,
       tooLarge = false,
       signatureParts, algo, signature, hmac;
 
   // v0.4 hubs have a linke header that includes both the topic url and hub url
-  (req.headers && req.headers.link || "").
-    replace(/<([^>]+)>\s*(?:;\s*rel=['"]([^'"]+)['"])?/gi, function(o, url, rel){
-	switch((rel || "").toLowerCase()){
-	case "self":
-	topic = url;
-	break;
-	case "hub":
-	hub = url;
-	break;
-	}
-	});
+  (req.headers && req.headers.link || "")
+    .replace(/<([^>]+)>\s*(?:;\s*rel=['"]([^'"]+)['"])?/gi, function(o, url, rel){
+	    switch((rel || "").toLowerCase()){
+        case "self":
+          topic = url;
+          break;
+        case "hub":
+          hub = url;
+          break;
+        }
+    });
 
   if(!topic){
     console.log ( "no topic" );
@@ -137,7 +138,7 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
       return;
     }
   }
-  var fp = req.pipe( new feedParser());
+  var stream = req.pipe( new Stream());
   req.on( 'data', function ( data) {
     hmac.update ( data );
   });
@@ -151,20 +152,10 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
       res.end();
       return;
     }
-    self._parseFeed( topic, fp  );
+    self.emit( 'liveFeed',  stream, sub );
     res.writeHead(204, {'Content-Type': 'text/plain; charset=utf-8'});
     res.end();
   });
-};
-
-FeedSubscriber.prototype._parseFeed = function ( topic, fp ){
-  var self = this;
-  fp.on('error', function(err ){
-      console.log(" got feedparser error: " + err);
-      });
-  var sub = self.subscriptions[ topic ];
-  self.emit( 'liveFeed',  fp, sub );
- 
 };
 
 FeedSubscriber.prototype.onGetRequest = function( req, res ){
@@ -176,20 +167,20 @@ FeedSubscriber.prototype.onGetRequest = function( req, res ){
   if(!params.query["hub.topic"] || !params.query['hub.mode']){
     return self._sendError(req, res, 400, "Bad Request");
   }
-  
+
   switch(params.query['hub.mode']){
     case "denied":
       res.writeHead(200, {'Content-Type': 'text/plain'});
       data = {topic: params.query["hub.topic"], hub: params.query.hub};
       res.end(params.query['hub.challenge'] || "ok");
       break;
-    case "subscribe": 
+    case "subscribe":
      if ( ! self.subscriptions[ params.query["hub.topic"] ] ){
          console.error( "subscription verification error for : " + params.query["hub.topic"]);
-         self.sendRequest( "unsubscribe", params.query["hub.topic"], params.query.hub);  
+         self.sendRequest( "unsubscribe", params.query["hub.topic"], params.query.hub);
          self.subscriptions[ params.query["hub.topic"] ] ={ unsub: true};
          return self._sendError(req, res, 404, "Not Found");
-        } 
+        }
         res.writeHead(200, {'Content-Type': 'text/plain'});
         res.end(params.query['hub.challenge']);
         data = {
@@ -218,13 +209,13 @@ FeedSubscriber.prototype.onGetRequest = function( req, res ){
 
 FeedSubscriber.prototype.sendRequest = function( mode, topic, hub, callbackUrl, callback ){
   var self = this;
-//  console.log(  mode + " : " + topic);  
+//  console.log(  mode + " : " + topic);
   if(!callback && typeof callbackUrl == "function"){
     callback = callbackUrl;
     callbackUrl = undefined;
   }
 
-  callbackUrl = callbackUrl || self.callbackUrl + 
+  callbackUrl = callbackUrl || self.callbackUrl +
     (self.callbackUrl.replace(/^https?:\/\//i, "").match(/\//)?"":"/") +
     (self.callbackUrl.match(/\?/)?"&":"?") +
     "topic="+encodeURIComponent(topic)+
@@ -251,7 +242,7 @@ FeedSubscriber.prototype.sendRequest = function( mode, topic, hub, callbackUrl, 
 
       if(error){
         if(callback){
-          return callback(error);    
+          return callback(error);
         } else{
           return self.emit("denied", {topic: topic, error: error});
         }
@@ -276,19 +267,19 @@ FeedSubscriber.prototype.subscribe = function ( topic, hub, _id, callbackUrl, ca
   var self = this;
   self.subscriptions[ topic ] = {_id: _id, url: topic, hub: hub, unsub: false};
   self.sendRequest( "subscribe", topic, hub, callback );
-   
+
 };
 
-FeedSubscriber.prototype.unsubscribe = function ( id ){ 
+FeedSubscriber.prototype.unsubscribe = function ( id ){
    var self = this;
    var sub = getKey ( self.subscriptions, "_id", id );
-   if ( sub ){ 
+   if ( sub ){
      self.sendRequest( "unsubscribe", sub.url, sub.hub );
-     sub.unsub = true; 
+     sub.unsub = true;
    }  else {
       console.error( " No subscription found with id :  " + id );
    }
-   
+
 };
 
 

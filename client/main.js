@@ -75,6 +75,10 @@ Template.feedList.helpers({
 
 });
 
+Template.feedListButtons.importOPML = function(){
+  return Session.equals("importOPML", true);
+};
+
 Template.feedList.events({
                              
                              //could modify this to verify feed and populate fields for insertion

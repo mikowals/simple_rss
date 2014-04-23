@@ -16,7 +16,7 @@ var _fp = function( fd, kl, forDB ){
   if (! fd.url)
     throw new Error( "_fp called without url");
   feed.url = fd.url;
-  if (fd._id) 
+  if (fd._id)
     feed._id = fd._id;
   else {
     var existing = Feeds.findOne( {url : feed.url});
@@ -30,63 +30,64 @@ var _fp = function( fd, kl, forDB ){
     timeout: 7000
   };
 
-  if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString(); // 
+  if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString(); //
   if ( feed.etag ) options.headers['If-None-Match'] =  feed.etag; //
 
   var r = request( options, function ( error, response ){
       // return a future for cases where no http response leads to nothing getting piped to feedparser
     if ( !response || response.statusCode !== 200 ){
-      if ( error ) 
+      if ( error )
         console.log( feed.url + " error: " + error + " in " + (new Date() - start )/1000+ " seconds");
-      if ( response  && response.statusCode !== 304 ) 
+      if ( response  && response.statusCode !== 304 )
         console.log( feed.url + " statusCode: " + response.statusCode + " in " + (new Date() - start )/1000+ " seconds");
       future.return ({url: feed.url, error: error, statusCode: response && response.statusCode} );
     }
   });
 
   r.on ( 'response', Meteor.bindEnvironment( function ( response ){
-      if ( response.statusCode === 200 ){
-        feed.statusCode = 200; 
-        if ( response.headers['content-encoding'] === 'gzip' ){
-          r = r.pipe( zlib.createGunzip() );
-        }
+    if ( response.statusCode === 200 ){
+      feed.statusCode = 200;
+      if ( response.headers['content-encoding'] === 'gzip' ){
+        r = r.pipe( zlib.createGunzip() );
+      }
 
       if ( response.headers['last-modified'] ){
         feed.lastModified = response.headers[ 'last-modified' ] ;
       }
 
-
-     var fp = r.pipe( new feedParser() );
-     fp.on('error', function(err ){
-	console.log(feed.url + " got feedparser error: " + err);
-	feed.error = err;
-	})
+      var fp = r.pipe( new feedParser() );
+      fp.on('error', function(err ){
+        console.log(feed.url + " got feedparser error: " + err);
+        feed.error = err;
+      })
       .on ( 'meta', function ( meta ){
-	//console.log( "feedparser emmitted meta for url: " + url );
-	if (meta !== null ){
-	feed.url = meta.xmlurl || feed.url;
-	feed.hub = meta.cloud.href;
-	feed.title = meta.title;
-	feed.date = new Date( meta.date );
-	feed.author = meta.author;
-	}
+        //console.log( "feedparser emmitted meta for url: " + url );
+        if (meta !== null ){
+          feed.url = meta.xmlurl || feed.url;
+          feed.hub = meta.cloud.href;
+          feed.title = meta.title;
+          feed.date = new Date( meta.date );
+          feed.author = meta.author;
+        }
       })
       .on( 'end', function() {
-	  //console.log( feed.url + " returned in " + ( new Date() -start ) /1000 + " seconds"); 
-	  future.return ( feed );
-	  });
-        
-        readAndInsertArticles ( fp, feed );
-      }
-  }, function ( e ) { throw e;})
-  );
-  
- // Future.wait( futures );
+        //console.log( feed.url + " returned in " + ( new Date() -start ) /1000 + " seconds");
+        future.return ( feed );
+      });
+
+      readAndInsertArticles ( fp, feed );
+    }
+  }, function ( e ) { throw e;}));
+
   return future;
-}
+};
 
 //separate function so pubsubhubbub package can also add articles.  All added articles pass through this function.
 readAndInsertArticles = function ( fp, feed ){
+  if ( ! ( fp instanceof feedParser ) )
+    fp = fp.pipe( new feedParser() );
+  fp.on('error', err );
+
   function insert() {
     var item, doc;
     while ( item = fp.read() ) {
@@ -96,7 +97,7 @@ readAndInsertArticles = function ( fp, feed ){
       var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
       if ( doc.date > keepLimitDate ){
         Articles.insert( doc, function( error ) {
-          if ( !error ) { 
+          if ( !error ) {
             console.log( doc.title + " : " + doc.source );
             Feeds.update( { _id: doc.feed_id, last_date: {$lt: doc.date}}, { $set: { last_date: doc.date }}, function( error){});
           }
@@ -109,7 +110,7 @@ readAndInsertArticles = function ( fp, feed ){
     console.error( error );
   };
 
-  fp.on( 'readable', Meteor.bindEnvironment( insert, err ));   
+  fp.on( 'readable', Meteor.bindEnvironment( insert, err ));
 };
 
 
@@ -121,14 +122,13 @@ syncFP = function ( feed ) {
 multipleSyncFP = function( feeds ){
   var start = new Date();
   var futures = _.map( feeds, function( feed ){
-
-      return _fp( feed );
-      });
+    return _fp( feed );
+  });
 
   Future.wait(futures);
   console.log(" all futures from feedparser resolved in " + ( new Date() - start ) /1000 + " seconds");
-  
-  return _.invoke(futures,'get');
+
+  return _.invoke( futures, 'get');
 };
 
 cleanSummary = function (text){
