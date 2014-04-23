@@ -4,6 +4,7 @@ var updateInterval = 1000 * 60 * 15;
 var intervalProcesses = {};
 var articlePubLimit = 150;
 var maxArticlesFromSource = 25;
+var feedSubscriber;
 var keepLimitDate = function(){
   return new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
 };
@@ -18,17 +19,17 @@ Facts.setUserIdFilter(function ( userId ) {
 });
 
 FastRender.onAllRoutes( function( ) {
-  
+
   var self = this,
       feed_ids,
       visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
-  
+
   if ( self.userId ){
     feed_ids = Meteor.users.findOne( self.userId, {fields: {feedList: 1}} ).feedList;
   } else{
     feed_ids = Feeds.find( {subscribers: null}, {fields: {_id: 1}}).map ( function( feed ) { return feed._id;});
   }
-  
+
   self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
   self.completeSubscriptions(['feedsWithArticles']);
 });
@@ -37,13 +38,13 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   var self = this;
   articleLimit = articleLimit || articlePubLimit;
   check( articleLimit, Number );
-  
+
   var initialising = true;
   var articleHandle, userHandle;
   var startDate = keepLimitDate();
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
   var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
-  
+
   function startArticleObserver() {
     //when limit is working again, uncomment code and simplify publish so article observer publishes all articles it finds and removes any articles it doesn't find.
     // no longer need feed_id in visible fields, no more counting, feedobserver manages feeds and article observer manages articles.
@@ -73,16 +74,16 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
 
     _.keys( publishedArticles ).forEach( function ( id ){
       self.removed( "articles", id );
-    }); 
+    });
     init = false;
-    return handle; 
+    return handle;
   };
 
   self.onStop( function(){
     userHandle &&  userHandle.stop();
     articleHandle && articleHandle.stop();
   });
- 
+
   if ( self.userId ){
     userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
 
@@ -121,7 +122,7 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     });
     articleHandle = startArticleObserver();
 
-  } 
+  }
 
   initialising = false;
 
@@ -135,7 +136,7 @@ Articles.allow({
   update: function (userId, doc, fieldNames, modifier ) {
     return false;
   },
- 
+
   remove: function ( doc ) {
  // can only remove your own documents
   return false //doc.owner === userId;
@@ -155,13 +156,13 @@ Feeds.allow({
   remove: function(userId, doc){
     return false; //doc.subscribers.length === 1 && doc.subscribers[0] === userId;
   }
-    
+
 });
 
 Meteor.startup( function(){
   //unsafe eval in FastRender.
   BrowserPolicy.content.allowEval();
-  
+
   Meteor.call('findArticles', {} );
 
   Meteor.call('removeOldArticles');
@@ -176,11 +177,11 @@ Meteor.startup( function(){
   if ( !intervalProcesses[ "findArticles"] ){
     var pro = Meteor.setInterval( function(){
       Meteor.call('findArticles', { hub: null});
-      }, 
+      },
       updateInterval);
     intervalProcesses[ "findArticles"] = pro;
   }
-  
+
 
 
   var options = {
@@ -193,40 +194,37 @@ Meteor.startup( function(){
     options.callbackUrl = "http://localhost:3000/" + options.callbackPath;
   }
 
-  var feedSubscriber = new FeedSubscriber ( options );
+  feedSubscriber = new FeedSubscriber ( options );
   feedSubscriber.on( 'liveFeed', Meteor.bindEnvironment( readAndInsertArticles, function( error ) { console.log( error ); } ));
 
   process.on('exit', Meteor.bindEnvironment ( function (){
     feedSubscriber.stopAllSubscriptions();
-    Meteor.setTimeout ( function() { 
-      console.log( "paused to allow subscriptions to end");
-    }, 8000 );
+    console.log( "paused to allow subscriptions to end");
+
   }, function ( e ) { throw e; }));
 
   _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
     process.once(sig, Meteor.bindEnvironment (function () {
        console.log ( "process received : " + sig);
       feedSubscriber.stopAllSubscriptions();
-      Meteor.setTimeout ( function() { 
-        process.kill( process.pid, sig);
-      }  , 8000 );
+      process.kill( process.pid, sig);
     }, function ( e ) { throw e; }));
   });
 
+  var boundCallback = Meteor.bindEnvironment( function (error, topic){
+    if ( error ) {
+      console.error( error );
+    } else {
+      console.log( feed.url + " : " + topic );
+    }
+  }, function ( e) { throw e;});
 
   var handle = Feeds.find({},{fields: {_id: 1, hub:1, url:1}}).observeChanges({
 
     added: function ( id, fields ){
       if ( fields.hub ){
-
-	feedSubscriber.subscribe ( fields.url, fields.hub , id, Meteor.bindEnvironment( function (error, topic){
-	  if ( error ) { 
-	    console.error( error );
-	  } else {
-	    console.log( fields.url + " : " + topic );
-	  }
-	}, function ( e) { throw e;}) ); 
-      } 
+	      feedSubscriber.subscribe ( fields.url, fields.hub , id, boundCallback );
+      }
     },
 
     removed: function( id ){
@@ -235,16 +233,9 @@ Meteor.startup( function(){
 
     changed: function ( id, fields ){
       if ( fields.hub ) {
-	feedSubscriber.unsubscribe( id );
+	      feedSubscriber.unsubscribe( id );
         var feed = Feeds.findOne( id );
-	feedSubscriber.subscribe ( feed.url, feed.hub , id, Meteor.bindEnvironment( function (error, topic){
-	  if ( error ) {
-	    console.error( error );
-	  } else {
-	    console.log( feed.url + " : " + topic );
-	  }
-	}, function ( e) { throw e;}) );
-
+	      feedSubscriber.subscribe ( feed.url, feed.hub , id, boundCallback);
       }
     }
   });
@@ -253,39 +244,47 @@ Meteor.startup( function(){
 Meteor.methods({
 
   findArticles: function( criteria ) {
-    check ( criteria,  Object ); 
+    check ( criteria,  Object );
     console.time("findArticles");
-    criteria = criteria || {};		
-    //console.log("looking for new articles");
-    var article_count = 0;         
-
-    //var rssResults = multipleSyncFP ( Feeds.find( criteria ).fetch() );
+    criteria = criteria || {};
+    var article_count = 0;
     var rssResults = multipleSyncFP( Feeds.find( criteria ).fetch() );
 
-    rssResults.forEach(function(rssResult){ 
-    if ( rssResult.statusCode === 200 ) {
-      Feeds.update(rssResult._id, {$set: {lastModified: rssResult.lastModified, etag: rssResult.etag, lastDate: rssResult.date } } );
-    }
-    else if ( rssResult.error ) console.log (rssResult.url + " returned " + rssResult.error);
-    else if (typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){
-      console.log( rssResult.url + " responded with " + rssResult.statusCode );
-    }
-  }); 
+    rssResults.forEach(function(rssResult){
+      if ( rssResult.statusCode === 200 ) {
+        Feeds.update(rssResult._id, {$set: {lastModified: rssResult.lastModified, etag: rssResult.etag, lastDate: rssResult.date } } );
+      }
+      else if ( rssResult.error ) console.log (rssResult.url + " returned " + rssResult.error);
+      else if (typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){
+        console.log( rssResult.url + " responded with " + rssResult.statusCode );
+      }
+    });
 
-  console.timeEnd("findArticles");
-//console.log("finished find articles " + (new Date() - start ) / 1000 + " seconds"); 
+    console.timeEnd("findArticles");
+
   },
 
   findHubs : function(){
     Feeds.find({}, {fields: {_id:1, url: 1}}).forEach( function( feed ) {
       var result = syncFP( feed );
       if ( result.hub ){
-	Feeds.update( {_id: feed._id}, { $set: { hub: result.hub}}, function ( error ){
-	  if ( error )  console.error ( error.reason);
-	  else console.log( result.title + " updated with hub " + result.hub);
-	});
+	      Feeds.update( {_id: feed._id}, { $set: { hub: result.hub}}, function ( error ){
+	        if ( error )  console.error ( error.reason);
+	        else console.log( result.title + " updated with hub " + result.hub);
+	      });
       }
     });
+  },
+
+  stopAndRestartPubSub: function(){
+    feedSubscriber.stopAllSubscriptions();
+
+    var onErr = function(err, res){ if( err ) console.error( err );};
+    var onFeed = function( feed ){
+      feedSubscriber.subscribe( feed.url, feed.hub , feed._id, onErr );
+    };
+
+    Feeds.find({},{fields: {_id: 1, hub:1, url:1}}).forEach( onFeed );
   },
 
   removeOldArticles: function(){
@@ -325,10 +324,10 @@ Meteor.methods({
     var self = this;
     check( link, String );
     var article = Articles.findOne({link: link});
-    if ( article ){ 
+    if ( article ){
       Articles.update( article._id,{$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}, function( error, result){
 	//make update async since client might be waiting to navigate
-      }); 
+      });
     }
     console.log( "marked as read: " + link);
   },
@@ -350,5 +349,5 @@ Meteor.methods({
     return user && user.admin;
   }
 
-  
+
 });

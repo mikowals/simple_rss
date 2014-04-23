@@ -3,7 +3,8 @@ var Stream = Npm.require("stream").Stream;
 var urllib = Npm.require("url");
 var utillib = Npm.require("util")
 var crypto = Npm.require("crypto");
-
+var TransformStream = require('stream').Transform;
+var Future = Npm.require( 'fibers/future');
 
 FeedSubscriber = function ( options ){
   var self = this;
@@ -77,7 +78,7 @@ FeedSubscriber = function ( options ){
 utillib.inherits( FeedSubscriber, Stream );
 
 FeedSubscriber.prototype.stopAllSubscriptions = function(){
-
+  var future = new Future();
     var self = this;
     var count = 0;
     for (var key in self.subscriptions ){
@@ -86,8 +87,13 @@ FeedSubscriber.prototype.stopAllSubscriptions = function(){
     };
     self.on( 'unsubscribe', function(){
       count--;
-      count === 0 && self.emit( 'exitOk', null);
+      if ( ! count ){
+        self.emit( 'exitOk', null);
+        future.return( true );
+      }
     });
+
+    return future.wait();
 };
 
 FeedSubscriber.prototype.onPostRequest = function(req, res){
@@ -139,9 +145,7 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
     }
   }
 
-  var stream = new Stream();
-  stream.writable = stream.readable = true;
-  stream = req.pipe( stream );
+  var stream = req.pipe( new transformStream() );
   req.on( 'data', function ( data) {
     hmac.update ( data );
   });
