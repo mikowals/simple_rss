@@ -219,12 +219,10 @@ Meteor.startup( function(){
     }
   }, function ( e) { throw e;});
 
-  var handle = Feeds.find({},{fields: {_id: 1, hub:1, url:1}}).observeChanges({
+  var handle = Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).observeChanges({
 
     added: function ( id, fields ){
-      if ( fields.hub ){
-	      feedSubscriber.subscribe ( fields.url, fields.hub , id, boundCallback );
-      }
+	    feedSubscriber.subscribe ( fields.url, fields.hub , id, boundCallback );
     },
 
     removed: function( id ){
@@ -232,11 +230,9 @@ Meteor.startup( function(){
     },
 
     changed: function ( id, fields ){
-      if ( fields.hub ) {
-	      feedSubscriber.unsubscribe( id );
-        var feed = Feeds.findOne( id );
-	      feedSubscriber.subscribe ( feed.url, feed.hub , id, boundCallback);
-      }
+	    feedSubscriber.unsubscribe( id );
+      var feed = Feeds.findOne( id );
+	    feedSubscriber.subscribe ( feed.url, feed.hub , id, boundCallback);
     }
   });
 });
@@ -284,7 +280,7 @@ Meteor.methods({
       feedSubscriber.subscribe( feed.url, feed.hub , feed._id, onErr );
     };
 
-    Feeds.find({},{fields: {_id: 1, hub:1, url:1}}).forEach( onFeed );
+    Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).forEach( onFeed );
   },
 
   removeOldArticles: function(){
