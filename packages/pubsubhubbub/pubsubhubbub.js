@@ -138,7 +138,7 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
       return;
     }
   }
-  var stream = req.pipe( new feedParser());
+  var stream = req.pipe( new Stream());
   req.on( 'data', function ( data) {
     hmac.update ( data );
   });
