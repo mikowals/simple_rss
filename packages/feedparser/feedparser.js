@@ -1,171 +1,142 @@
-feedParser = Npm.require('feedparser');
+FeedParser = Npm.require('feedparser');
 var request = Npm.require('request');
 var Future = Npm.require('fibers/future');
 var zlib = Npm.require('zlib');
-var cheerio = Npm.require( 'cheerio');
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
 //var http = Npm.require('http');
 //http.globalAgent.maxSockets = 200;
 //var URL = Npm.require('url');
+function _request( feed, cb ){
+  if (! feed.url)
+    throw new Error( "_request called without url");
 
-var _fp = function( fd, kl, forDB ){
-  var start = new Date();
-  var future = new Future();
-  var feed = {};
-  if (! fd.url)
-    throw new Error( "_fp called without url");
-  feed.url = fd.url;
-  if (fd._id)
-    feed._id = fd._id;
-  else {
-    var existing = Feeds.findOne( {url : feed.url});
-    feed._id = (existing && existing.Id) || Feeds.insert( {url: feed.url, temp: true} );
-  }
   var options = {
     url: feed.url,
-      headers: {
-       'Accept-Encoding': "gzip, deflate"
-      },
+    headers: {
+      'Accept-Encoding': "gzip, deflate"
+    },
     timeout: 7000
   };
 
-  if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString(); //
-  if ( feed.etag ) options.headers['If-None-Match'] =  feed.etag; //
+  if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString();
+  if ( feed.etag ) options.headers['If-None-Match'] =  feed.etag;
 
-  var r = request( options, function ( error, response ){
-      // return a future for cases where no http response leads to nothing getting piped to feedparser
-    if ( !response || response.statusCode !== 200 ){
-      if ( error )
-        console.log( feed.url + " error: " + error + " in " + (new Date() - start )/1000+ " seconds");
-      if ( response  && response.statusCode !== 304 )
-        console.log( feed.url + " statusCode: " + response.statusCode + " in " + (new Date() - start )/1000+ " seconds");
+  return request( options, cb );
+};
+
+function onError( err ){
+  var feed = this.feed;
+  console.log(feed.url + " got feedparser error: " + err);
+  feed.error = err;
+  return;
+};
+
+function onMeta( meta ) {
+  var feed = this.feed;
+  //console.log( "feedparser emmitted meta for url: " + url );
+  if (meta !== null ){
+    feed.url = meta.xmlurl || feed.url;
+    feed.hub = meta.cloud.href;
+    feed.title = meta.title;
+    feed.date = new Date( meta.date );
+    feed.author = meta.author;
+  }
+  return;
+};
+
+function onReadable() {
+  var fp = this.feedparser;
+  var feed = this.feed;
+  var item, doc;
+  while ( item = fp.read() ) {
+    doc = new Article( item );
+    doc.sourceUrl = feed.url;
+    doc.feed_id = feed._id;
+    var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
+    if ( doc.date > keepLimitDate ){
+      Articles.insert( doc, function( error ) {
+        if ( !error ) {
+          console.log( doc.title + " : " + doc.source );
+          Feeds.update( { _id: doc.feed_id, last_date: {$lt: doc.date}}, { $set: { last_date: doc.date }}, function( error){});
+        }
+      });
+    }
+  }
+  return;
+};
+
+function bindEnvironmentError( error ){
+  console.error( error );
+  return;
+};
+
+//separate function so pubsubhubbub package can also add articles.
+readAndInsertArticles = function ( fp, feed ){
+  if ( ! ( fp instanceof FeedParser ) )
+    fp = fp.pipe( new FeedParser() );
+
+  fp.on( 'readable', Meteor.bindEnvironment( onReadable, err, {feedparser: fp, feed: feed} ));
+  return;
+};
+
+function _fp( feed ) {
+  var fp;
+
+  function parseFeed( onError, onMeta, onReadable ){
+    if ( ! ( fp instanceof FeedParser ) )
+      fp = fp.pipe( new feedParser() );
+
+    fp.on( 'error', Meteor.bindEnvironment( onError, bindEnvironmentError, {feed: feed}))
+      .on('meta', Meteor.bindEnvironment( onMeta, bindEnvironmentError, {feed: feed}))
+      .on('readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed}));
+
+    return;
+  };
+
+  var future = new Future();
+  var r = _request( feed, function( error, response ){
+    if ( ! response || response.statusCode !== 200){
+      response && response.statusCode !== 304 && console.error( "url: ", feed.url, "response: ", response && response.statusCode );
+      //future.return for all non-200 responses
       future.return ({url: feed.url, error: error, statusCode: response && response.statusCode} );
     }
   });
-
-  r.on ( 'response', Meteor.bindEnvironment( function ( response ){
-    if ( response.statusCode === 200 ){
-      feed.statusCode = 200;
-      if ( response.headers['content-encoding'] === 'gzip' ){
-        r = r.pipe( zlib.createGunzip() );
-      }
-
-      if ( response.headers['last-modified'] ){
-        feed.lastModified = response.headers[ 'last-modified' ] ;
-      }
-
-      var fp = r.pipe( new feedParser() );
-      fp.on('error', function(err ){
-        console.log(feed.url + " got feedparser error: " + err);
-        feed.error = err;
-      })
-      .on ( 'meta', function ( meta ){
-        //console.log( "feedparser emmitted meta for url: " + url );
-        if (meta !== null ){
-          feed.url = meta.xmlurl || feed.url;
-          feed.hub = meta.cloud.href;
-          feed.title = meta.title;
-          feed.date = new Date( meta.date );
-          feed.author = meta.author;
+  //bindEnvironment because adding articles calls Articles.insert()
+  r.on( 'response', Meteor.bindEnvironment(
+    function( response ){
+      if ( response.statusCode === 200 ){
+        feed.statusCode = 200;
+        if ( response.headers['content-encoding'] === 'gzip' ){
+          r = r.pipe( zlib.createGunzip() );
         }
-      })
-      .on( 'end', function() {
-        //console.log( feed.url + " returned in " + ( new Date() -start ) /1000 + " seconds");
-        future.return ( feed );
-      });
 
-      readAndInsertArticles ( fp, feed );
-    }
-  }, function ( e ) { throw e;}));
+        if ( response.headers['last-modified'] ){
+          feed.lastModified = response.headers[ 'last-modified' ] ;
+        }
+
+        //future.return() in onEnd handles all 200 responses
+        fp = r.pipe( new FeedParser());
+        parseFeed ( onError, onMeta, onReadable);
+        future.return( feed );
+      }
+
+    },
+    function ( e ) { throw e;}
+  ));
 
   return future;
 };
 
-//separate function so pubsubhubbub package can also add articles.  All added articles pass through this function.
-readAndInsertArticles = function ( fp, feed ){
-  if ( ! ( fp instanceof feedParser ) )
-    fp = fp.pipe( new feedParser() );
-  fp.on('error', err );
+syncFP = function( feed ){
 
-  function insert() {
-    var item, doc;
-    while ( item = fp.read() ) {
-      doc = new Article( item );
-      doc.sourceUrl = feed.url;
-      doc.feed_id = feed._id;
-      var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
-      if ( doc.date > keepLimitDate ){
-        Articles.insert( doc, function( error ) {
-          if ( !error ) {
-            console.log( doc.title + " : " + doc.source );
-            Feeds.update( { _id: doc.feed_id, last_date: {$lt: doc.date}}, { $set: { last_date: doc.date }}, function( error){});
-          }
-        });
-      }
-    }
-  };
-
-  function err( error ){
-    console.error( error );
-  };
-
-  fp.on( 'readable', Meteor.bindEnvironment( insert, err ));
-};
-
-
-syncFP = function ( feed ) {
-  var retObject = _fp( feed ).wait();
-  return retObject;
-};
-
-multipleSyncFP = function( feeds ){
-  var start = new Date();
-  var futures = _.map( feeds, function( feed ){
-    return _fp( feed );
-  });
-
-  Future.wait(futures);
-  console.log(" all futures from feedparser resolved in " + ( new Date() - start ) /1000 + " seconds");
-
-  return _.invoke( futures, 'get');
-};
-
-cleanSummary = function (text){
-  var $ = cheerio.load(text);  //relies on cheerio package
-
-  $('img').remove();
-  $('table').remove();
-  $('script').remove();
-  $('iframe').remove();
-  $('.feedflare').remove();
-
-  if( $('p').length )
-  {
-    text = $('p').eq(0).html() + ( $('p').eq(1).html() || '');
+  if ( ! feed.length ){
+    return _fp( feed ).wait();
+  } else {
+    var futures = _.map( feed, _fp );
+    Future.wait(futures);
+    return _.invoke( futures, 'get');
   }
-  else if( $('li').length ){
-    text = '<ul>';
-    $('ul li').slice(0,6).each( function(){
-	text += "<li>" + $(this).html() + "</li>";
-	});
-    text += "</ul>";
-  }
-
-  else{
-    if ( $.html() ){
-      text = $.html();
-    }
-
-    if ( text.indexOf('<br') !== -1 ){
-      text = text.substring(0, text.indexOf('<br'));
-    }
-
-    text = text.substring(0, 500);
-  }
-
-  if (text === null || text === undefined || text === "null") {
-    text = '';
-  }
-  return text;
 }
+
+multipleSyncFP = syncFP;

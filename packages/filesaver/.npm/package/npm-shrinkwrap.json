@@ -1,0 +1,7 @@
+{
+  "dependencies": {
+    "filesaver.js": {
+      "version": "2013.1.23"
+    }
+  }
+}
