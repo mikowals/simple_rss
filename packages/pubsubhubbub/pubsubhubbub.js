@@ -3,7 +3,7 @@ var Stream = Npm.require("stream").Stream;
 var urllib = Npm.require("url");
 var utillib = Npm.require("util")
 var crypto = Npm.require("crypto");
-var TransformStream = Npm.require('stream').Transform;
+var PassThrough = Npm.require('stream').PassThrough;
 var Future = Npm.require( 'fibers/future');
 
 FeedSubscriber = function ( options ){
@@ -145,7 +145,7 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
     }
   }
 
-  var stream = req.pipe( new TransformStream() );
+  var stream = req.pipe( new PassThrough() );
   req.on( 'data', function ( data) {
     hmac.update ( data );
   });
