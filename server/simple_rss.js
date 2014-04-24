@@ -160,8 +160,6 @@ Feeds.allow({
 });
 
 Meteor.startup( function(){
-  //unsafe eval in FastRender.
-  BrowserPolicy.content.allowEval();
 
   Meteor.call('findArticles', {} );
 
@@ -195,7 +193,7 @@ Meteor.startup( function(){
   }
 
   feedSubscriber = new FeedSubscriber ( options );
-  feedSubscriber.on( 'liveFeed', Meteor.bindEnvironment( readAndInsertArticles, function( error ) { console.log( error ); } ));
+  feedSubscriber.on( 'liveFeed', Meteor.bindEnvironment( FeedParser.readAndInsertArticles, function( error ) { console.log( error ); } ));
 
   process.on('exit', Meteor.bindEnvironment ( function (){
     feedSubscriber.stopAllSubscriptions();
@@ -244,7 +242,7 @@ Meteor.methods({
     console.time("findArticles");
     criteria = criteria || {};
     var article_count = 0;
-    var rssResults = multipleSyncFP( Feeds.find( criteria ).fetch() );
+    var rssResults = FeedParser.syncFP( Feeds.find( criteria ).fetch() );
 
     rssResults.forEach(function(rssResult){
       if ( rssResult.statusCode === 200 ) {
@@ -258,18 +256,6 @@ Meteor.methods({
 
     console.timeEnd("findArticles");
 
-  },
-
-  findHubs : function(){
-    Feeds.find({}, {fields: {_id:1, url: 1}}).forEach( function( feed ) {
-      var result = syncFP( feed );
-      if ( result.hub ){
-	      Feeds.update( {_id: feed._id}, { $set: { hub: result.hub}}, function ( error ){
-	        if ( error )  console.error ( error.reason);
-	        else console.log( result.title + " updated with hub " + result.hub);
-	      });
-      }
-    });
   },
 
   stopAndRestartPubSub: function(){
@@ -307,14 +293,13 @@ Meteor.methods({
 
   cleanUrls: function(){
     Feeds.find({}).forEach( function(feed){
-      var result = syncFP( feed );
+      var result = FeedParser.syncFP( feed );
       if (result && result.url && feed.url !== result.url ){
-	console.log("changing url " + feed.url + " to " + result.url);
-	Feeds.update(feed._id, {$set: {url: result.url }});
-     }
+	      console.log("changing url " + feed.url + " to " + result.url);
+	      Feeds.update(feed._id, {$set: {url: result.url }});
+      }
     });
   },
-
 
   markRead: function( link ){
     var self = this;

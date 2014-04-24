@@ -10,5 +10,5 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.add_files("feedparser.js", "server");
-  api.export && api.export([ "readAndInsertArticles", "syncFP", "multipleSyncFP"], "server");
+  api.export && api.export([ "FeedParser" ], "server");
 });

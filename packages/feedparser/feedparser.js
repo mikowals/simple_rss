@@ -71,28 +71,7 @@ function bindEnvironmentError( error ){
   return;
 };
 
-//separate function so pubsubhubbub package can also add articles.
-readAndInsertArticles = function ( fp, feed ){
-  if ( ! ( fp instanceof FeedParser ) )
-    fp = fp.pipe( new FeedParser() );
-
-  fp.on( 'readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed} ));
-  return;
-};
-
 function _fp( feed ) {
-  var fp;
-
-  function parseFeed( onError, onMeta, onReadable ){
-    if ( ! ( fp instanceof FeedParser ) )
-      fp = fp.pipe( new feedParser() );
-
-    fp.on( 'error', Meteor.bindEnvironment( onError, bindEnvironmentError, {feed: feed}))
-      .on('meta', Meteor.bindEnvironment( onMeta, bindEnvironmentError, {feed: feed}))
-      .on('readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed}));
-
-    return;
-  };
 
   var future = new Future();
   var r = _request( feed, function( error, response ){
@@ -114,10 +93,16 @@ function _fp( feed ) {
         if ( response.headers['last-modified'] ){
           feed.lastModified = response.headers[ 'last-modified' ] ;
         }
+        if ( response.headers['etag'] ){
+          feed.etag = response.headers['etag'];
+        }
 
         //future.return() in onEnd handles all 200 responses
-        fp = r.pipe( new FeedParser());
-        parseFeed ( onError, onMeta, onReadable);
+        var fp = r.pipe( new FeedParser());
+        fp.on( 'error', Meteor.bindEnvironment( onError, bindEnvironmentError, {feed: feed}))
+          .on('meta', Meteor.bindEnvironment( onMeta, bindEnvironmentError, {feed: feed}))
+          .on('readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed}));
+
         future.return( feed );
       }
 
@@ -128,7 +113,7 @@ function _fp( feed ) {
   return future;
 };
 
-syncFP = function( feed ){
+FeedParser.syncFP = function( feed ){
 
   if ( ! feed.length ){
     return _fp( feed ).wait();
@@ -137,6 +122,13 @@ syncFP = function( feed ){
     Future.wait(futures);
     return _.invoke( futures, 'get');
   }
-}
+};
 
-multipleSyncFP = syncFP;
+//separate function so pubsubhubbub package can also add articles.
+FeedParser.readAndInsertArticles = function ( fp, feed ){
+  if ( ! ( fp instanceof FeedParser ) )
+    fp = fp.pipe( new FeedParser() );
+
+  fp.on( 'readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed} ));
+  return;
+};
