@@ -76,7 +76,7 @@ readAndInsertArticles = function ( fp, feed ){
   if ( ! ( fp instanceof FeedParser ) )
     fp = fp.pipe( new FeedParser() );
 
-  fp.on( 'readable', Meteor.bindEnvironment( onReadable, err, {feedparser: fp, feed: feed} ));
+  fp.on( 'readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed} ));
   return;
 };
 
