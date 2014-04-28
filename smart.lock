@@ -2,18 +2,14 @@
   "meteor": {},
   "dependencies": {
     "basePackages": {
-      "fast-render": {
-        "version": "0.2.2"
-      },
-      "bootstrap3-less": {
-        "version": "0.1.9"
-      }
+      "fast-render": {},
+      "bootstrap3-less": {}
     },
     "packages": {
       "fast-render": {
         "git": "https://github.com/arunoda/meteor-fast-render.git",
-        "tag": "v0.2.2",
-        "commit": "2a7298d72a84b85e989ec2cc9300bbea7c159eb8"
+        "tag": "v0.2.3",
+        "commit": "d56bd4a4d222bf176241cd6e756aa349cb24c260"
       },
       "bootstrap3-less": {
         "git": "https://github.com/eprochasson/bootstrap3-less",
