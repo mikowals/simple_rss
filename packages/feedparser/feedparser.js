@@ -4,9 +4,7 @@ var Future = Npm.require('fibers/future');
 var zlib = Npm.require('zlib');
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
-//var http = Npm.require('http');
-//http.globalAgent.maxSockets = 200;
-//var URL = Npm.require('url');
+
 function _request( feed, cb ){
   if (! feed.url)
     throw new Error( "_request called without url");
@@ -16,7 +14,8 @@ function _request( feed, cb ){
     headers: {
       'Accept-Encoding': "gzip, deflate"
     },
-    timeout: 7000
+    timeout: 7000,
+    pool: false
   };
 
   if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString();
@@ -90,19 +89,14 @@ function _fp( feed ) {
           r = r.pipe( zlib.createGunzip() );
         }
 
-        if ( response.headers['last-modified'] ){
-          feed.lastModified = response.headers[ 'last-modified' ] ;
-        }
-        if ( response.headers['etag'] ){
-          feed.etag = response.headers['etag'];
-        }
+        if ( response.headers['last-modified'] ) feed.lastModified = response.headers[ 'last-modified' ] ;
+        if ( response.headers['etag'] )  feed.etag = response.headers['etag'];
 
-        //future.return() in onEnd handles all 200 responses
         var fp = r.pipe( new FeedParser());
         fp.on( 'error', Meteor.bindEnvironment( onError, bindEnvironmentError, {feed: feed}))
           .on('meta', Meteor.bindEnvironment( onMeta, bindEnvironmentError, {feed: feed}))
           .on('readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed}));
-
+        //future return for all 200 responses
         future.return( feed );
       }
 
