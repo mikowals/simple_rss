@@ -3,22 +3,30 @@
   "dependencies": {
     "basePackages": {
       "fast-render": {
-        "version": "0.2.2"
+        "version": "0.2.4"
       },
       "bootstrap3-less": {
         "version": "0.1.9"
+      },
+      "apm": {
+        "version": "1.2.2"
       }
     },
     "packages": {
       "fast-render": {
         "git": "https://github.com/arunoda/meteor-fast-render.git",
-        "tag": "v0.2.2",
-        "commit": "2a7298d72a84b85e989ec2cc9300bbea7c159eb8"
+        "tag": "v0.2.4",
+        "commit": "160a64bd61792f53a7c8848c5e979a953be13564"
       },
       "bootstrap3-less": {
         "git": "https://github.com/eprochasson/bootstrap3-less",
         "tag": "v0.1.9",
         "commit": "5c812c4d7ce72917a065f0424c3cf54e5ff2d16a"
+      },
+      "apm": {
+        "git": "https://github.com/arunoda/meteor-apm-client.git",
+        "tag": "v1.2.2",
+        "commit": "46019950b917191b78a9c81349421521ce07a932"
       }
     }
   }
