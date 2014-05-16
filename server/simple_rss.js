@@ -38,9 +38,9 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   var self = this;
   articleLimit = articleLimit || articlePubLimit;
   check( articleLimit, Number );
-
+  var feedList = [];
   var initialising = true;
-  var articleHandle, userHandle;
+  var articleHandle, userHandle, nullUserHandle;
   var startDate = keepLimitDate();
   var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
   var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
@@ -52,7 +52,7 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     var publishedArticles = _.clone( self._documents.articles || {} );
     var init = true;
     var criteria = {date: {$gt: startDate}};
-    var feedList = _.keys( self._documents.feeds || {} );
+    var feedList = _.keys( self._documents.feeds || null );
     if ( feedList )
       _.extend( criteria, {feed_id: {$in: feedList }});
     var options = {limit: articleLimit, sort: { date: -1}, fields: visibleFields};
@@ -79,54 +79,72 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     return handle;
   };
 
+  function feedsForNullUser(){
+    return Feeds.find({subscribers: null}, {fields: feedFields }).observeChanges({
+      added: function( id, feed ){
+        self.added( 'feeds', id, feed);
+        if ( ! initialising ) articleHandle = startArticleObserver();
+      },
+      removed: function( id ){
+        self.removed( 'feeds', id);
+        articleHandle = startArticleObserver();
+      },
+      changed: function( id, fields){
+        self.changed( 'feeds', id, fields);
+      }
+    });
+  }
+
   self.onStop( function(){
+    nullUserHandle && nullUserHandle.stop();
     userHandle &&  userHandle.stop();
     articleHandle && articleHandle.stop();
   });
 
-  if ( self.userId ){
-    userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
 
+  userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
       added: function( id, doc ){
-        Feeds.find( { _id: {$in: doc.feedList }}, { fields: feedFields }).forEach( function( feed ){
-          self.added( "feeds", feed._id, feed );
+        //user has changed so remove all feeds
+        if( self._documents.feeds){
+          nullUserHandle && nullUserHandle.stop();
+          _.keys( self._documents.feeds ).forEach( function( id ){
+            self.removed( 'feeds', id);
+          });
+        }
+
+        Feeds.find( {_id: {$in: doc.feedList}}, {fields: feedFields}).forEach( function ( feed ){
+          self.added( 'feeds', feed._id, feed );
         });
-        articleHandle = startArticleObserver();
+        if ( ! initialising ) articleHandle = startArticleObserver();
       },
       changed: function( id, doc ){
         _.difference( doc.feedList, _.keys( self._documents.feeds ) ).forEach( function( newId ){
           var feed = Feeds.findOne( newId, {fields: feedFields} );
-          feed && self.added( "feeds", feed._id, feed );
+          feed && self.added( 'feeds', newId, feed );
+          console.log( 'publishing: ', newId);
         });
-
-        _.difference( _.keys( self._documents.feeds ), doc.feedList ).forEach( function( removedId ){
-          self.removed( "feeds", removedId );
+        _.difference( _.keys( self._documents.feeds ), doc.feedList ).forEach( function( removeId ){
+          self.removed( 'feeds', removeId );
         });
-
+        articleHandle = startArticleObserver();
+      },
+      removed: function( id ){
+        _.keys( self._documents.feeds ).forEach( function( id ){
+          self.removed( 'feeds', id);
+        });
+        nullUserHandle = feedsForNullUser();
         articleHandle = startArticleObserver();
       }
     });
-  } else {
-    userHandle =  Feeds.find( {subscribers: null}, {fields: feedFields }).observeChanges({
-      added: function ( id, feed ){
-        self.added( 'feeds', id, feed);
-        ! initialising && ( articleHandle = startArticleObserver() );
-      },
-      removed : function( id ){
-        self.removed( 'feeds', id);
-        (! initialising) && ( articleHandle = startArticleObserver() );
-      },
-      changed : function( id, feed){
-        self.changed( 'feeds', id, feed);
-      }
-    });
+    if ( ! self._documents.feeds )
+      nullUserHandle = feedsForNullUser();
+
     articleHandle = startArticleObserver();
-
-  }
-
   initialising = false;
 
-  return Meteor.users.find( {_id: self.userId}, {fields: {admin: 1}});
+  return [
+    Meteor.users.find( {_id: self.userId}, {fields: {admin: 1}})
+  ];
 });
 
 Articles.allow({
@@ -321,7 +339,8 @@ Meteor.methods({
   createFeedListByUser: function(){
     Meteor.users.find( {}, {_id:1} ).forEach( function ( user ){
       var feedList = Feeds.find( {subscribers: user._id}, {_id: 1} ).map( function( feed ) { return feed._id });
-      Meteor.users.update( user._id, {$set: {feedList: feedList}});
+      Meteor.users.update( user._id, {$set: {feedList: feedList}, $pull:{feedList: null}});
+    //  Meteor.users.update( user._id, { $pull:{feedList: null}});
     });
   },
 

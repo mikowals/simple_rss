@@ -24,26 +24,6 @@ function _request( feed, cb ){
   return request( options, cb );
 };
 
-function onError( err ){
-  var feed = this.feed;
-  console.log(feed.url + " got feedparser error: " + err);
-  feed.error = err;
-  return;
-};
-
-function onMeta( meta ) {
-  var feed = this.feed;
-  //console.log( "feedparser emmitted meta for url: " + url );
-  if (meta !== null ){
-    feed.url = meta.xmlurl || feed.url;
-    feed.hub = meta.cloud.href;
-    feed.title = meta.title;
-    feed.date = new Date( meta.date );
-    feed.author = meta.author;
-  }
-  return;
-};
-
 function onReadable() {
   var fp = this.feedparser;
   var feed = this.feed;
@@ -72,6 +52,32 @@ function bindEnvironmentError( error ){
 
 function _fp( feed ) {
 
+  function onError( err ){
+    console.log(feed.url + " got feedparser error: " + err);
+    feed.error = err;
+    future.return( feed );
+    return;
+  };
+
+  function onMeta( meta ) {
+
+    //console.log( "feedparser emmitted meta for url: " + url );
+    if (meta !== null ){
+      feed.url = meta.xmlurl || feed.url;
+      feed.hub = meta.cloud.href;
+      feed.title = meta.title;
+      feed.date = new Date( meta.date );
+      feed.author = meta.author;
+    }
+    future.return( feed );
+    return;
+  };
+
+  function onEnd(){
+    if( ! future.isResolved() )
+      future.return( feed );
+  };
+
   var future = new Future();
   var r = _request( feed, function( error, response ){
     if ( ! response || response.statusCode !== 200){
@@ -93,11 +99,10 @@ function _fp( feed ) {
         if ( response.headers['etag'] )  feed.etag = response.headers['etag'];
 
         var fp = r.pipe( new FeedParser());
-        fp.on( 'error', Meteor.bindEnvironment( onError, bindEnvironmentError, {feed: feed}))
-          .on('meta', Meteor.bindEnvironment( onMeta, bindEnvironmentError, {feed: feed}))
-          .on('readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed}));
-        //future return for all 200 responses
-        future.return( feed );
+        fp.on( 'error', onError )
+          .on('meta', onMeta )
+          .on('readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed}))
+          .on( 'end', onEnd);
       }
 
     },
