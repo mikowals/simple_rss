@@ -3,3 +3,6 @@
 *~
 *.swo
 *.swp
+**/.npm/**
+**/.build/**
+.meteor
