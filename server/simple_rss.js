@@ -42,7 +42,7 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   var initialising = true;
   var articleHandle, userHandle, nullUserHandle;
   var startDate = keepLimitDate();
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1};
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
   var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
 
   function startArticleObserver() {
@@ -58,8 +58,11 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     var options = {limit: articleLimit, sort: { date: -1}, fields: visibleFields};
     var handle = Articles.find( criteria, options ).observeChanges({
       added: function( id, doc){
-        if ( ! init || ! publishedArticles[ id ] )
+        if ( ! init || ! publishedArticles[ id ] ){
+          self.changed( 'feeds', doc.feed_id, {last_date: doc.date})
+          delete doc.feed_id;
           self.added( "articles", id, doc );
+        }
         else delete publishedArticles[ id ];
       },
       removed: function( id ) {
@@ -121,7 +124,6 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
         _.difference( doc.feedList, _.keys( self._documents.feeds ) ).forEach( function( newId ){
           var feed = Feeds.findOne( newId, {fields: feedFields} );
           feed && self.added( 'feeds', newId, feed );
-          console.log( 'publishing: ', newId);
         });
         _.difference( _.keys( self._documents.feeds ), doc.feedList ).forEach( function( removeId ){
           self.removed( 'feeds', removeId );
