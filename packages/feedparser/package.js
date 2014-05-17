@@ -9,6 +9,7 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
+  api.use( 'underscore', 'server');
   api.add_files("feedparser.js", "server");
   api.export && api.export([ "FeedParser" ], "server");
 });

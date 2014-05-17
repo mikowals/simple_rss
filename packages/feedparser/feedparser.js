@@ -24,12 +24,10 @@ function _request( feed, cb ){
   return request( options, cb );
 };
 
-function onReadable() {
-  var fp = this.feedparser;
-  var feed = this.feed;
-  var item, doc;
+var onReadable = Meteor.bindEnvironment( function(fp, feed) {
+  var item;
   while ( item = fp.read() ) {
-    doc = new Article( item );
+    var doc = new Article( item );
     doc.sourceUrl = feed.url;
     doc.feed_id = feed._id;
     var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
@@ -43,7 +41,7 @@ function onReadable() {
     }
   }
   return;
-};
+}, bindEnvironmentError );
 
 function bindEnvironmentError( error ){
   console.error( error );
@@ -101,10 +99,9 @@ function _fp( feed ) {
         var fp = r.pipe( new FeedParser());
         fp.on( 'error', onError )
           .on('meta', onMeta )
-          .on('readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed}))
-          .on( 'end', onEnd);
+          .on('readable',  _( onReadable ).partial( fp, feed ) )
+          .on( 'end', onEnd );
       }
-
     },
     function ( e ) { throw e;}
   ));
@@ -128,6 +125,6 @@ FeedParser.readAndInsertArticles = function ( fp, feed ){
   if ( ! ( fp instanceof FeedParser ) )
     fp = fp.pipe( new FeedParser() );
 
-  fp.on( 'readable', Meteor.bindEnvironment( onReadable, bindEnvironmentError, {feedparser: fp, feed: feed} ));
+  fp.on( 'readable', _( onReadable ).partial( fp, feed ) );
   return;
 };

@@ -31,10 +31,9 @@ FeedSubscriber = function ( options ){
      }
     }
    });
-  self.emit( "listen", { uri: self.callbackUri });
 
+  console.log( 'PubSub listening on ', self.callbackUrl );
   self.listening = true;
-  console.log ( "started a feed subscriber with url : " + self.callbackUrl);
 
   self.on( 'denied', function ( data ){
     console.error ( "denied request: ", data );
@@ -69,8 +68,8 @@ FeedSubscriber = function ( options ){
      console.log ( " unsubscribed from : " + data.topic);
      delete self.subscriptions[ data.topic ];
     } else {
-        console.error( "resubscribing to: " + data.topic );
-        self.subscribe( data.topic, data.hub, sub._id );
+      console.error( "resubscribing to: " + data.topic );
+      self.subscribe( data.topic, data.hub, sub._id );
     }
   });
 };

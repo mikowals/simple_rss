@@ -82,14 +82,14 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     return handle;
   };
 
-  function feedsForNullUser(){
-    return Feeds.find({subscribers: null}, {fields: feedFields }).observeChanges({
+  function feedsForUser(){
+    return Feeds.find({subscribers: null }, {fields: feedFields }).observeChanges({
       added: function( id, feed ){
         self.added( 'feeds', id, feed);
         if ( ! initialising ) articleHandle = startArticleObserver();
       },
       removed: function( id ){
-        self.removed( 'feeds', id);
+        self.removed( 'feeds', id );
         articleHandle = startArticleObserver();
       },
       changed: function( id, fields){
@@ -125,6 +125,7 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
           var feed = Feeds.findOne( newId, {fields: feedFields} );
           feed && self.added( 'feeds', newId, feed );
         });
+
         _.difference( _.keys( self._documents.feeds ), doc.feedList ).forEach( function( removeId ){
           self.removed( 'feeds', removeId );
         });
@@ -141,7 +142,7 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     if ( ! self._documents.feeds )
       nullUserHandle = feedsForNullUser();
 
-    articleHandle = startArticleObserver();
+  articleHandle = startArticleObserver();
   initialising = false;
 
   return [
@@ -213,7 +214,11 @@ Meteor.startup( function(){
   }
 
   feedSubscriber = new FeedSubscriber ( options );
-  feedSubscriber.on( 'liveFeed', Meteor.bindEnvironment( FeedParser.readAndInsertArticles, function( error ) { console.log( error ); } ));
+
+  feedSubscriber.on(
+    'liveFeed',
+    Meteor.bindEnvironment( FeedParser.readAndInsertArticles, function( error ) { console.log( error ); } )
+  );
 
   process.on('exit', Meteor.bindEnvironment ( function (){
     feedSubscriber.stopAllSubscriptions();
@@ -223,7 +228,7 @@ Meteor.startup( function(){
 
   _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
     process.once(sig, Meteor.bindEnvironment (function () {
-       console.log ( "process received : " + sig);
+      console.log ( "process received : " + sig);
       feedSubscriber.stopAllSubscriptions();
       process.kill( process.pid, sig);
     }, function ( e ) { throw e; }));
@@ -264,12 +269,12 @@ Meteor.methods({
     var article_count = 0;
     var rssResults = FeedParser.syncFP( Feeds.find( criteria ).fetch() );
 
-    rssResults.forEach(function(rssResult){
+    rssResults.forEach( function( rssResult ){
       if ( rssResult.statusCode === 200 ) {
-        Feeds.update(rssResult._id, {$set: {lastModified: rssResult.lastModified, etag: rssResult.etag, lastDate: rssResult.date } } );
+        Feeds.update(rssResult._id, {$set: _( rssResult ).pick( 'lastModified', 'etag', 'lastDate' ) } );
       }
       else if ( rssResult.error ) console.log (rssResult.url + " returned " + rssResult.error);
-      else if (typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){
+      else if ( typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){
         console.log( rssResult.url + " responded with " + rssResult.statusCode );
       }
     });
