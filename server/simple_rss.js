@@ -46,8 +46,6 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
   var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
 
   function startArticleObserver() {
-    //when limit is working again, uncomment code and simplify publish so article observer publishes all articles it finds and removes any articles it doesn't find.
-    // no longer need feed_id in visible fields, no more counting, feedobserver manages feeds and article observer manages articles.
     articleHandle && articleHandle.stop();
     var publishedArticles = _.clone( self._documents.articles || {} );
     var init = true;
@@ -82,8 +80,8 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
     return handle;
   };
 
-  function feedsForUser(){
-    return Feeds.find({subscribers: null }, {fields: feedFields }).observeChanges({
+  function feedsForUser( userId ){
+    return Feeds.find({subscribers: userId }, {fields: feedFields }).observeChanges({
       added: function( id, feed ){
         self.added( 'feeds', id, feed);
         if ( ! initialising ) articleHandle = startArticleObserver();
@@ -139,8 +137,8 @@ Meteor.publish( "feedsWithArticles", function( articleLimit ){
         articleHandle = startArticleObserver();
       }
     });
-    if ( ! self._documents.feeds )
-      nullUserHandle = feedsForNullUser();
+    if ( ! self.userId )
+      nullUserHandle = feedsForNullUser( null );
 
   articleHandle = startArticleObserver();
   initialising = false;
@@ -200,8 +198,6 @@ Meteor.startup( function(){
       updateInterval);
     intervalProcesses[ "findArticles"] = pro;
   }
-
-
 
   var options = {
     callbackPath: "hubbub",  //leave slash off since this will be argument to eteor.AbsoluteUrl()
