@@ -10,11 +10,11 @@ Session.setDefault("articleLimit", articlesOnLoad );
 Session.setDefault( "page", "articleList" );
 Session.setDefault( "offline", null);
 
+Meteor.subscribe( 'feeds' );
+
 Deps.autorun( function( comp ){
-  if ( Feeds.find().count() > 0 ){
-    var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );
-    Meteor.subscribe( "articles", ids, + Session.get( "articleLimit" ));
-  }
+  var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );
+  comp.firstRun || Meteor.subscribe( "articles", ids, + Session.get( "articleLimit" ));
 });
 
 Deps.autorun( function(){
