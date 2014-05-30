@@ -29,153 +29,32 @@ FastRender.onAllRoutes( function( ) {
   } else{
     feed_ids = Feeds.find( {subscribers: null}, {fields: {_id: 1}}).map ( function( feed ) { return feed._id;});
   }
+  self.subscribe( "articles", feed_ids, 20);
+  //self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
 
-  self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
-  self.completeSubscriptions(['feedsWithArticles']);
 });
 
-Meteor.publish( "feedsWithArticles", function( articleLimit ){
+//prepare userdata and feedlist for all clients ASAP
+Meteor.publish( null, function(){
   var self = this;
-  articleLimit = articleLimit || articlePubLimit;
-  check( articleLimit, Number );
-  var feedList = [];
-  var initialising = true;
-  var articleHandle, userHandle, nullUserHandle;
-  var startDate = keepLimitDate();
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
   var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
 
-  function startArticleObserver() {
-    articleHandle && articleHandle.stop();
-    var publishedArticles = _.clone( self._documents.articles || {} );
-    var init = true;
-    var criteria = {date: {$gt: startDate}};
-    var feedList = _.keys( self._documents.feeds || null );
-    if ( feedList )
-      _.extend( criteria, {feed_id: {$in: feedList }});
-    var options = {limit: articleLimit, sort: { date: -1}, fields: visibleFields};
-    var handle = Articles.find( criteria, options ).observeChanges({
-      added: function( id, doc){
-        if ( ! init || ! publishedArticles[ id ] ){
-          self.changed( 'feeds', doc.feed_id, {last_date: doc.date})
-          delete doc.feed_id;
-          self.added( "articles", id, doc );
-        }
-        else delete publishedArticles[ id ];
-      },
-      removed: function( id ) {
-        if ( self._documents.articles[ id ])
-          self.removed( "articles", id );
-      },
-      changed: function( id, doc){
-        if ( self._documents.articles[ id ] )
-          self.changed( "articles", id, doc );
-      }
-    });
-
-    _.keys( publishedArticles ).forEach( function ( id ){
-      self.removed( "articles", id );
-    });
-    init = false;
-    return handle;
-  };
-
-  function feedsForUser( userId ){
-    return Feeds.find({subscribers: userId }, {fields: feedFields }).observeChanges({
-      added: function( id, feed ){
-        self.added( 'feeds', id, feed);
-        if ( ! initialising ) articleHandle = startArticleObserver();
-      },
-      removed: function( id ){
-        self.removed( 'feeds', id );
-        articleHandle = startArticleObserver();
-      },
-      changed: function( id, fields){
-        self.changed( 'feeds', id, fields);
-      }
-    });
+  if ( self.userId ){
+    return [
+      Feeds.find( { subscribers: self.userId }, { fields: feedFields }),
+      Meteor.users.find( self.userId, {fields: {admin: 1}} )
+    ];
   }
 
-  self.onStop( function(){
-    nullUserHandle && nullUserHandle.stop();
-    userHandle &&  userHandle.stop();
-    articleHandle && articleHandle.stop();
-  });
-
-
-  userHandle = Meteor.users.find( self.userId, {feedList: 1} ).observeChanges({
-      added: function( id, doc ){
-        //user has changed so remove all feeds
-        if( self._documents.feeds){
-          nullUserHandle && nullUserHandle.stop();
-          _.keys( self._documents.feeds ).forEach( function( id ){
-            self.removed( 'feeds', id);
-          });
-        }
-
-        Feeds.find( {_id: {$in: doc.feedList}}, {fields: feedFields}).forEach( function ( feed ){
-          self.added( 'feeds', feed._id, feed );
-        });
-        if ( ! initialising ) articleHandle = startArticleObserver();
-      },
-      changed: function( id, doc ){
-        _.difference( doc.feedList, _.keys( self._documents.feeds ) ).forEach( function( newId ){
-          var feed = Feeds.findOne( newId, {fields: feedFields} );
-          feed && self.added( 'feeds', newId, feed );
-        });
-
-        _.difference( _.keys( self._documents.feeds ), doc.feedList ).forEach( function( removeId ){
-          self.removed( 'feeds', removeId );
-        });
-        articleHandle = startArticleObserver();
-      },
-      removed: function( id ){
-        _.keys( self._documents.feeds ).forEach( function( id ){
-          self.removed( 'feeds', id);
-        });
-        nullUserHandle = feedsForNullUser();
-        articleHandle = startArticleObserver();
-      }
-    });
-    if ( ! self.userId )
-      nullUserHandle = feedsForNullUser( null );
-
-  articleHandle = startArticleObserver();
-  initialising = false;
-
-  return [
-    Meteor.users.find( {_id: self.userId}, {fields: {admin: 1}})
-  ];
+  return Feeds.find( { subscribers: self.userId }, { fields: feedFields });
 });
 
-Articles.allow({
-  insert: function ( doc ) {
-    return false //(userId && doc.owner === userId);
-  },
-  update: function (userId, doc, fieldNames, modifier ) {
-    return false;
-  },
-
-  remove: function ( doc ) {
- // can only remove your own documents
-  return false //doc.owner === userId;
- }
- //fetch: ['owner']
-});
-
-Feeds.allow({
-  insert: function (userId, doc) {
-    return false;
-  },
-
-  update: function (doc, fields, modifier) {
-    return false;
-  },
-
-  remove: function(userId, doc){
-    return false; //doc.subscribers.length === 1 && doc.subscribers[0] === userId;
-  }
-
+Meteor.publish( 'articles', function( feed_ids, limit ){
+  check( feed_ids, [String] );
+  check( limit, Number );
+  var startDate = keepLimitDate();
+  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
+  return Articles.find( {feed_id: {$in: feed_ids}, date: {$gt: startDate}}, {fields: visibleFields, limit: limit, sort: {date: -1, _id: 1}});
 });
 
 Meteor.startup( function(){

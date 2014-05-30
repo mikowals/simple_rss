@@ -9,23 +9,27 @@ Session.setDefault( "now", new Date() );
 Session.setDefault("articleLimit", articlesOnLoad );
 Session.setDefault( "page", "articleList" );
 
-                   
 var articleSub;
 
 Deps.autorun( function(){
-  articleSub = Meteor.subscribe( "feedsWithArticles", + Session.get( "articleLimit" ), function(){
-    Session.set("loaded", true);
-  });
+  if ( Feeds.find().count() > 0 ){
+    Session.set( 'loaded', false);
+    var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );
+    articleSub = Meteor.subscribe( "articles", ids, + Session.get( "articleLimit" ), function(){
+      Session.set( 'loaded', true);
+    });
+  }
 });
 
+
 Meteor.startup( function() {
-                          
+
   intervalProcesses['updateNow'] = intervalProcesses['updateNow'] || Meteor.setInterval( function() {
     Session.set( "now", new Date() );
     },
     updateNowFreq );
   Session.set( "offline", null);
-  
+
 });
 
 Deps.autorun( function(){
@@ -67,7 +71,7 @@ Template.feedList.helpers({
   importOPML: function(){
     return Session.equals("importOPML", true);
   },
-   
+
   flash: function(){
     return Session.get("feedListFlash");
   }
@@ -80,7 +84,7 @@ Template.feedListButtons.importOPML = function(){
 };
 
 Template.feedList.events({
-                             
+
                              //could modify this to verify feed and populate fields for insertion
                              'submit, click #addFeed': function(e,t) {
                                e.stopImmediatePropagation();
@@ -94,17 +98,17 @@ Template.feedList.events({
                                } else{
                                  alert("RSS feed entered is not a valid url");
                                }
-                               return false;        
+                               return false;
                              },
-                             
+
                              'click #importToggle': function(){
                              Session.set("importOPML", true);
                              console.log(Session.equals("importOPML", true));
                              },
-                             
+
                              'click #opmlUpload' : function(e,t){
                                Session.set("importOPML", false);
-                             
+
                                var opmlFile = t.$("#opmlFile")[0].files[0];
                                var fr = new FileReader();
                                fr.readAsText(opmlFile);
@@ -119,11 +123,11 @@ Template.feedList.events({
                                  }
                                }
                              },
-                          
+
                              'click #importCancel' : function(){
                              Session.set("importOPML", false);
                              },
-                             
+
                              'click #exportOPML': function(){
                                var exportOPML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                                                "<opml version=\"1.0\">" +
@@ -150,13 +154,13 @@ Template.feedList.events({
                                Meteor.call( 'removeFeed', Session.get("selected_feed"), function( error ){
                                  if ( error === false ) console.error( "could not remove feed");
                                  else Session.set( "selected_feed", null);
-                               }); 
-                             }   
-                         
+                               });
+                             }
+
 });
 
 Template.articleList.articles = function() {
-  //must sort by _id or order can flicker where dates are equal and the query updates 
+  //must sort by _id or order can flicker where dates are equal and the query updates
    return Articles.find( {}, { sort: { date: -1, _id: 1}});
 };
 
@@ -171,7 +175,7 @@ Template.articleList.events({
      }
      return true;
   },
-  
+
   'tap a':  function( e, t){
     Session.set( "handleTap", true);
     e.preventDefault();
@@ -182,7 +186,7 @@ Template.articleList.events({
     });
     return false;
   }
-}); 
+});
 
 Template.article.helpers({
   subscribed: function(){
@@ -213,17 +217,17 @@ Template.menubar.events({
     e.preventDefault();
     var newPage = Session.equals( "page", "feedList") ? "articleList" : "feedList";
     Session.set( "page", newPage );
-    if ( newPage === "articleList" ) 
+    if ( newPage === "articleList" )
       Session.set( "lastArticleId", null );
     return false;
   }
 });
 
-Template.menubar.helpers({ 
+Template.menubar.helpers({
   loaded: function(){
     return Session.equals( "loaded", true );
   },
-  
+
   offline: function(){
     return Session.get("offline");
   },
@@ -265,9 +269,9 @@ var setLastArticleWaypoint = _.debounce( function( target ){
   if ( Session.get( "articleLimit" ) <= Articles.find().count() ){
     target.waypoint({
       handler: function( dir ){
-      if ( dir === 'down' ) 
+      if ( dir === 'down' )
         Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
-      } 
+      }
       ,offset: '110%'     //offset percentage must be a string
       ,triggerOnce: true
     });

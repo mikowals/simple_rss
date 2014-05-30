@@ -1,0 +1,33 @@
+{
+  "meteor": {},
+  "dependencies": {
+    "basePackages": {
+      "fast-render": {},
+      "bootstrap3-less": {},
+      "apm": {},
+      "harmony": {}
+    },
+    "packages": {
+      "fast-render": {
+        "git": "https://github.com/arunoda/meteor-fast-render.git",
+        "tag": "v0.2.5",
+        "commit": "93e2fb334e55fbe9b5ebb2a2e65964018658f43e"
+      },
+      "bootstrap3-less": {
+        "git": "https://github.com/eprochasson/bootstrap3-less",
+        "tag": "v0.1.9",
+        "commit": "5c812c4d7ce72917a065f0424c3cf54e5ff2d16a"
+      },
+      "apm": {
+        "git": "https://github.com/arunoda/meteor-apm-client.git",
+        "tag": "v1.4.4",
+        "commit": "36f2f9775178621e9798d14c99baf24c06cc43c0"
+      },
+      "harmony": {
+        "git": "https://github.com/mquandalle/meteor-harmony.git",
+        "tag": "v0.0.42",
+        "commit": "0bdf2a08302b8356eb76d54fea294d67df0cf7c0"
+      }
+    }
+  }
+}
