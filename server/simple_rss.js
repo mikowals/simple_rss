@@ -19,7 +19,6 @@ Facts.setUserIdFilter(function ( userId ) {
 });
 
 FastRender.onAllRoutes( function( ) {
-
   var self = this,
       feed_ids,
       visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
@@ -30,7 +29,6 @@ FastRender.onAllRoutes( function( ) {
     feed_ids = Feeds.find( {subscribers: null}, {fields: {_id: 1}}).map ( function( feed ) { return feed._id;});
   }
   self.subscribe( "articles", feed_ids, 20);
-  //self.find( Articles,{ feed_id: {$in: feed_ids}, date: {$gt: keepLimitDate()} }, { sort: {date: -1}, limit: 20, fields: visibleFields } );
 
 });
 
@@ -46,7 +44,7 @@ Meteor.publish( null, function(){
     ];
   }
 
-  return Feeds.find( { subscribers: self.userId }, { fields: feedFields });
+  return Feeds.find( { subscribers: null }, { fields: feedFields });
 });
 
 Meteor.publish( 'articles', function( feed_ids, limit ){
