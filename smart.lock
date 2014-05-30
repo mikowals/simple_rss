@@ -4,8 +4,7 @@
     "basePackages": {
       "fast-render": {},
       "bootstrap3-less": {},
-      "apm": {},
-      "harmony": {}
+      "apm": {}
     },
     "packages": {
       "fast-render": {
@@ -22,11 +21,6 @@
         "git": "https://github.com/arunoda/meteor-apm-client.git",
         "tag": "v1.4.4",
         "commit": "36f2f9775178621e9798d14c99baf24c06cc43c0"
-      },
-      "harmony": {
-        "git": "https://github.com/mquandalle/meteor-harmony.git",
-        "tag": "v0.0.42",
-        "commit": "0bdf2a08302b8356eb76d54fea294d67df0cf7c0"
       }
     }
   }
