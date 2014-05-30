@@ -23,31 +23,32 @@ FastRender.onAllRoutes( function( ) {
       feed_ids,
       visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
 
-  if ( self.userId ){
+  if ( self.userId )
     feed_ids = Meteor.users.findOne( self.userId, {fields: {feedList: 1}} ).feedList;
-  } else{
+  else
     feed_ids = Feeds.find( {subscribers: null}, {fields: {_id: 1}}).map ( function( feed ) { return feed._id;});
-  }
-  self.subscribe( "articles", feed_ids, 20);
 
+  self.subscribe( 'feeds' );
+  self.subscribe( "articles", feed_ids, 20);
 });
 
 //prepare userdata and feedlist for all clients ASAP
-Meteor.publish( null, function(){
+Meteor.publish( 'feeds', function(){
   var self = this;
   var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
-
   if ( self.userId ){
+
     return [
       Feeds.find( { subscribers: self.userId }, { fields: feedFields }),
       Meteor.users.find( self.userId, {fields: {admin: 1}} )
     ];
   }
 
-  return Feeds.find( { subscribers: null }, { fields: feedFields });
+  return Feeds.find( { subscribers: self.userId }, { fields: feedFields });
 });
 
 Meteor.publish( 'articles', function( feed_ids, limit ){
+  var self = this;
   check( feed_ids, [String] );
   check( limit, Number );
   var startDate = keepLimitDate();
