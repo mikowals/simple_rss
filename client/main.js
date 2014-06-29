@@ -14,10 +14,11 @@ Meteor.subscribe( 'feeds' );
 
 Deps.autorun( function( comp ){
   var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );
-  comp.firstRun || Meteor.subscribe( "articles", ids, + Session.get( "articleLimit" ));
+  if ( ! comp.firstRun ) Meteor.subscribe( "articles", ids, + Session.get( "articleLimit" ) );
 });
 
 Deps.autorun( function(){
+
   if ( + Session.get( "articleLimit") <= Articles.find().count() )
     Session.set( 'loaded', true);
   else
