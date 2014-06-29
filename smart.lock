@@ -4,23 +4,23 @@
     "basePackages": {
       "fast-render": {},
       "bootstrap3-less": {},
-      "apm": {}
+      "kadira": {}
     },
     "packages": {
       "fast-render": {
         "git": "https://github.com/arunoda/meteor-fast-render.git",
-        "tag": "v0.2.5",
-        "commit": "93e2fb334e55fbe9b5ebb2a2e65964018658f43e"
+        "tag": "v0.2.8",
+        "commit": "149984b1aff3a5642a270aff9bd9006872c8302e"
       },
       "bootstrap3-less": {
         "git": "https://github.com/eprochasson/bootstrap3-less",
         "tag": "v0.1.9",
         "commit": "5c812c4d7ce72917a065f0424c3cf54e5ff2d16a"
       },
-      "apm": {
-        "git": "https://github.com/arunoda/meteor-apm-client.git",
-        "tag": "v1.4.4",
-        "commit": "36f2f9775178621e9798d14c99baf24c06cc43c0"
+      "kadira": {
+        "git": "https://github.com/meteorhacks/kadira.git",
+        "tag": "v2.4.5",
+        "commit": "fa9a6446f6efb576953f99c01c03474f56f3852e"
       }
     }
   }

@@ -36,15 +36,12 @@ FastRender.onAllRoutes( function( ) {
 Meteor.publish( 'feeds', function(){
   var self = this;
   var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
+  var cursors = [];
   if ( self.userId ){
-
-    return [
-      Feeds.find( { subscribers: self.userId }, { fields: feedFields }),
-      Meteor.users.find( self.userId, {fields: {admin: 1}} )
-    ];
+    cursors.push( Meteor.users.find( self.userId, {fields: {admin: 1}} ) );
   }
-
-  return Feeds.find( { subscribers: self.userId }, { fields: feedFields });
+  cursors.push( Feeds.find( { subscribers: self.userId }, { fields: feedFields }) );
+  return cursors;
 });
 
 Meteor.publish( 'articles', function( feed_ids, limit ){
