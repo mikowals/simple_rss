@@ -11,6 +11,7 @@ var keepLimitDate = function(){
 
 Articles._ensureIndex( { feed_id: 1, date: -1} );
 
+
 Accounts.config({sendVerificationEmail: true});
 
 Facts.setUserIdFilter(function ( userId ) {
@@ -29,19 +30,75 @@ FastRender.onAllRoutes( function( ) {
     feed_ids = Feeds.find( {subscribers: null}, {fields: {_id: 1}}).map ( function( feed ) { return feed._id;});
 
   self.subscribe( 'feeds' );
-  self.subscribe( "articles", feed_ids, 20);
+  //self.subscribe( "articles", feed_ids, 20);
 });
+
+function observeAndPublish( cursor, sub ){
+  var collectionName = cursor._cursorDescription.collectionName,
+      oldIds,
+      newIds,
+      handle,
+      newFuncs ={};
+
+  ['added', 'removed', 'changed'].forEach( function( n ){
+    newFuncs[ n ] = function( id, doc){
+      sub[ n ]( collectionName, id, doc);
+    }
+  });
+
+  oldIds = _( sub._documents && sub._documents[ collectionName ] || {} ).keys();
+  handle = cursor.observeChanges( newFuncs );
+
+  if ( sub._documents && oldIds.length){
+    newIds = _( sub._documents[ collectionName ] ).keys();
+    _( oldIds ).difference( newIds ).forEach( function( id ) {
+      sub.removed ( collectionName, id);
+    });
+  }
+
+  sub.onStop( function(){ handle.stop();} );
+  return handle;
+}
 
 //prepare userdata and feedlist for all clients ASAP
 Meteor.publish( 'feeds', function(){
   var self = this;
-  var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
-  var cursors = [];
-  if ( self.userId ){
-    cursors.push( Meteor.users.find( self.userId, {fields: {admin: 1}} ) );
+  var feedFields = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
+  var feedHandle, articleHandle, userObserver;
+  function startFeedObserver(feedIds){
+    if( feedHandle )
+      feedHandle.stop();
+    var c = Feeds.find( { _id: {$in: feedIds} },  feedFields );
+    feedHandle = observeAndPublish( c, self );
   }
-  cursors.push( Feeds.find( { subscribers: self.userId }, { fields: feedFields }) );
-  return cursors;
+  function startArticleObserver( feedIds ){
+    if( articleHandle )
+      articleHandle.stop();
+    var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
+    var options = {fields: visibleFields, limit: 150, sort: {date: -1, _id: 1}};
+    var c = Articles.find( {feed_id: {$in: feedIds}, date: {$gt: keepLimitDate()}}, options);
+    articleHandle = observeAndPublish( c, self );
+  }
+  function startFeedsAndArticles( id, doc){
+    startFeedObserver( doc.feedList );
+    startArticleObserver( doc.feedList );
+  }
+  if ( self.userId ){
+    Meteor.users.find( self.userId, {fields: {admin: 1}} )._publishCursor( self );
+    userObserver = Meteor.users.find( self.userId, {fields: {feedList: 1}} ).observeChanges({
+      added: startFeedsAndArticles,
+      changed: startFeedsAndArticles
+    });
+  } else{
+    //stop these cursors on sig
+    feedHandle = observeAndPublish( Feeds.find( { subscribers: null },feedFields), self );
+    articleHandle = startArticleObserver( _( self._documents.feeds ).keys() );
+  }
+  self.ready();
+
+  self.onStop( function(){
+    userObserver && userObserver.stop();
+  });
 });
 
 Meteor.publish( 'articles', function( feed_ids, limit ){
