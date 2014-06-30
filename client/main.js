@@ -10,7 +10,7 @@ Session.setDefault("articleLimit", articlesOnLoad );
 Session.setDefault( "page", "articleList" );
 Session.setDefault( "offline", null);
 
-Meteor.subscribe( 'feeds' );
+//Meteor.subscribe( 'feeds' );
 
 Deps.autorun( function( comp ){
   var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );

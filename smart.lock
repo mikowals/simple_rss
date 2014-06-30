@@ -4,7 +4,8 @@
     "basePackages": {
       "fast-render": {},
       "bootstrap3-less": {},
-      "kadira": {}
+      "kadira": {},
+      "harmony": {}
     },
     "packages": {
       "fast-render": {
@@ -21,6 +22,16 @@
         "git": "https://github.com/meteorhacks/kadira.git",
         "tag": "v2.4.5",
         "commit": "fa9a6446f6efb576953f99c01c03474f56f3852e"
+      },
+      "harmony": {
+        "git": "https://github.com/mquandalle/meteor-harmony.git",
+        "tag": "v1.2.1",
+        "commit": "433d276ddcc61eb80606eb15f4552f4fc3fbb8ca"
+      },
+      "exports": {
+        "git": "https://github.com/christianbundy/meteor-exports.git",
+        "tag": "v1.0.0",
+        "commit": "3fd51053c2a16b94519e2720be7b70feb654e5a7"
       }
     }
   }
