@@ -3,6 +3,9 @@
     "fast-render": {},
     "bootstrap3-less": {},
     "kadira": {},
-    "harmony": {}
+    "harmony": {
+      "git": "https://github.com/mikowals/meteor-harmony.git",
+      "branch": "master"
+    }
   }
 }

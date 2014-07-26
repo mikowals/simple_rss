@@ -160,7 +160,7 @@ FeedSubscriber.prototype.onPostRequest = function(req, res){
 
 FeedSubscriber.prototype.onGetRequest = function( req, res ){
 
-  self = this;
+  var self = this;
   var params = urllib.parse(req.url, true, true),
       data;
 
