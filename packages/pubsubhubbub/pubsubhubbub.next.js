@@ -65,6 +65,7 @@ FeedSubscriber = function ( options ){
       console.error( "unmatched unsubscribe: " + data.topic );
     }
     else if ( sub.unsub ){
+      sub.unsub.return( data );
       console.log ( " unsubscribed from : " + data.topic);
       delete self.subscriptions[ data.topic ];
     } else {
@@ -77,16 +78,9 @@ FeedSubscriber = function ( options ){
 utillib.inherits( FeedSubscriber, Stream );
 
 FeedSubscriber.prototype.stopAllSubscriptions = function(){
-  var fut = new Future();
   var self = this;
-  var waitingOn = [];
-  for (var key in self.subscriptions ){
-    waitingOn.push( self.unsubscribe( self.subscriptions[ key ]._id ) );
-  };
-  Promise.all( waitingOn ).then( function(){
-    fut.return( true );
-  });
-  return fut.wait();
+  var waitingOn = _( self.subscriptions ).map( sub => self.unsubscribe( sub._id ));
+  return Future.wait( waitingOn );
 };
 
 FeedSubscriber.prototype.onPostRequest = function(req, res){
@@ -274,16 +268,9 @@ FeedSubscriber.prototype.unsubscribe = function ( id ){
   var self = this;
   var sub = getKey ( self.subscriptions, "_id", id );
   if ( sub ){
-
-    sub.unsub = new Promise( function( resolve, reject){
-      var cb = function( err, res ){
-        if ( err ) reject( err );
-        else resolve( res );
-      };
-      self.sendRequest( "unsubscribe", sub.url, sub.hub,  cb);
-    });
-
-   return sub.unsub;
+    sub.unsub = new Future();
+    self.sendRequest( "unsubscribe", sub.url, sub.hub);
+    return sub.unsub;
   }  else {
     console.error( " No subscription found with id :  " + id );
   }
