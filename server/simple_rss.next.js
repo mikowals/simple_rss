@@ -18,6 +18,7 @@ Facts.setUserIdFilter(function ( userId ) {
   return user && user.admin;
 });
 
+/************* null publication should be sent without fastRender.onAllRoutes()
 FastRender.onAllRoutes( function( ) {
   var self = this,
       feed_ids,
@@ -28,23 +29,99 @@ FastRender.onAllRoutes( function( ) {
   else
     feed_ids = Feeds.find( {subscribers: null}, {fields: {_id: 1}}).map ( function( feed ) { return feed._id;});
 
-  self.subscribe( 'feeds' );
-  self.subscribe( "articles", feed_ids, 20);
+  //self.subscribe( 'feeds' );
+  //self.subscribe( "articles", feed_ids, 20);
 });
+****************/
+function stoppablePublisher( sub ){
+  var self = this,
+      handle,
+      name;
 
-//prepare userdata and feedlist for all clients ASAP
-Meteor.publish( 'feeds', function(){
-  var self = this;
-  var feedFields = {_id: 1, title: 1, url: 1, last_date:1};
-  if ( self.userId ){
+  function subHasId( id ){
+    return sub._documents && sub._documents[ name ] && sub._documents[ name ][ id ];
+  };
 
-    return [
-      Feeds.find( { subscribers: self.userId }, { fields: feedFields }),
-      Meteor.users.find( self.userId, {fields: {admin: 1}} )
-    ];
+  self.ids = () => {
+    return _( sub._documents && sub._documents[ name ] || {} ).keys();
   }
 
-  return Feeds.find( { subscribers: self.userId }, { fields: feedFields });
+  function observeAndPublish( cursor ){
+    var oldIds = self.ids(),
+        newIds;
+
+    handle = cursor.observeChanges({
+      added( id, doc ){
+        if ( subHasId( id ) ){
+          oldIds.splice( oldIds.indexOf( id ), 1);
+        } else{
+          sub.added( name, id, doc );
+        }
+      },
+      removed ( id ){
+        sub.removed( name, id );
+      },
+      changed ( id, doc ){
+        sub.changed( name, id, doc );
+      }
+    });
+
+    if ( sub._documents && oldIds.length)
+      oldIds.forEach( ( id ) => sub.removed ( name, id) );
+  }
+
+  self.start = ( cursor ) =>{
+    if ( handle ) handle.stop();
+    if ( cursor._cursorDescription.collectionName !== name ){
+      if ( ! name )
+        name = cursor._cursorDescription.collectionName;
+      else
+        throw new Error( 'stoppablePublisher can not handle cursors from different collections. ',
+         name, ' to ', cursor._cursorDescription.collectionName);
+    }
+    observeAndPublish( cursor );
+  };
+
+  self.stop = () => {
+    handle && handle.stop();
+  }
+}
+
+
+//prepare userdata and feedlist for all clients ASAP
+Meteor.publish( null, function() {
+  var self = this;
+  var userId = self.userId || 'nullUser';
+  var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
+  var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
+  var articleOptions = {fields: articleFields, limit: 100, sort: {date: -1, _id: 1}};
+  var feedPublisher, articlePublisher, userObserver, nullUserObserver, nullUserCursor;
+
+  feedPublisher = new stoppablePublisher( self );
+  articlePublisher = new stoppablePublisher( self );
+
+  function startFeedsAndArticles( id, doc){
+    var feedCursor = Feeds.find( {_id:{ $in: doc.feedList}}, feedOptions);
+    feedPublisher.start( feedCursor );
+    var articleCursor = Articles.find( {feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions);
+    articlePublisher.start( articleCursor );
+  }
+
+  userObserver = Meteor.users.find( userId, {fields: {feedList: 1}} ).observeChanges({
+    added: startFeedsAndArticles,
+    changed: startFeedsAndArticles
+  });
+
+
+  self.onStop( () => {
+    userObserver.stop();
+    feedPublisher.stop();
+    delete self.feedPublisher;
+    articlePublisher.stop();
+    delete self.articlePublisher;
+  });
+
+  return Meteor.users.find( userId, {fields: {admin: 1}});
 });
 
 Meteor.publish( 'articles', function( feed_ids, limit ){
@@ -56,25 +133,23 @@ Meteor.publish( 'articles', function( feed_ids, limit ){
   return Articles.find( {feed_id: {$in: feed_ids}, date: {$gt: startDate}}, {fields: visibleFields, limit: limit, sort: {date: -1, _id: 1}});
 });
 
-Meteor.startup( function(){
+Meteor.startup( () => {
 
   Meteor.call('findArticles', {} );
-
   Meteor.call('removeOldArticles');
 
   if ( !intervalProcesses[ "removeOldArticles"] ){
-    var pro = Meteor.setInterval(function (){
-      Meteor.call('removeOldArticles'); },
-      DAY);
-    intervalProcesses["removeOldArticles"] = pro;
+    intervalProcesses["removeOldArticles"] = Meteor.setInterval(
+      () => Meteor.call('removeOldArticles'),
+      DAY
+    );
   }
 
   if ( !intervalProcesses[ "findArticles"] ){
-    var pro = Meteor.setInterval( function(){
-      Meteor.call('findArticles', { hub: null});
-      },
-      updateInterval);
-    intervalProcesses[ "findArticles"] = pro;
+    intervalProcesses[ "findArticles"] = Meteor.setInterval(
+      () => Meteor.call('findArticles', { hub: null} ),
+      updateInterval
+    );
   }
 
   var options = {
@@ -91,7 +166,7 @@ Meteor.startup( function(){
 
   feedSubscriber.on(
     'liveFeed',
-    Meteor.bindEnvironment( FeedParser.readAndInsertArticles, function( error ) { console.log( error ); } )
+    Meteor.bindEnvironment( FeedParser.readAndInsertArticles, ( error ) => console.log( error ) )
   );
 
   process.on('exit', Meteor.bindEnvironment ( function (){
@@ -108,13 +183,13 @@ Meteor.startup( function(){
     }, function ( e ) { throw e; }));
   });
 
-  var boundCallback = Meteor.bindEnvironment( function (error, topic){
+  var boundCallback = Meteor.bindEnvironment(  (error, topic) => {
     if ( error ) {
       console.error( error );
     } else {
       console.log( feed.url + " : " + topic );
     }
-  }, function ( e) { throw e;});
+  }, (e) => {throw e;} );
 
   var handle = Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).observeChanges({
 
@@ -179,6 +254,13 @@ Meteor.methods({
     Feeds.find({}).forEach( function ( feed ){
       console.log("adding subscriber " + self.userId);
       Feeds.update( feed._id,{ $addToSet: { subscribers: self.userId }});
+    });
+  },
+
+  createNullSubscriber: function(){
+    var feedList = Feeds.find( {subscribers: null}, {fields: {_id:1}}).map( feed => feed._id );
+    Meteor.users.upsert( 'nullUser', { _id: 'nullUser', feedList }, error => {
+      if ( error ) console.log( error );
     });
   },
 
