@@ -62,11 +62,11 @@ FeedSubscriber = function ( options ){
   self.on ( 'unsubscribe' , function ( data ) {
     var sub = self.subscriptions[ data.topic ];
     if ( ! sub ){
-       console.error( "unmatched unsubscribe: " + data.topic );
+      console.error( "unmatched unsubscribe: " + data.topic );
     }
     else if ( sub.unsub ){
-     console.log ( " unsubscribed from : " + data.topic);
-     delete self.subscriptions[ data.topic ];
+      console.log ( " unsubscribed from : " + data.topic);
+      delete self.subscriptions[ data.topic ];
     } else {
       console.error( "resubscribing to: " + data.topic );
       self.subscribe( data.topic, data.hub, sub._id );
@@ -77,22 +77,16 @@ FeedSubscriber = function ( options ){
 utillib.inherits( FeedSubscriber, Stream );
 
 FeedSubscriber.prototype.stopAllSubscriptions = function(){
-  var future = new Future();
-    var self = this;
-    var count = 0;
-    for (var key in self.subscriptions ){
-      self.unsubscribe( self.subscriptions[ key ]._id );
-      count++;
-    };
-    self.on( 'unsubscribe', function(){
-      count--;
-      if ( ! count ){
-        self.emit( 'exitOk', null);
-        future.return( true );
-      }
-    });
-
-    return future.wait();
+  var fut = new Future();
+  var self = this;
+  var waitingOn = [];
+  for (var key in self.subscriptions ){
+    waitingOn.push( self.unsubscribe( self.subscriptions[ key ]._id ) );
+  };
+  Promise.all( waitingOn ).then( function(){
+    fut.return( true );
+  });
+  return fut.wait();
 };
 
 FeedSubscriber.prototype.onPostRequest = function(req, res){
@@ -277,14 +271,22 @@ FeedSubscriber.prototype.subscribe = function ( topic, hub, _id, callbackUrl, ca
 };
 
 FeedSubscriber.prototype.unsubscribe = function ( id ){
-   var self = this;
-   var sub = getKey ( self.subscriptions, "_id", id );
-   if ( sub ){
-     self.sendRequest( "unsubscribe", sub.url, sub.hub );
-     sub.unsub = true;
-   }  else {
-      console.error( " No subscription found with id :  " + id );
-   }
+  var self = this;
+  var sub = getKey ( self.subscriptions, "_id", id );
+  if ( sub ){
+
+    sub.unsub = new Promise( function( resolve, reject){
+      var cb = function( err, res ){
+        if ( err ) reject( err );
+        else resolve( res );
+      };
+      self.sendRequest( "unsubscribe", sub.url, sub.hub,  cb);
+    });
+
+   return sub.unsub;
+  }  else {
+    console.error( " No subscription found with id :  " + id );
+  }
 
 };
 
