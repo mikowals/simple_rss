@@ -1,3 +1,4 @@
+var Future = Npm.require( 'fibers/future');
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 3.0;
 var updateInterval = 1000 * 60 * 15;
@@ -152,31 +153,32 @@ Meteor.startup( () => {
 
 
   var options = {
-    callbackPath: "hubbub",  //leave slash off since this will be argument to eteor.AbsoluteUrl()
+    callbackUrl: Meteor.absoluteUrl("hubbub"),  //leave slash off since this will be argument to eteor.AbsoluteUrl()
     secret: Random.id()
   };
-
-//if no ROOT_URL was set assume we are on my server
-  if ( Meteor.absoluteUrl() === "http://localhost:3000/"){
-    options.callbackUrl = "http://localhost:3000/" + options.callbackPath;
-  }
 
   var openSubscriptions = {};
   feedSubscriber = new FeedSubscriber ( options );
 
+  feedSubscriber.on("error", function(error){
+    console.log("Error");
+    console.log(error);
+  });
+
   feedSubscriber.on(
-    'feed',
-    Meteor.bindEnvironment( FeedParser.readAndInsertArticles, ( error ) => console.log( error ) )
-  );
+    'feed', data => console.log( data ));
+    //Meteor.bindEnvironment( FeedParser.readAndInsertArticles, ( error ) => console.log( error ) )
+  //);
 
   var stopAllSubscriptions = () => {
-    var waitingOn = openSubscriptions.map( sub => {
+    var waitingOn = _( openSubscriptions ).map( sub => {
       var fut = new Future();
       var cb = ( err, res ) => {
         delete openSubscriptions[ sub.url ];
+        console.log( 'unsubscribed: ', res);
         fut.return( res );
       };
-      sub => feedSubscriber.unsubscribe( sub.url, sub.hub , feedSubscriber.callbackUrl, cb );
+      feedSubscriber.unsubscribe( sub.url, sub.hub , feedSubscriber.callbackUrl, cb );
       return fut;
     });
     return Future.wait( waitingOn );
