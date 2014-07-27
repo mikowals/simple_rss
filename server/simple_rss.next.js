@@ -138,19 +138,18 @@ Meteor.startup( () => {
   Meteor.call('findArticles', {} );
   Meteor.call('removeOldArticles');
 
-  if ( !intervalProcesses[ "removeOldArticles"] ){
-    intervalProcesses["removeOldArticles"] = Meteor.setInterval(
-      () => Meteor.call('removeOldArticles'),
-      DAY
-    );
-  }
 
-  if ( !intervalProcesses[ "findArticles"] ){
-    intervalProcesses[ "findArticles"] = Meteor.setInterval(
-      () => Meteor.call('findArticles', { hub: null} ),
-      updateInterval
-    );
-  }
+  intervalProcesses["removeOldArticles"] = Meteor.setInterval(
+    () => Meteor.call('removeOldArticles'),
+    DAY
+  );
+
+
+  intervalProcesses[ "findArticles"] = Meteor.setInterval(
+    () => Meteor.call('findArticles', { hub: null} ),
+    updateInterval
+  );
+
 
   var options = {
     callbackPath: "hubbub",  //leave slash off since this will be argument to eteor.AbsoluteUrl()
@@ -162,15 +161,29 @@ Meteor.startup( () => {
     options.callbackUrl = "http://localhost:3000/" + options.callbackPath;
   }
 
+  var openSubscriptions = {};
   feedSubscriber = new FeedSubscriber ( options );
 
   feedSubscriber.on(
-    'liveFeed',
+    'feed',
     Meteor.bindEnvironment( FeedParser.readAndInsertArticles, ( error ) => console.log( error ) )
   );
 
+  var stopAllSubscriptions = () => {
+    var waitingOn = openSubscriptions.map( sub => {
+      var fut = new Future();
+      var cb = ( err, res ) => {
+        delete openSubscriptions[ sub.url ];
+        fut.return( res );
+      };
+      sub => feedSubscriber.unsubscribe( sub.url, sub.hub , feedSubscriber.callbackUrl, cb );
+      return fut;
+    });
+    return Future.wait( waitingOn );
+  };
+
   process.on('exit', Meteor.bindEnvironment ( function (){
-    feedSubscriber.stopAllSubscriptions();
+    stopAllSubscriptions();
     console.log( "paused to allow subscriptions to end");
 
   }, function ( e ) { throw e; }));
@@ -178,33 +191,41 @@ Meteor.startup( () => {
   _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
     process.once(sig, Meteor.bindEnvironment (function () {
       console.log ( "process received : " + sig);
-      feedSubscriber.stopAllSubscriptions();
+      stopAllSubscriptions();
       process.kill( process.pid, sig);
     }, function ( e ) { throw e; }));
   });
 
-  var boundCallback = Meteor.bindEnvironment(  (error, topic) => {
-    if ( error ) {
-      console.error( error );
-    } else {
-      console.log( feed.url + " : " + topic );
-    }
-  }, (e) => {throw e;} );
+  var trackSubscriptionAdded = ( subData, err, topic ) => {
+    if ( err ) throw err;
+
+    openSubscriptions[ topic ] = {_id: subData._id, url: topic, hub: subData.hub, unsub: false};
+    console.log( "subscribed to : " + subData.hub + " : " + topic );
+  };
+
+  var trackSubscriptionRemoved = ( err, topic ) => {
+    delete openSubscriptions[ topic ];
+  };
 
   var handle = Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).observeChanges({
 
     added: function ( id, fields ){
-	    feedSubscriber.subscribe ( fields.url, fields.hub , id, boundCallback );
+      fields._id = id;
+      var cb = _( trackSubscriptionAdded ).partial( fields );
+	    feedSubscriber.subscribe ( fields.url, fields.hub , feedSubscriber.callbackUrl, cb );
     },
 
     removed: function( id ){
-      feedSubscriber.unsubscribe( id );
+      var fields = _( openSubscriptions ).find( sub => sub._id === id );
+      feedSubscriber.unsubscribe( fields.url, fields.hub , feedSubscriber.callbackUrl, trackSubscriptionRemoved );
     },
 
     changed: function ( id, fields ){
-	    feedSubscriber.unsubscribe( id );
-      var feed = Feeds.findOne( id );
-	    feedSubscriber.subscribe ( feed.url, feed.hub , id, boundCallback);
+      var oldSub = _( openSubscriptions ).find( sub => sub._id === id );
+	    feedSubscriber.unsubscribe( oldSub.url, oldSub.hub , feedSubscriber.callbackUrl, trackSubscriptionRemoved );
+      fields = _( fields ).default( oldSub );
+      var cb = _( trackSubscriptionAdded ).partial( fields );
+	    feedSubscriber.subscribe ( fields.url, fields.hub , feedSubscriber.callbackUrl, cb );
     }
   });
 });

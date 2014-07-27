@@ -1,5 +1,10 @@
 Package.describe({
-  summary: 'a pubsubhubbub subscription manager'
+  summary: 'a pubsubhubbub subscription manager',
+  version: "0.5"
+});
+
+Npm.depends({
+  "pubsubhubbub":"0.3.4"
 });
 
 Package.on_use(function (api) {
