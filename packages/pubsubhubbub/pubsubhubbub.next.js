@@ -2,13 +2,13 @@
 // customised to work with Meteor and within Simple_RSS app
 
 var PubSubHubbub = Npm.require("pubsubhubbub");
-
+var resumer = Npm.require("resumer");
 FeedSubscriber = (options) => {
   var pubsub = PubSubHubbub.createServer( options );
   console.log( pubsub );
 
   WebApp.connectHandlers.stack.splice(0,0,{
-      route: pubsub.callbackUrl,
+      route: '/hubbub',
       handle: function(req, res, next) {
        if(req.method === 'POST') {
          return  pubsub._onPostRequest( req, res);
@@ -20,7 +20,10 @@ FeedSubscriber = (options) => {
      }
     }
    });
-
+   pubsub.on( 'feed', data =>{
+     var stream = resumer().queue( data.feed ).end();
+     pubsub.emit( 'feedStream', stream, data.topic );
+   });
 
 
    return pubsub;

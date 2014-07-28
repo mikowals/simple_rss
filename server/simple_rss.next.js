@@ -159,27 +159,31 @@ Meteor.startup( () => {
 
   var openSubscriptions = {};
   feedSubscriber = new FeedSubscriber ( options );
-
-  feedSubscriber.on("error", function(error){
-    console.log("Error");
-    console.log(error);
-  });
-
+  
   feedSubscriber.on(
-    'feed', data => console.log( data ));
-    //Meteor.bindEnvironment( FeedParser.readAndInsertArticles, ( error ) => console.log( error ) )
-  //);
+    'feedStream', 
+    Meteor.bindEnvironment( function( stream, topic ) {
+      var feed = openSubscriptions[ topic ];
+      FeedParser.readAndInsertArticles( stream, feed )
+    }, ( error ) => console.log( error ) )
+  );
+ 
+  feedSubscriber.on( 'unsubscribe', data=>{
+    var sub = openSubscriptions[ data.topic ]; 
+    if ( sub ){
+      console.log( 'unsubscribed: ', data.topic );
+      if ( sub.unsub instanceof Future ) 
+        sub.unsub.return( true );
+      delete openSubscriptions[ data.topic ];
+    } else 
+      console.log( 'no unsub requested: ', data );
+  }); 
 
   var stopAllSubscriptions = () => {
     var waitingOn = _( openSubscriptions ).map( sub => {
-      var fut = new Future();
-      var cb = ( err, res ) => {
-        delete openSubscriptions[ sub.url ];
-        console.log( 'unsubscribed: ', res);
-        fut.return( res );
-      };
-      feedSubscriber.unsubscribe( sub.url, sub.hub , feedSubscriber.callbackUrl, cb );
-      return fut;
+      sub.unsub =  new Future();
+      feedSubscriber.unsubscribe( sub.url, sub.hub );
+      return sub.unsub;
     });
     return Future.wait( waitingOn );
   };
@@ -205,29 +209,25 @@ Meteor.startup( () => {
     console.log( "subscribed to : " + subData.hub + " : " + topic );
   };
 
-  var trackSubscriptionRemoved = ( err, topic ) => {
-    delete openSubscriptions[ topic ];
-  };
-
   var handle = Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).observeChanges({
 
     added: function ( id, fields ){
       fields._id = id;
       var cb = _( trackSubscriptionAdded ).partial( fields );
-	    feedSubscriber.subscribe ( fields.url, fields.hub , feedSubscriber.callbackUrl, cb );
+      feedSubscriber.subscribe ( fields.url, fields.hub , cb );
     },
 
     removed: function( id ){
       var fields = _( openSubscriptions ).find( sub => sub._id === id );
-      feedSubscriber.unsubscribe( fields.url, fields.hub , feedSubscriber.callbackUrl, trackSubscriptionRemoved );
+      feedSubscriber.unsubscribe( fields.url, fields.hub );
     },
 
     changed: function ( id, fields ){
       var oldSub = _( openSubscriptions ).find( sub => sub._id === id );
-	    feedSubscriber.unsubscribe( oldSub.url, oldSub.hub , feedSubscriber.callbackUrl, trackSubscriptionRemoved );
+	    feedSubscriber.unsubscribe( oldSub.url, oldSub.hub );
       fields = _( fields ).default( oldSub );
       var cb = _( trackSubscriptionAdded ).partial( fields );
-	    feedSubscriber.subscribe ( fields.url, fields.hub , feedSubscriber.callbackUrl, cb );
+	    feedSubscriber.subscribe ( fields.url, fields.hub , cb );
     }
   });
 });
