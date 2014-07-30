@@ -102,6 +102,8 @@ Meteor.publish( null, function() {
   articlePublisher = new stoppablePublisher( self );
 
   function startFeedsAndArticles( id, doc){
+    if ( ! doc || ! doc.feedList || doc.feedList.length === 0 )
+      return;
     var feedCursor = Feeds.find( {_id:{ $in: doc.feedList}}, feedOptions);
     feedPublisher.start( feedCursor );
     var articleCursor = Articles.find( {feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions);
@@ -239,7 +241,9 @@ Meteor.methods({
     console.time("findArticles");
     criteria = criteria || {};
     var article_count = 0;
-    var rssResults = FeedParser.syncFP( Feeds.find( criteria ).fetch() );
+    var feeds = Feeds.find( criteria );
+    if ( feeds.count() < 1) return;
+    var rssResults = FeedParser.syncFP( feeds.fetch() );
 
     rssResults.forEach( function( rssResult ){
       if ( rssResult.statusCode === 200 ) {
