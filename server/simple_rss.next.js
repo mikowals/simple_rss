@@ -155,43 +155,21 @@ Meteor.startup( () => {
 
 
   var options = {
-    callbackUrl: Meteor.absoluteUrl("hubbub"),  //leave slash off since this will be argument to eteor.AbsoluteUrl()
+    callbackUrl: Meteor.absoluteUrl("hubbub"),
     secret: Random.id()
   };
 
-  var openSubscriptions = {};
   feedSubscriber = new FeedSubscriber ( options );
-  
-  feedSubscriber.on(
-    'feedStream', 
+
+  feedSubscriber.on( 'feedStream',
     Meteor.bindEnvironment( function( stream, topic ) {
-      var feed = openSubscriptions[ topic ];
+      var feed = feedSubscriber.subscriptions[ topic ];
       FeedParser.readAndInsertArticles( stream, feed )
     }, ( error ) => console.log( error ) )
   );
- 
-  feedSubscriber.on( 'unsubscribe', data=>{
-    var sub = openSubscriptions[ data.topic ]; 
-    if ( sub ){
-      console.log( 'unsubscribed: ', data.topic );
-      if ( sub.unsub instanceof Future ) 
-        sub.unsub.return( true );
-      delete openSubscriptions[ data.topic ];
-    } else 
-      console.log( 'no unsub requested: ', data );
-  }); 
-
-  var stopAllSubscriptions = () => {
-    var waitingOn = _( openSubscriptions ).map( sub => {
-      sub.unsub =  new Future();
-      feedSubscriber.unsubscribe( sub.url, sub.hub );
-      return sub.unsub;
-    });
-    return Future.wait( waitingOn );
-  };
 
   process.on('exit', Meteor.bindEnvironment ( function (){
-    stopAllSubscriptions();
+    feedSubscriber.stopAllSubscriptions();
     console.log( "paused to allow subscriptions to end");
 
   }, function ( e ) { throw e; }));
@@ -199,37 +177,33 @@ Meteor.startup( () => {
   _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
     process.once(sig, Meteor.bindEnvironment (function () {
       console.log ( "process received : " + sig);
-      stopAllSubscriptions();
+      feedSubscriber.stopAllSubscriptions();
       process.kill( process.pid, sig);
     }, function ( e ) { throw e; }));
   });
-
-  var trackSubscriptionAdded = ( subData, err, topic ) => {
-    if ( err ) throw err;
-
-    openSubscriptions[ topic ] = {_id: subData._id, url: topic, hub: subData.hub, unsub: false};
-    console.log( "subscribed to : " + subData.hub + " : " + topic );
-  };
 
   var handle = Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).observeChanges({
 
     added: function ( id, fields ){
       fields._id = id;
-      var cb = _( trackSubscriptionAdded ).partial( fields );
-      feedSubscriber.subscribe ( fields.url, fields.hub , cb );
+      feedSubscriber.subscriptions[ fields.url ] = fields;
+      feedSubscriber.subscribe ( fields.url, fields.hub );
     },
 
     removed: function( id ){
-      var fields = _( openSubscriptions ).find( sub => sub._id === id );
+      var fields = _( feedSubscriber.subscriptions ).findWhere( {_id: id});
+      fields.unsub = new Future();
       feedSubscriber.unsubscribe( fields.url, fields.hub );
     },
 
     changed: function ( id, fields ){
-      var oldSub = _( openSubscriptions ).find( sub => sub._id === id );
-	    feedSubscriber.unsubscribe( oldSub.url, oldSub.hub );
+      var oldSub = _( feedSubscriber.subscriptions ).findWhere({_id :id });
       fields = _( fields ).default( oldSub );
-      var cb = _( trackSubscriptionAdded ).partial( fields );
-	    feedSubscriber.subscribe ( fields.url, fields.hub , cb );
+      oldSub.unsub = new Future();
+	    feedSubscriber.unsubscribe( oldSub.url, oldSub.hub );
+      oldSub.unsub.wait();
+      feedSubscriber.subscriptions[ fields.url ] = fields;
+	    feedSubscriber.subscribe ( fields.url, fields.hub );
     }
   });
 });
@@ -264,6 +238,7 @@ Meteor.methods({
 
     var onErr = function(err, res){ if( err ) console.error( err );};
     var onFeed = function( feed ){
+      feedSubscriber.subscriptions[ feed.url ] = feed;
       feedSubscriber.subscribe( feed.url, feed.hub , feed._id, onErr );
     };
 
