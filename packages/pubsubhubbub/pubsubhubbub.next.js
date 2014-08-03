@@ -46,16 +46,16 @@ FeedSubscriber = (options) => {
         sub = self.subscriptions[ data.topic ];
 
     if ( sub ){
-      sub.expiry = new Date().getTime() + data.lease * 1000;
-      sub.resub && clearTimeout( sub.resub );
+      //sub.expiry = new Date().getTime() + data.lease * 1000;
+      //sub.resub && clearTimeout( sub.resub );
       console.log ( "subscribed to : " + data.hub + " : " + data.topic );
-      interval = Math.max( ( data.lease - 60 * 60 ) * 1000, 9 * 24 * 60 * 60 * 1000 );
-      fn = function(){
-        sub.unsub = new Future();
-        self.unsubscribe( data.topic, data.hub );
-        self.subscribe( data.topic, data.hub );
-      };
-      sub.resub = setTimeout( fn, interval );
+      //interval = Math.max( ( data.lease - 60 * 60 ) * 1000, 9 * 24 * 60 * 60 * 1000 );
+      //fn = function(){
+      //  sub.unsub = new Future();
+      //  self.unsubscribe( data.topic, data.hub );
+      //  self.subscribe( data.topic, data.hub );
+      //};
+      //sub.resub = setTimeout( fn, interval );
     } else {
       console.error( "unmatched subscription: " + data.topic);
     }
