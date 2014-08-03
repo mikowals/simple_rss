@@ -239,7 +239,7 @@ Meteor.methods({
     var onErr = function(err, res){ if( err ) console.error( err );};
     var onFeed = function( feed ){
       feedSubscriber.subscriptions[ feed.url ] = feed;
-      feedSubscriber.subscribe( feed.url, feed.hub , feed._id, onErr );
+      feedSubscriber.subscribe( feed.url, feed.hub, onErr );
     };
 
     Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).forEach( onFeed );
