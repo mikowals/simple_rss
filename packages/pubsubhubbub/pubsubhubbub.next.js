@@ -10,7 +10,7 @@ FeedSubscriber = (options) => {
   var self = PubSubHubbub.createServer( options );
   console.log( self );
 
-  self.openSubscriptions = {};
+  self.subscriptions = {};
 
   WebApp.connectHandlers.stack.splice(0,0,{
     route: urlParse( self.callbackUrl ).pathname,
