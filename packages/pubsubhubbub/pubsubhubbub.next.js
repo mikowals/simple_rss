@@ -4,6 +4,7 @@
 var PubSubHubbub = Npm.require("pubsubhubbub");
 var resumer = Npm.require("resumer");
 var urlParse = Npm.require( 'url' ).parse;
+var Future = Npm.require( 'fibers/future');
 
 FeedSubscriber = (options) => {
   var self = PubSubHubbub.createServer( options );
