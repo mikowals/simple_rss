@@ -28,6 +28,7 @@ var onReadable = Meteor.bindEnvironment( function(fp, feed) {
   var item;
   while ( item = fp.read() ) {
     var doc = new Article( item );
+    console.log( 'onReadable: ', feed);
     doc.sourceUrl = feed.url;
     doc.feed_id = feed._id;
     var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
