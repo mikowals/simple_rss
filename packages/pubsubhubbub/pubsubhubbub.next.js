@@ -27,7 +27,6 @@ FeedSubscriber = (options) => {
 
   self.on( 'feed', data =>{
     var stream = resumer().queue( data.feed ).end();
-    console.log( 'feed emitted: ', data);
     self.emit( 'feedStream', stream, data.topic );
   });
 
