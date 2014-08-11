@@ -1,6 +1,0 @@
-{
-  "MONGO_URL": "mongodb://127.0.0.1:3002/meteor",
-  "MONGO_OPLOG_URL": "mongodb://127.0.0.1:3002/local",
-  "ROOT_URL": "http://new-river.mak-play.com",
-  "PORT": 8090
-}

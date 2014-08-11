@@ -1,5 +1,6 @@
 Package.describe({
-  summary: "Parse html on server"
+  summary: "Parse html on server",
+  'version':'0.16.0'
 });
 
 Npm.depends({

@@ -1,6 +1,6 @@
 Package.describe({
-  summary: 'a pubsubhubbub subscription manager',
-  version: "0.5"
+  'summary': 'a pubsubhubbub subscription manager',
+  'version': "0.5.0"
 });
 
 Npm.depends({
@@ -9,7 +9,8 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
-  api.use( ['harmony','webapp','random'], "server" );
+   api.versionsFrom('METEOR-CORE@0.9.0-rc5');
+  api.use( ['mikowals:harmony@1.2.0','webapp','random'], "server" );
   api.add_files([ "pubsubhubbub.next.js"], "server");
   api.export && api.export( [ "FeedSubscriber" ], "server");
 });

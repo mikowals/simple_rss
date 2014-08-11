@@ -22,7 +22,7 @@ facts
 browser-policy
 jquery-waypoints
 accounts-ui
-fast-render
-bootstrap3-less
-kadira
-harmony
+arunoda:fast-render
+simison:bootstrap3-less
+arunoda:kadira
+mikowals:harmony@1.2.0
