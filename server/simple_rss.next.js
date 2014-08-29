@@ -137,7 +137,7 @@ Meteor.publish( 'articles', function( feed_ids, limit ){
 });
 
 Meteor.startup( () => {
-
+  
   Meteor.call('findArticles', {} );
   Meteor.call('removeOldArticles');
 

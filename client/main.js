@@ -21,8 +21,8 @@ Deps.autorun( function(){
 
   if ( + Session.get( "articleLimit") <= Articles.find().count() )
     Session.set( 'loaded', true);
-  else
-    Session.set( 'loaded', false);
+  //else
+  //  Session.set( 'loaded', false);
 });
 
 Deps.autorun( function(){
@@ -39,7 +39,7 @@ Meteor.startup( function() {
     Session.set( "now", new Date() );
     },
     updateNowFreq );
-
+  
 });
 
 var timeago = function( some_date ){
@@ -276,5 +276,4 @@ var setLastArticleWaypoint = _.debounce( function( target ){
     });
     oldTarget = target;
   }
-}, 100
-);
+}, 100 );
