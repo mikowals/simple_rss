@@ -35,11 +35,15 @@ Deps.autorun( function(){
 
 Meteor.startup( function() {
 
+  window.addEventListener('load', function() {
+    FastClick.attach(document.body);
+  }, false);
+
   intervalProcesses['updateNow'] = intervalProcesses['updateNow'] || Meteor.setInterval( function() {
     Session.set( "now", new Date() );
     },
     updateNowFreq );
-  
+
 });
 
 var timeago = function( some_date ){
