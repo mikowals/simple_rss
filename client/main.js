@@ -10,7 +10,7 @@ Session.setDefault("articleLimit", articlesOnLoad );
 Session.setDefault( "page", "articleList" );
 Session.setDefault( "offline", null);
 
-//Meteor.subscribe( 'feeds' );
+//Meteor.subscribe( 'base' );
 
 Deps.autorun( function( comp ){
   var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );
@@ -77,8 +77,11 @@ Template.feedList.helpers({
 
   flash: function(){
     return Session.get("feedListFlash");
+  },
+  admin: function() {
+    var user = Meteor.user();
+    return user && user.admin;
   }
-
 
 });
 
@@ -207,10 +210,6 @@ Template.article.helpers({
 Template.newriver.helpers({
   currentPage: function(){
     return Template[ Session.get( "page" ) ];
-  },
-  admin: function() {
-    var user = Meteor.user();
-    return user && user.admin;
   }
 });
 

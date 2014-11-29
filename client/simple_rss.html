@@ -12,7 +12,6 @@
   
     {{>menubar}}
     {{> currentPage}}
-    {{#if admin}}{{> serverFacts}}{{/if}}
   </div>
 </template>
 
@@ -23,6 +22,7 @@
     {{#if offline}}<small class="label label-default">{{offline}}</small>{{/if}}
     {{> loginButtons align="right" }}
    </h4>
+
   </div>
 </template>
 
@@ -46,6 +46,7 @@
       <div class="feed row">{{>feed}}</div>
     {{/each}}
    </div>
+   {{#if admin}}{{> serverFacts}}{{/if}}
 </template>
 
 <template name="feed">

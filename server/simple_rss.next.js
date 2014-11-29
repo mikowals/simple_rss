@@ -19,21 +19,20 @@ Facts.setUserIdFilter(function ( userId ) {
   return user && user.admin;
 });
 
-/************* null publication should be sent without fastRender.onAllRoutes()
-FastRender.onAllRoutes( function( ) {
+/**FastRender.onAllRoutes( function( ) {
   var self = this,
       feed_ids,
       visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, clicks: 1, readCount: 1};
 
-  if ( self.userId )
+  /if ( self.userId )
     feed_ids = Meteor.users.findOne( self.userId, {fields: {feedList: 1}} ).feedList;
   else
     feed_ids = Feeds.find( {subscribers: null}, {fields: {_id: 1}}).map ( function( feed ) { return feed._id;});
-
+  //self.subscribe( 'base');
   //self.subscribe( 'feeds' );
   //self.subscribe( "articles", feed_ids, 20);
-});
-****************/
+});**/
+
 function stoppablePublisher( sub ){
   var self = this,
       handle,
@@ -95,7 +94,7 @@ Meteor.publish( null, function() {
   var userId = self.userId || 'nullUser';
   var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
-  var articleOptions = {fields: articleFields, limit: 100, sort: {date: -1, _id: 1}};
+  var articleOptions = {fields: articleFields, limit: 50, sort: {date: -1, _id: 1}};
   var feedPublisher, articlePublisher, userObserver, nullUserObserver, nullUserCursor;
 
   feedPublisher = new stoppablePublisher( self );
