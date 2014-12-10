@@ -5,8 +5,8 @@ Package.describe({
 
 
 Npm.depends({
-  "feedparser": "0.19.1",
-  "request": "2.40.0",
+  "feedparser": "0.19.2",
+  "request": "2.50.0",
 });
 
 Package.on_use(function (api) {
