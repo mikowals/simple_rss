@@ -99,7 +99,7 @@ function _fp( feed ) {
         var fp = r.pipe( new FeedParser());
         fp.on( 'error', onError )
           .on('meta', onMeta )
-          .on('readable',  lodash.partial( onReadable, fp, feed ) )
+          .on('readable',  lodash( onReadable ).partial( fp, feed ) )
           .on( 'end', onEnd );
       }
     },
@@ -125,6 +125,6 @@ FeedParser.readAndInsertArticles = function ( fp, feed ){
   if ( ! ( fp instanceof FeedParser ) )
     fp = fp.pipe( new FeedParser() );
 
-  fp.on( 'readable', lodash.partial( onReadable, fp, feed ));
+  fp.on( 'readable', lodash( onReadable ).partial( fp, feed ) );
   return;
 };
