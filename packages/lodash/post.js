@@ -1,1 +1,1 @@
-_ = lodash;
+lodash = _.noConflict();
