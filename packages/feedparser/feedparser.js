@@ -99,7 +99,7 @@ function _fp( feed ) {
         var fp = r.pipe( new FeedParser());
         fp.on( 'error', onError )
           .on('meta', onMeta )
-          .on('readable',  _( onReadable ).partial( fp, feed ) )
+          .on('readable',  lodash.partial( onReadable, fp, feed ) )
           .on( 'end', onEnd );
       }
     },
@@ -114,9 +114,9 @@ FeedParser.syncFP = function( feed ){
   if ( ! feed.length ){
     return _fp( feed ).wait();
   } else {
-    var futures = _.map( feed, _fp );
+    var futures = lodash.map( feed, _fp );
     Future.wait(futures);
-    return _.invoke( futures, 'get');
+    return lodash.invoke( futures, 'get');
   }
 };
 
@@ -125,6 +125,6 @@ FeedParser.readAndInsertArticles = function ( fp, feed ){
   if ( ! ( fp instanceof FeedParser ) )
     fp = fp.pipe( new FeedParser() );
 
-  fp.on( 'readable', _( onReadable ).partial( fp, feed ) );
+  fp.on( 'readable', lodash.partial( onReadable, fp, feed ));
   return;
 };

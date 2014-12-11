@@ -136,7 +136,7 @@ Meteor.publish( 'articles', function( feed_ids, limit ){
 });
 
 Meteor.startup( () => {
-  
+
   Meteor.call('findArticles', {} );
   Meteor.call('removeOldArticles');
 
@@ -220,7 +220,8 @@ Meteor.methods({
 
     rssResults.forEach( function( rssResult ){
       if ( rssResult.statusCode === 200 ) {
-        Feeds.update(rssResult._id, {$set: _( rssResult ).pick( 'lastModified', 'etag', 'lastDate' ) } );
+        var modifier = _.pick( rssResult, 'lastModified', 'etag', 'lastDate' );
+        Feeds.update(rssResult._id, {$set: modifier } );
       }
       else if ( rssResult.error ) console.log (rssResult.url + " returned " + rssResult.error);
       else if ( typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){

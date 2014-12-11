@@ -11,7 +11,7 @@ Npm.depends({
 
 Package.on_use(function (api) {
   api.versionsFrom('METEOR-CORE@0.9.0-rc9');
-  api.use( 'underscore', 'server');
+  api.use( ['mikowals:lodash'], 'server');
   api.add_files("feedparser.js", "server");
   api.export && api.export([ "FeedParser" ], "server");
 });
