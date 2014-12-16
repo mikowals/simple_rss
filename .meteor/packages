@@ -18,7 +18,6 @@ jquery-waypoints
 accounts-ui
 simison:bootstrap3-less
 arunoda:kadira
-mikowals:harmony@1.2.0
 mikowals:find-async
 percolatestudio:fastclick
 meteorhacks:fast-render
@@ -37,3 +36,4 @@ check
 jquery
 random
 
+mquandalle:harmony
