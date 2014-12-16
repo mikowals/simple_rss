@@ -6,61 +6,45 @@ var intervalProcesses = []; //hold interval process id to start and stop with di
 Session.setDefault("loaded", false);
 Session.setDefault("importOPML", false);
 Session.setDefault( "now", new Date() );
+Session.setDefault("articleLimit", articlesOnLoad );
+Session.setDefault( "page", "articleList" );
+Session.setDefault( "offline", null);
 
-var cleanForXml = function ( string ){
-  string = string.replace ( /\"/g, "&quot;");
-  string = string.replace ( /\'/g, "&apos;");
-  string = string.replace ( /\&/g, "&amp;");
-  string = string.replace ( /\>/g, "&gt;");
-  
-  return  string.replace ( /\</g, "&lt;");
-};
-                   
-var articleSub, feedHandle;
+//Meteor.subscribe( 'base' );
+
+Deps.autorun( function( comp ){
+  var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );
+//  if ( ! comp.firstRun ) Meteor.subscribe( "articles", ids, + Session.get( "articleLimit" ) );
+});
+
+Deps.autorun( function(){
+
+  if ( + Session.get( "articleLimit") <= Articles.find().count() )
+    Session.set( 'loaded', true);
+  //else
+  //  Session.set( 'loaded', false);
+});
+
+Deps.autorun( function(){
+  var status = Meteor.status();
+  if ( ! status.connected && status.status !== 'connecting' && Session.equals( "loaded", true) )
+    Session.set ("offline", "offline" );
+  else
+    Session.set("offline", null);
+});
 
 Meteor.startup( function() {
-                          
+
+  window.addEventListener('load', function() {
+    FastClick.attach(document.body);
+  }, false);
+
   intervalProcesses['updateNow'] = intervalProcesses['updateNow'] || Meteor.setInterval( function() {
     Session.set( "now", new Date() );
     },
     updateNowFreq );
-  Session.set( "offline", null);
 
 });
-
-Deps.autorun ( function(){
-  if ( Session.equals( "loaded", true)  ){
-    articleSub = Meteor.subscribe("articles", function(){
-    });
-  } else {  
-    articleSub = Meteor.subscribe("articles", articlesOnLoad, function( ){
-      Session.set("loaded", true);
-    });
-  }  
-  
-});
-
-//always keep localStorage up to date with most recent articles
-//not too efficient currently - every change rewrites all articles in localStorage
-Deps.autorun( function(){
-    if ( Session.equals( "loaded", true ) ){ // make sure collection is ready otherwise every database item passes through quickArticles as it loads
-
-      amplify.store( "quickArticles", Articles.find( {}, {sort: {date: -1}, limit: articlesOnLoad} ).fetch() );
-      Session.set( "now" , new Date() );
-
-    }
-});
-
-Deps.autorun( function(){
-    if ( ! Meteor.status().connected && Session.equals( "loaded", true) ) {
-      console.log( "Meteor.status().connected = " + Meteor.status().connected );
-      Session.set ("offline", "offline" );
-    }
-    else if ( articleSub && articleSub.ready() ){
-      Session.set("offline", null);
-    }
-});
-
 
 var timeago = function( some_date ){
   var now = new Date( Session.get( "now" ) );
@@ -82,109 +66,108 @@ Handlebars.registerHelper('timeago',  function(some_date){
   return timeago(some_date);
 });
 
-Template.feedList.feeds= function () {
-  return Feeds.find({}, {sort: {title: 1}});
-};
+Template.feedList.helpers({
+  feeds: function () {
+    return Feeds.find({}, {sort: {title: 1}});
+  },
 
-Template.feedList.flash = function(){
-  return Session.get("feedListFlash");
-};
+  importOPML: function(){
+    return Session.equals("importOPML", true);
+  },
 
-Template.modalButtons.importOPML = function(){
+  flash: function(){
+    return Session.get("feedListFlash");
+  },
+  admin: function() {
+    var user = Meteor.user();
+    return user && user.admin;
+  }
+
+});
+
+Template.feedListButtons.importOPML = function(){
   return Session.equals("importOPML", true);
 };
 
-Template.modalButtons.events({
-                             
-                             //could modify this to verify feed and populate fields for insertion
-                             'submit, click #addFeed': function(e) {
-                               e.stopImmediatePropagation();
-                               e.preventDefault();
-                               var url = $("#feedUrl").val();
-                               var regex =/(((f|ht){1}tp|tps:\/\/)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]+)/g;
-                               if ( Match.test ( url, String ) && regex.test(url) ){
-                                 Meteor.call( 'addFeed', { url: url } );
-                                 $("#feedUrl").val("");
-                               } else{
-                                 alert("RSS feed entered is not a valid url");
-                               }
-                               return false;        
-                             },
-                             
-                             'click #importToggle': function(){
-                             Session.set("importOPML", true);
-                             console.log(Session.equals("importOPML", true));
-                             },
-                             
-                             'click #opmlUpload' : function(){
-                               Session.set("importOPML", false);
-                             
-                               var opmlFile = $("#opmlFile")[0].files[0];
-                               var fr = new FileReader();
-                               fr.readAsText(opmlFile);
-                               fr.onloadend = function(evt) {
-                                 if (evt.target.readyState === FileReader.DONE) { // DONE == 2
-                                   //Meteor.call( 'XML2JSparse', evt.target.result, function ( error, result ){
-                                   $(  evt.target.result ).find( 'outline').each( function( ){
-                                      var url = $( this ).attr("xmlUrl");
-                                      if ( url )
-                                        Meteor.call('addFeed', {url: url} );
-                                   });
-                                 }
-                               }
-                             },
-                          
-                             'click #importCancel' : function(){
-                             Session.set("importOPML", false);
-                             },
-                             
-                             'click #exportOPML': function(){
-                               var exportOPML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-                                               "<opml version=\"1.0\">" +
-                                                "<head>" +
-                                                 "<title>" + Meteor.user.username + " subscriptions from New-River</title>" +
-                                                 "</head>" +
-                                               "<body>";
-                               Feeds.find().forEach( function( feed ) {
-                                 exportOPML += "<outline " +
-                                               "text=\"" + cleanForXml( feed.title ) + "\" " +
-                                               "title=\"" + cleanForXml( feed.title ) + "\" " +
-                                               "type=\"rss\" " +
-                                               "xmlUrl=\"" + cleanForXml( feed.url ) + "\"/>";
-                               });
-                                exportOPML += "</body></opml>";
-                                //exportOPML = ( new window.DOMParser() ).parseFromString( exportOPML, "text/xml");
-                                //exportOPML = (new XMLSerializer()).serializeToString( exportOPML );
-                                var blob = new Blob([exportOPML], {type: "application/xml"});
-                                var fname = Meteor.absoluteUrl().split( "//" )[1];
-                                saveAs ( blob, fname + ".opml");
-                             }
-                         
-                             });
+Template.feedList.events({
 
-Template.feedList.events({                                                   
-                         'click #removeFeed': function(){
-                           Meteor.call( 'removeFeed', Session.get("selected_feed"), function( error ){
-                             if ( error === false ) console.error( "could not remove feed"); 
-                             else Session.set( "selected_feed", null);
-                             });
-                         }
-                         
-                         });
-                           
+  //could modify this to verify feed and populate fields for insertion
+  'submit, click #addFeed': function(e,t) {
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    var $feedUrl = t.$("#feedUrl");
+    var url = $feedUrl.val();
+    var regex =/(((f|ht){1}tp|tps:\/\/)[-a-zA-Z0-9@:%_\+.~#?&\/\/=]+)/g;
+    if ( Match.test ( url, String ) && regex.test(url) ){
+      Meteor.call( 'addFeed', { url: url } );
+      $feedUrl.val("");
+    } else{
+      alert("RSS feed entered is not a valid url");
+    }
+    return false;
+  },
+
+  'click #importToggle': function(){
+    Session.set("importOPML", true);
+    console.log(Session.equals("importOPML", true));
+  },
+
+  'click #opmlUpload' : function(e,t){
+    Session.set("importOPML", false);
+
+    var opmlFile = t.$("#opmlFile")[0].files[0];
+    var fr = new FileReader();
+    fr.readAsText(opmlFile);
+    fr.onloadend = function(evt) {
+      if (evt.target.readyState === FileReader.DONE) { // DONE == 2
+        //Meteor.call( 'XML2JSparse', evt.target.result, function ( error, result ){
+        $(  evt.target.result ).find( 'outline').each( function( ){
+          var url = $( this ).attr("xmlUrl");
+          if ( url )
+          Meteor.call('addFeed', {url: url} );
+        });
+      }
+    }
+  },
+
+  'click #importCancel' : function(){
+    Session.set("importOPML", false);
+  },
+
+  'click #exportOPML': function(){
+    var exportOPML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+    "<opml version=\"1.0\">" +
+    "<head>" +
+    "<title>" + Meteor.user.username + " subscriptions from New-River</title>" +
+    "</head>" +
+    "<body>";
+    Feeds.find().forEach( function( feed ) {
+      exportOPML += "<outline " +
+      "text=\"" + _( feed.title ).escape() + "\" " +
+      "title=\"" + _( feed.title ).escape() + "\" " +
+      "type=\"rss\" " +
+      "xmlUrl=\"" + _( feed.url ).escape() + "\"/>";
+    });
+    exportOPML += "</body></opml>";
+    //exportOPML = ( new window.DOMParser() ).parseFromString( exportOPML, "text/xml");
+    //exportOPML = (new XMLSerializer()).serializeToString( exportOPML );
+    var blob = new Blob([exportOPML], {type: "application/xml"});
+    var fname = Meteor.absoluteUrl().split( "//" )[1];
+    saveAs ( blob, fname + ".opml");
+  },
+
+  'click #removeFeed': function(){
+    Meteor.call( 'removeFeed', Session.get("selected_feed"), function( error ){
+      if ( error === false ) console.error( "could not remove feed");
+      else Session.set( "selected_feed", null);
+    });
+  }
+
+});
+
 Template.articleList.articles = function() {
-  
- if ( Session.equals( "loaded", true ) ) { 
-   return Articles.find( {}, { sort: { date: -1 } } );
- }
- else{
-  console.log("articles from QuickArticles");
-  return amplify.store("quickArticles");
- }
-};
-
-Template.articleList.loaded = function(){
-  return Session.equals( "loaded", true );
+  //must sort by _id or order can flicker where dates are equal and the query updates
+   return Articles.find( {}, { sort: { date: -1, _id: 1}});
 };
 
 Template.articleList.events({
@@ -198,38 +181,63 @@ Template.articleList.events({
      }
      return true;
   },
-  
-  'tap a':  function( e ){
+
+  'tap a':  function( e, t){
     Session.set( "handleTap", true);
     e.preventDefault();
     e.stopImmediatePropagation();
-    var dest = $( e.currentTarget ).attr('href');
+    var dest = t.$( e.currentTarget ).attr('href');
     Meteor.call( 'markRead', dest, function(){
       window.location.href = dest;
     });
     return false;
   }
-}); 
+});
 
-Template.article.subscribed = function(){
-  return Feeds.findOne({title: this.source}) !==null;
-};
+Template.article.helpers({
+  subscribed: function(){
+    return Feeds.findOne({title: this.source}) !==null;
+  },
 
-Template.article.subscribeRss = function(){
-  if (this.sourceUrl) return this.sourceUrl;
+  subscribeRss: function(){
+    if (this.sourceUrl) return this.sourceUrl;
 
-  var feed = Feeds.findOne( {title: this.source});
-  return feed && feed.url;
-  
-};
+    var feed = Feeds.findOne( {title: this.source});
+    return feed && feed.url;
+  }
+});
 
-Template.menubar.loaded = function(){
-  return Session.equals( "loaded", true );
-};
+Template.newriver.helpers({
+  currentPage: function(){
+    return Template[ Session.get( "page" ) ];
+  }
+});
 
-Template.menubar.offline = function(){
-  return Session.get("offline");
-}
+Template.menubar.events({
+  'click #page,  tap #page': function( e ){
+    e.stopImmediatePropagation();
+    e.preventDefault();
+    var newPage = Session.equals( "page", "feedList") ? "articleList" : "feedList";
+    Session.set( "page", newPage );
+    if ( newPage === "articleList" )
+      Session.set( "lastArticleId", null );
+    return false;
+  }
+});
+
+Template.menubar.helpers({
+  loaded: function(){
+    return Session.equals( "loaded", true );
+  },
+
+  offline: function(){
+    return Session.get("offline");
+  },
+
+  pageButton: function(){
+    return Session.equals( "page", "feedList") ? "glyphicon glyphicon-list" : "glyphicon glyphicon-cog";
+  }
+});
 
 Template.updated.updated = function(){
   return Session.get( "updated" );
@@ -244,10 +252,31 @@ Template.feed.article_count = function () {
 };
 
 Template.feed.events({
-                     'click': function(){
-                     Session.set("selected_feed", this._id);
-                     }
-                     });
+  'click': function(){
+    Session.set("selected_feed", this._id);
+  }
+});
+Template.article.rendered = function(){
+  setLastArticleWaypoint( $( this.lastNode ) );
+};
 
+Template.articleList.destroyed = function(){
+  $.waypoints('destroy');
+  Session.set( "articleLimit", 20 );
+};
 
-
+var oldTarget;
+var setLastArticleWaypoint = _.debounce( function( target ){
+  oldTarget && oldTarget.waypoint( 'destroy' );
+  if ( Session.get( "articleLimit" ) <= Articles.find().count() ){
+    target.waypoint({
+      handler: function( dir ){
+        if ( dir === 'down' )
+        Session.set( "articleLimit" , Session.get( "articleLimit" ) + 20);
+      }
+      ,offset: '110%'     //offset percentage must be a string
+      ,triggerOnce: true
+    });
+    oldTarget = target;
+  }
+}, 100 );

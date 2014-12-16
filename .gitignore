@@ -1,4 +1,8 @@
 .DS_Store
+**/node_modules/**
 *~
 *.swo
 *.swp
+**/.npm/**
+**/.build/**
+.meteor
