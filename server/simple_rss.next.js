@@ -43,7 +43,7 @@ function stoppablePublisher( sub ){
   };
 
   self.ids = () => {
-    return _( sub._documents && sub._documents[ name ] || {} ).keys();
+    return _.keys( sub._documents && sub._documents[ name ] || {} );
   }
 
   function observeAndPublish( cursor ){
@@ -66,8 +66,9 @@ function stoppablePublisher( sub ){
       }
     });
 
-    if ( sub._documents && oldIds.length)
+    if ( sub._documents && oldIds.length){
       oldIds.forEach( ( id ) => sub.removed ( name, id) );
+    }
   }
 
   self.start = ( cursor ) =>{
@@ -94,8 +95,9 @@ Meteor.publish( null, function() {
   var userId = self.userId || 'nullUser';
   var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
-  var articleOptions = {fields: articleFields, limit: 50, sort: {date: -1, _id: 1}};
+  var articleOptions = {fields: articleFields, limit: 70, sort: {date: -1, _id: 1}};
   var feedPublisher, articlePublisher, userObserver, nullUserObserver, nullUserCursor;
+  var tmpFeedList;
 
   feedPublisher = new stoppablePublisher( self );
   articlePublisher = new stoppablePublisher( self );
@@ -103,6 +105,8 @@ Meteor.publish( null, function() {
   function startFeedsAndArticles( id, doc){
     if ( ! doc || ! doc.feedList || doc.feedList.length === 0 )
       return;
+    console.log('feeds: ', _.difference( tmpFeedList, doc.feedList));
+    tmpFeedList = doc.feedList;
     var feedCursor = Feeds.find( {_id:{ $in: doc.feedList}}, feedOptions);
     feedPublisher.start( feedCursor );
     var articleCursor = Articles.find( {feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions);
@@ -124,15 +128,6 @@ Meteor.publish( null, function() {
   });
 
   return Meteor.users.find( userId, {fields: {admin: 1}});
-});
-
-Meteor.publish( 'articles', function( feed_ids, limit ){
-  var self = this;
-  check( feed_ids, [String] );
-  check( limit, Number );
-  var startDate = keepLimitDate();
-  var visibleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
-  return Articles.find( {feed_id: {$in: feed_ids}, date: {$gt: startDate}}, {fields: visibleFields, limit: limit, sort: {date: -1, _id: 1}});
 });
 
 Meteor.startup( () => {
@@ -190,14 +185,14 @@ Meteor.startup( () => {
     },
 
     removed: function( id ){
-      var fields = _( feedSubscriber.subscriptions ).findWhere( {_id: id});
+      var fields = _.findWhere( feedSubscriber.subscriptions , {_id: id});
       fields.unsub = new Future();
       feedSubscriber.unsubscribe( fields.url, fields.hub );
     },
 
     changed: function ( id, fields ){
-      var oldSub = _( feedSubscriber.subscriptions ).findWhere({_id :id });
-      fields = _( fields ).default( oldSub );
+      var oldSub = _.findWhere( feedSubscriber.subscriptions , {_id: id});
+      fields = _.default( fields , oldSub );
       oldSub.unsub = new Future();
 	    feedSubscriber.unsubscribe( oldSub.url, oldSub.hub );
       oldSub.unsub.wait();
