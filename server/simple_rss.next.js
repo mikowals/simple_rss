@@ -97,7 +97,6 @@ Meteor.publish( null, function() {
   var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
   var articleOptions = {fields: articleFields, limit: 70, sort: {date: -1, _id: 1}};
   var feedPublisher, articlePublisher, userObserver, nullUserObserver, nullUserCursor;
-  var tmpFeedList;
 
   feedPublisher = new stoppablePublisher( self );
   articlePublisher = new stoppablePublisher( self );
@@ -105,8 +104,7 @@ Meteor.publish( null, function() {
   function startFeedsAndArticles( id, doc){
     if ( ! doc || ! doc.feedList || doc.feedList.length === 0 )
       return;
-    console.log('feeds: ', _.difference( tmpFeedList, doc.feedList));
-    tmpFeedList = doc.feedList;
+
     var feedCursor = Feeds.find( {_id:{ $in: doc.feedList}}, feedOptions);
     feedPublisher.start( feedCursor );
     var articleCursor = Articles.find( {feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions);
