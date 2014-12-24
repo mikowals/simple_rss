@@ -31,7 +31,7 @@ FeedSubscriber = (options) => {
   });
 
   self.stopAllSubscriptions = () => {
-    var waitingOn = _( self.subscriptions ).map( sub => {
+    var waitingOn = _.map( self.subscriptions, sub => {
       sub.unsub =  new Future();
       self.unsubscribe( sub.url, sub.hub );
       return sub.unsub;

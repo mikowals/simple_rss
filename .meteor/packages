@@ -17,7 +17,6 @@ browser-policy
 jquery-waypoints
 accounts-ui
 simison:bootstrap3-less
-arunoda:kadira
 mikowals:find-async
 percolatestudio:fastclick
 meteorhacks:fast-render
@@ -37,3 +36,4 @@ jquery
 random
 
 mquandalle:harmony
+meteorhacks:kadira

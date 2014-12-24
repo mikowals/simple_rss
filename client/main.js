@@ -143,10 +143,10 @@ Template.feedList.events({
     "<body>";
     Feeds.find().forEach( function( feed ) {
       exportOPML += "<outline " +
-      "text=\"" + _( feed.title ).escape() + "\" " +
-      "title=\"" + _( feed.title ).escape() + "\" " +
+      "text=\"" + _.escape( feed.title ) + "\" " +
+      "title=\"" + _.escape( feed.title ) + "\" " +
       "type=\"rss\" " +
-      "xmlUrl=\"" + _( feed.url ).escape() + "\"/>";
+      "xmlUrl=\"" + _.escape( feed.url ) + "\"/>";
     });
     exportOPML += "</body></opml>";
     //exportOPML = ( new window.DOMParser() ).parseFromString( exportOPML, "text/xml");
