@@ -2,8 +2,8 @@
 
 @media all {
 
-html, 
-body, 
+html,
+body,
 div {
     padding:0;
     margin:0;
@@ -27,13 +27,13 @@ body {
 
     min-height:100px;
     padding:0 5px;
-    overflow:scroll;
+
 }
 
 
 #footer {
-  border-top: 1px solid #bbb; 
-  font-size: 0.7em;  
+  border-top: 1px solid #bbb;
+  font-size: 0.7em;
   padding: 0 5px;
 }
 
@@ -111,16 +111,16 @@ time {
 }
 .small-loader { /* loading graphic */
   width:16px;
-  height:16px; 
+  height:16px;
   margin:1px auto;
-  content: 
+  content:
 #  background:url(/ajax-loader.gif) no-repeat 0 0;
 }
 
 .loader { /* loading graphic */
-  width:32px; 
-  height:32px; 
-  margin:20px auto; 
+  width:32px;
+  height:32px;
+  margin:20px auto;
   background:url(/loader.gif) no-repeat 0 0;
 }
 
@@ -148,7 +148,7 @@ time {
   min-height: 60px;
 }
 
-#progress 
+#progress
 {
     -webkit-border-radius: 1px;
     background-color: rgba(67,53,49,.6);

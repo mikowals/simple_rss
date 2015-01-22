@@ -15,6 +15,7 @@ function _request( feed, cb ){
       'Accept-Encoding': "gzip, deflate"
     },
     timeout: 7000,
+    gzip: true,
     pool: false
   };
 
@@ -24,7 +25,7 @@ function _request( feed, cb ){
   return request( options, cb );
 };
 
-var onReadable = Meteor.bindEnvironment( function(fp, feed) {
+var onReadable = Meteor.bindEnvironment( function( fp, feed) {
   var item;
   while ( item = fp.read() ) {
     var doc = new Article( item );
@@ -77,34 +78,33 @@ function _fp( feed ) {
   };
 
   var future = new Future();
-  var r = _request( feed, function( error, response ){
-    if ( ! response || response.statusCode !== 200){
-      response && response.statusCode !== 304 && console.error( "url: ", feed.url, "response: ", response && response.statusCode );
-      //future.return for all non-200 responses
-      future.return ({url: feed.url, error: error, statusCode: response && response.statusCode} );
-    }
-  });
-  //bindEnvironment because adding articles calls Articles.insert()
-  r.on( 'response', Meteor.bindEnvironment(
-    function( response ){
-      if ( response.statusCode === 200 ){
-        feed.statusCode = 200;
-        if ( response.headers['content-encoding'] === 'gzip' ){
-          r = r.pipe( zlib.createGunzip() );
+  var r = _request( feed )
+    .on( 'error', function( error ){
+      feed.error = error;
+    })
+
+    .on( 'response', Meteor.bindEnvironment(
+      function( response ){
+        feed.statusCode = response.statusCode;
+        if ( feed.statusCode === 200 ){
+
+          if ( response.headers['last-modified'] ) feed.lastModified = response.headers[ 'last-modified' ] ;
+          if ( response.headers['etag'] )  feed.etag = response.headers['etag'];
+
+          var fp = r.pipe( new FeedParser());
+          fp.on( 'error', onError )
+            .on('meta', onMeta )
+            .on('readable',  lodash.partial( onReadable, fp, feed ) )
+            .on( 'end', onEnd );
+
+        } else {
+          if ( feed.statusCode !== 304 )
+            console.error( "url: ", feed.url, "response: ", feed.statusCode );
         }
-
-        if ( response.headers['last-modified'] ) feed.lastModified = response.headers[ 'last-modified' ] ;
-        if ( response.headers['etag'] )  feed.etag = response.headers['etag'];
-
-        var fp = r.pipe( new FeedParser());
-        fp.on( 'error', onError )
-          .on('meta', onMeta )
-          .on('readable',  lodash.partial( onReadable, fp, feed ) )
-          .on( 'end', onEnd );
-      }
-    },
-    function ( e ) { throw e;}
-  ));
+      },
+      function ( e ) { throw e;}
+    ))
+    .on( 'end', onEnd );
 
   return future;
 };
@@ -114,8 +114,8 @@ FeedParser.syncFP = function( feed ){
   if ( ! feed.length ){
     return _fp( feed ).wait();
   } else {
-    var futures = lodash.map( feed, _fp );
-    Future.wait(futures);
+    var futures = feed.map( _fp );
+    Future.wait( futures );
     return lodash.invoke( futures, 'get');
   }
 };

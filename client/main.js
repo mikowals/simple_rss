@@ -85,9 +85,11 @@ Template.feedList.helpers({
 
 });
 
-Template.feedListButtons.importOPML = function(){
-  return Session.equals("importOPML", true);
-};
+Template.feedListButtons.helpers({
+  importOPML: function(){
+    return Session.equals("importOPML", true);
+  }
+});
 
 Template.feedList.events({
 
@@ -165,10 +167,12 @@ Template.feedList.events({
 
 });
 
-Template.articleList.articles = function() {
-  //must sort by _id or order can flicker where dates are equal and the query updates
-   return Articles.find( {}, { sort: { date: -1, _id: 1}});
-};
+Template.articleList.helpers({
+  articles: function() {
+    //must sort by _id or order can flicker where dates are equal and the query updates
+    return Articles.find( {}, { sort: { date: -1, _id: 1}});
+  }
+});
 
 Template.articleList.events({
   'click a, contextmenu a': function( e ){
@@ -209,9 +213,28 @@ Template.article.helpers({
 
 Template.newriver.helpers({
   currentPage: function(){
-    return Template[ Session.get( "page" ) ];
+    return Session.get( "page" );
   }
 });
+
+Template.newriver.rendered = function(){
+  this.firstNode._uihooks = {
+    insertElement: function(node, next) {
+      //# Make the node invisible before fading in
+      $(node).css("opacity", 0).insertBefore( next );
+
+      $(node).transition( {opacity: 1}, 200, "in", function(){
+        $(this).css("opacity", "");
+      });
+    },
+
+    removeElement: function(node) {
+      $(node).transition( {opacity: 0}, 200, "out", function() {
+        $(this).remove() //# equiv to parent.removeChild(node) or $node.remove()
+      });
+    }
+  };
+};
 
 Template.menubar.events({
   'click #page,  tap #page': function( e ){
@@ -239,17 +262,21 @@ Template.menubar.helpers({
   }
 });
 
-Template.updated.updated = function(){
-  return Session.get( "updated" );
-}
+Template.updated.helpers({
+  updated : function(){
+    return Session.get( "updated" );
+  }
+})
 
-Template.feed.selected = function () {
-  return Session.equals("selected_feed", this._id) ? "selected" : '';
-};
+Template.feed.helpers({
+  selected : function () {
+    return Session.equals("selected_feed", this._id) ? "selected" : '';
+  },
 
-Template.feed.article_count = function () {
-  return Articles.find({source: this.title}).count();
-};
+  article_count: function () {
+    return Articles.find({source: this.title}).count();
+  }
+});
 
 Template.feed.events({
   'click': function(){
@@ -258,6 +285,32 @@ Template.feed.events({
 });
 Template.article.rendered = function(){
   setLastArticleWaypoint( $( this.lastNode ) );
+};
+
+Template.articleList.rendered = function(){
+  AnimatedEach.attachHooks( this.firstNode, this.firstNode );
+  /**
+  var container = this.firstNode;
+  console.log( container );
+  container._uihooks = {
+    insertElement: function(node, next) {
+      //# Make the node invisible before fading in
+      $(node).css("opacity", 0).insertBefore( next );
+
+      $(node).transition( {opacity: 1}, "fast", "in", function(){
+        $(this).css("opacity", "");
+      });
+    },
+
+
+    removeElement: function(node) {
+
+      $(node).transition( {opacity: 0}, "fast", "out", function() {
+        $(this).remove() //# equiv to parent.removeChild(node) or $node.remove()
+      });
+    }
+  };
+  **/
 };
 
 Template.articleList.destroyed = function(){

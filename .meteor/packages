@@ -14,7 +14,6 @@ less
 filesaver
 facts
 browser-policy
-jquery-waypoints
 accounts-ui
 simison:bootstrap3-less
 mikowals:find-async
@@ -37,3 +36,7 @@ random
 
 meteorhacks:kadira
 mquandalle:harmony
+mizzao:animated-each
+jquery-waypoints
+mizzao:jquery-ui
+

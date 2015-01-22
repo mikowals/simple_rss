@@ -8,10 +8,12 @@
 </body>
 
 <template name="newriver">
-  <div class="container">
-  
+  <div id='scroll-container' class="container">
+
     {{>menubar}}
-    {{> currentPage}}
+
+    {{> Template.dynamic template=currentPage }}
+
   </div>
 </template>
 
@@ -52,7 +54,7 @@
 <template name="feed">
   <span class="col-xs-8 col-md-8">
     <h5 class="col-xs-9 col-md-9 pull-left">
-      {{#if title}}{{title}}{{else}}{{url}}{{/if}} 
+      {{#if title}}{{title}}{{else}}{{url}}{{/if}}
     </h5>
       {{#if selected}}<h6><button id="removeFeed" class="btn btn-xs btn-primary pull-right"><i class="glyphicon glyphicon-remove"></i></button></h6>{{/if}}
   </span>
@@ -65,24 +67,24 @@
 </template>
 
 <template name="articleList">
-  
+
     <div id="stream">
-      
+
       {{#each articles}}
       {{>article}}
       {{/each}}
-      
+
     </div>
-  
+
   <div id="footer">
     <p>The CSS layout of this page was taken entirely from Dave Winer's <a href="http://river2.newsriver.org/">River2</a> template.</p>
     <p>The River2 template is based on the beautiful river project ( <a href="http://beautriver1.blorkmark.com/">Credits</a> ) and I had no involvment with it.</p>
-   
+
   </div>
 </template>
 
 <template name="article">
-  <div id={{_id}} class="section"> 
+  <div id={{_id}} class="section">
     <div class="header row-fluid">
       <h2>{{source}} </h2>
       {{#unless subscribed}}

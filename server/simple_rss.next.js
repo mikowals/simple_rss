@@ -216,7 +216,7 @@ Meteor.methods({
     rssResults.forEach( function( rssResult ){
       if ( rssResult.statusCode === 200 ) {
         var modifier = _.pick( rssResult, 'lastModified', 'etag', 'lastDate' );
-        Feeds.update(rssResult._id, {$set: modifier } );
+        Feeds.update(rssResult._id, {$set: modifier } , function(){return;});
       }
       else if ( rssResult.error ) console.log (rssResult.url + " returned " + rssResult.error);
       else if ( typeof rssResult.statusCode === "number" && rssResult.statusCode !== 304 ){
