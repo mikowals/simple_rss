@@ -125,8 +125,8 @@ Template.feedList.events({
         //Meteor.call( 'XML2JSparse', evt.target.result, function ( error, result ){
         $(  evt.target.result ).find( 'outline').each( function( ){
           var url = $( this ).attr("xmlUrl");
-          if ( url )
-          Meteor.call('addFeed', {url: url} );
+          if ( url && ! Feeds.findOne( {url: url}, {fields:{_id:1}}));
+            Meteor.call('addFeed', {url: url} );
         });
       }
     }
