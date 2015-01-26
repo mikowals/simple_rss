@@ -1,13 +1,6 @@
 Article = function( doc ){
   var self = this;
 
-  self.setSourceUrl = function( sourceUrl ){
-      self.sourceUrl = sourceUrl;
-  }
-
-  self.setSummary = function( summary ){
-    self.summary = summary && cleanSummary( summary );
-  }
   if ( doc ) {
     self.title = doc.title || null;
     self.title = _.unescape( self.title );
@@ -19,6 +12,14 @@ Article = function( doc ){
     self.link = doc.link || doc.origlink || null;
     self.setSummary( doc.description || doc.summary );
   }
+};
+
+Article.prototype.setSourceUrl = function( sourceUrl ){
+  this.sourceUrl = sourceUrl;
+};
+
+Article.prototype.setSummary = function( summary ){
+  this.summary = summary && cleanSummary( summary );
 };
 
 function cleanSummary(text){

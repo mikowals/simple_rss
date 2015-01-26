@@ -54,8 +54,6 @@ function _fp( feed ) {
   function onError( err ){
     console.log(feed.url + " got feedparser error: " + err);
     feed.error = err;
-    future.return( feed );
-    return;
   };
 
   function onMeta( meta ) {
@@ -69,7 +67,6 @@ function _fp( feed ) {
       feed.author = meta.author;
     }
     future.return( feed );
-    return;
   };
 
   function onEnd(){
