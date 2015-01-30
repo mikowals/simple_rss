@@ -61,7 +61,7 @@ FeedSubscriber.prototype.startEventListeners = function () {
       sub.resub && clearTimeout( sub.resub );
       console.log (["subscribed to : ", data.hub, " : ", data.topic, " : ", sub.expiry].join());
       //  interval in ms with plan to resubscribe 6 hours before expiry
-      interval =  sub.expiry - new Date.getTime() - 6 * 60 * 60 * 1000;
+      interval =  sub.expiry - new Date().getTime() - 6 * 60 * 60 * 1000;
       sub.resub = setTimeout( function(){
         sub.unsub = new Future();
         server.unsubscribe( data.topic, data.hub );
