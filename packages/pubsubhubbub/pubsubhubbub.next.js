@@ -13,6 +13,10 @@ FeedSubscriber = function ( options ) {
   Stream.call( this );
 
   var self = this;
+
+  // The 'pubsubhubbub' module only exports createServer().
+  // Otherwise the manager could inherit from it.
+  // With inheritence no need for own subscribe and unsubscribe methods.
   self.server = PubSubHubbub.createServer( options );
   var server = self.server;
 
@@ -21,9 +25,9 @@ FeedSubscriber = function ( options ) {
 
   self.subscriptions = {};
 
-  WebApp.connectHandlers.stack.splice(0,0,{
-    route: urlParse( server.callbackUrl ).pathname,
-    handle: function(req, res, next) {
+  WebApp.connectHandlers.use(
+    urlParse( server.callbackUrl ).pathname,
+    function(req, res, next) {
       if(req.method === 'POST') {
         return  server._onPostRequest( req, res);
       } else if(req.method === 'GET') {
@@ -32,7 +36,7 @@ FeedSubscriber = function ( options ) {
         return server._sendError(req, res, 405, "Method Not Allowed");
       }
     }
-  });
+  );
 
   self.startEventListeners();
 };
