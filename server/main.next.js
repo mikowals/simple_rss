@@ -48,13 +48,10 @@ Meteor.publish( null, function() {
     changed: startFeedsAndArticles
   });
 
-
   self.onStop( () => {
     userObserver.stop();
     feedPublisher.stop();
-
     articlePublisher.stop();
-
   });
 
   return Meteor.users.find( userId, {fields: {admin: 1}});
@@ -65,18 +62,15 @@ Meteor.startup( () => {
   Meteor.call('findArticles', {} );
   Meteor.call('removeOldArticles');
 
-
   intervalProcesses["removeOldArticles"] = Meteor.setInterval(
     () => Meteor.call('removeOldArticles'),
     DAY
   );
 
-
   intervalProcesses[ "findArticles"] = Meteor.setInterval(
     () => Meteor.call('findArticles', { hub: null} ),
     updateInterval
   );
-
 
   var options = {
     callbackUrl: Meteor.absoluteUrl("hubbub"),

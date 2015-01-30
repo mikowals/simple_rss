@@ -1,5 +1,10 @@
 stoppablePublisher = function( sub ) {
-  this.sub = sub;
+  var self = this;
+  if ( ! self instanceof stoppablePublisher )
+    throw "must use 'new' to create a stoppablePublisher instance";
+  self.sub = sub;
+  self.name = null;
+  self.handle = null;
 };
 
 stoppablePublisher.prototype.subHasId = function( id ){
@@ -16,9 +21,9 @@ stoppablePublisher.prototype.ids = function() {
 
 stoppablePublisher.prototype.observeAndPublish = function( cursor ) {
   var self = this;
-  var oldIds = self.ids(),
-    name = self.name,
-    sub = self.sub;
+  var name = self.name;
+  var sub = self.sub;
+  var oldIds = self.ids();
 
   self.handle = cursor.observeChanges({
     added: function( id, doc ){
@@ -48,7 +53,7 @@ stoppablePublisher.prototype.start = function( cursor ){
   if ( handle ) handle.stop();
   if ( cursor._cursorDescription.collectionName !== name ){
     if ( ! name )
-      this.name = cursor._cursorDescription.collectionName;
+      self.name = cursor._cursorDescription.collectionName;
     else
       throw new Error( 'stoppablePublisher can not handle cursors from different collections. ',
         name, ' to ', cursor._cursorDescription.collectionName);
