@@ -14,47 +14,54 @@ Feeds._ensureIndex( { url: 1 }, {unique: true} );
 Articles._ensureIndex( { link: 1 }, {unique: true, dropDups: true });
 Articles._ensureIndex( { feed_id: 1, date: -1} );
 
-Accounts.config({sendVerificationEmail: true});
+//Accounts.config({sendVerificationEmail: true});
 
 Facts.setUserIdFilter(function ( userId ) {
   var user = Meteor.users.findOne(userId);
   return user && user.admin;
 });
 
-//prepare userdata and feedlist for all clients ASAP
+//  send feeds, articles and userdata in null publish to work with fast-render
+//  Feeds are associated with userIds and articles are associated with feeds
+
+Meteor.publish( null, function() {
+  var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
+  return Feeds.find( {subscribers: this.userId || 'nullUser'}, feedOptions );
+});
+
+Meteor.publish( null, function() {
+  return Meteor.users.find( this.userId, {fields: {admin: 1}});
+});
+
 Meteor.publish( null, function() {
   var self = this;
   var userId = self.userId || 'nullUser';
-  var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
+  //var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
   var articleOptions = {fields: articleFields, limit: 70, sort: {date: -1, _id: 1}};
   var feedPublisher, articlePublisher, userObserver, nullUserObserver, nullUserCursor;
 
-  feedPublisher = new stoppablePublisher( self );
   articlePublisher = new stoppablePublisher( self );
 
-  function startFeedsAndArticles( id, doc){
+  function observeArticles( id, doc){
     if ( ! doc || ! doc.feedList || doc.feedList.length === 0 )
       return;
 
-    var feedCursor = Feeds.find( {_id:{ $in: doc.feedList}}, feedOptions);
-    feedPublisher.start( feedCursor );
     var articleCursor = Articles.find( {feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions);
     articlePublisher.start( articleCursor );
   }
 
   userObserver = Meteor.users.find( userId, {fields: {feedList: 1}} ).observeChanges({
-    added: startFeedsAndArticles,
-    changed: startFeedsAndArticles
+    added: observeArticles,
+    changed: observeArticles
   });
 
   self.onStop( () => {
     userObserver.stop();
-    feedPublisher.stop();
     articlePublisher.stop();
   });
 
-  return Meteor.users.find( userId, {fields: {admin: 1}});
+  self.ready();
 });
 
 Meteor.startup( () => {

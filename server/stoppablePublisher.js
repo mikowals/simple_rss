@@ -1,33 +1,38 @@
 stoppablePublisher = function( sub ) {
   var self = this;
   if ( ! self instanceof stoppablePublisher )
-    throw "must use 'new' to create a stoppablePublisher instance";
-  self.sub = sub;
-  self.name = null;
-  self.handle = null;
+    throw new Error("must use 'new' to create a stoppablePublisher instance");
+
+  self._sub = sub;
+  self._name = null;
+  self._handle = null;
 };
 
-stoppablePublisher.prototype.subHasId = function( id ){
-  var name = this.name;
-  var sub = this.sub;
-  return sub._documents && sub._documents[ name ] && sub._documents[ name ][ id ];
+stoppablePublisher.prototype._subHasId = function( id ){
+  var self = this;
+  var name = self._name;
+  var docs = self._sub && self._sub._documents;
+  return docs && _.has( docs, name ) && docs[ name ][ id ];
 };
 
 stoppablePublisher.prototype.ids = function() {
-  var sub = this.sub;
-  return _.keys( sub._documents && sub._documents[ this.name ] || {} );
+  var sub = this._sub;
+  return _.keys( sub._documents && sub._documents[ this._name ] || {} );
 };
 
 
-stoppablePublisher.prototype.observeAndPublish = function( cursor ) {
+stoppablePublisher.prototype._observeAndPublish = function( cursor ) {
   var self = this;
-  var name = self.name;
-  var sub = self.sub;
+  var name = self._name;
+  var sub = self._sub;
   var oldIds = self.ids();
 
-  self.handle = cursor.observeChanges({
+  if ( self._handle )
+    self._handle.stop();
+
+  var handle = cursor.observeChanges({
     added: function( id, doc ){
-      if ( self.subHasId( id ) ){
+      if ( self._subHasId( id ) ){
         oldIds.splice( oldIds.indexOf( id ), 1);
       } else{
         sub.added( name, id, doc );
@@ -41,27 +46,32 @@ stoppablePublisher.prototype.observeAndPublish = function( cursor ) {
     }
   });
 
-  if ( sub._documents && oldIds.length){
-    oldIds.forEach( function( id ) { sub.removed ( name, id)} );
+  // any id not found during add should be removed after each restart
+  if ( sub._documents && oldIds.length ) {
+    oldIds.forEach( function( id ) { sub.removed ( name, id) } );
   }
+
+  self._handle = {stop: function(){
+    handle.stop();
+    self._handle = null;
+  }};
 };
 
 stoppablePublisher.prototype.start = function( cursor ){
   var self = this;
-  var handle = self.handle;
-  var name = self.name;
-  if ( handle ) handle.stop();
+  var name = self._name;
+
   if ( cursor._cursorDescription.collectionName !== name ){
     if ( ! name )
-      self.name = cursor._cursorDescription.collectionName;
+      self._name = cursor._cursorDescription.collectionName;
     else
       throw new Error( 'stoppablePublisher can not handle cursors from different collections. ',
         name, ' to ', cursor._cursorDescription.collectionName);
   }
 
-  self.observeAndPublish( cursor );
+  self._observeAndPublish( cursor );
 };
 
 stoppablePublisher.prototype.stop = function() {
-  this.handle && this.handle.stop();
+  this._handle && this._handle.stop();
 };
