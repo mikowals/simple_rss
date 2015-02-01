@@ -79,8 +79,8 @@ Template.feedList.helpers({
     return Session.get("feedListFlash");
   },
   admin: function() {
-    var user = Meteor.user();
-    return user && user.admin;
+    var user = Meteor.user({'profile.admin': true}, {fields: {_id:1}});
+    return !! user;
   }
 
 });

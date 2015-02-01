@@ -15,10 +15,13 @@ Articles._ensureIndex( { link: 1 }, {unique: true, dropDups: true });
 Articles._ensureIndex( { feed_id: 1, date: -1} );
 
 //Accounts.config({sendVerificationEmail: true});
+Meteor.users.deny({
+  update: () => true
+});
 
 Facts.setUserIdFilter(function ( userId ) {
-  var user = Meteor.users.findOne(userId);
-  return user && user.admin;
+  var user = Meteor.users.findOne({_id: userId, 'profile.admin': true}, {fields:{_id:1}});
+  return !! user;
 });
 
 //  send feeds, articles and userdata in null publish to work with fast-render
@@ -27,10 +30,6 @@ Facts.setUserIdFilter(function ( userId ) {
 Meteor.publish( null, function() {
   var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   return Feeds.find( {subscribers: this.userId || 'nullUser'}, feedOptions );
-});
-
-Meteor.publish( null, function() {
-  return Meteor.users.find( this.userId, {fields: {admin: 1}});
 });
 
 Meteor.publish( null, function() {
