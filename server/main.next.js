@@ -32,7 +32,7 @@ Meteor.publish( null, function() {
   return Feeds.find( {subscribers: this.userId || 'nullUser'}, feedOptions );
 });
 
-Meteor.publish( null, function() {
+Meteor.publish( 'articles', function() {
   var self = this;
   var userId = self.userId || 'nullUser';
   //var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};

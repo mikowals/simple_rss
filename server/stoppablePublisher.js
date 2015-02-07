@@ -20,11 +20,11 @@ stoppablePublisher.prototype.ids = function() {
   return _.keys( sub._documents && sub._documents[ this._name ] || {} );
 };
 
-
 stoppablePublisher.prototype._observeAndPublish = function( cursor ) {
   var self = this;
   var name = self._name;
   var sub = self._sub;
+  // need a list of current ids to track removals
   var oldIds = self.ids();
 
   if ( self._handle )
@@ -32,11 +32,10 @@ stoppablePublisher.prototype._observeAndPublish = function( cursor ) {
 
   var handle = cursor.observeChanges({
     added: function( id, doc ){
-      if ( self._subHasId( id ) ){
+      if ( self._subHasId( id ) )
         oldIds.splice( oldIds.indexOf( id ), 1);
-      } else{
+      else
         sub.added( name, id, doc );
-      }
     },
     removed: function ( id ){
       sub.removed( name, id );
@@ -48,7 +47,7 @@ stoppablePublisher.prototype._observeAndPublish = function( cursor ) {
 
   // any id not found during add should be removed after each restart
   if ( sub._documents && oldIds.length ) {
-    oldIds.forEach( function( id ) { sub.removed ( name, id) } );
+    oldIds.forEach( function( id ) { sub.removed ( name, id); });
   }
 
   self._handle = {stop: function(){
@@ -74,4 +73,5 @@ stoppablePublisher.prototype.start = function( cursor ){
 
 stoppablePublisher.prototype.stop = function() {
   this._handle && this._handle.stop();
+  
 };
