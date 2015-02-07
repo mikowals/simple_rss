@@ -10,6 +10,8 @@ var keepLimitDate = function(){
   return new Date( new Date().getTime() - ( DAY * daysStoreArticles ));
 };
 
+BrowserPolicy.content.allowConnectOrigin("https://*.mak-play.com");
+
 Feeds._ensureIndex( { url: 1 }, {unique: true} );
 Articles._ensureIndex( { link: 1 }, {unique: true, dropDups: true });
 Articles._ensureIndex( { feed_id: 1, date: -1} );
