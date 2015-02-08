@@ -191,9 +191,9 @@ Template.articleList.events({
     e.preventDefault();
     e.stopImmediatePropagation();
     var dest = t.$( e.currentTarget ).attr('href');
-    Meteor.call( 'markRead', dest, function(){
+    Meteor.apply( 'markRead', [dest], { onResultReceived: function(){
       window.location.href = dest;
-    });
+    }});
     return false;
   }
 });

@@ -213,7 +213,7 @@ Meteor.methods({
   markRead: function( link ){
     var self = this;
     check( link, String );
-    Articles.update({link: link}, {$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}});
+    Articles.update({link: link}, {$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}, _.noop );
   },
 
   XML2JSparse: function ( file ) {
