@@ -212,13 +212,7 @@ Meteor.methods({
   markRead: function( link ){
     var self = this;
     check( link, String );
-    var article = Articles.findOne({link: link});
-    if ( article ){
-      Articles.update( article._id,{$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}}, function( error, result){
-	//make update async since client might be waiting to navigate
-      });
-    }
-    console.log( "marked as read: " + link);
+    Articles.update({link: link}, {$addToSet: {readBy: this.userId }, $inc: {clicks: 1, readCount: 1}});
   },
 
   XML2JSparse: function ( file ) {
