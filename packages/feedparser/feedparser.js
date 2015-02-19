@@ -10,13 +10,10 @@ function _request( feed, cb ){
     throw new Error( "_request called without url");
 
   var options = {
+    headers: {},
     url: feed.url,
-    headers: {
-      'Accept-Encoding': "gzip, deflate"
-    },
     timeout: 7000,
-    //gzip: true,  // the request stream remains compressed so don't use until 3.0
-    pool: false
+    gzip: true,  // the request stream remains compressed so don't use until 3.0
   };
 
   if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString();
@@ -31,6 +28,7 @@ var onReadable = Meteor.bindEnvironment( function( fp, feed) {
     var doc = new Article( item );
     doc.sourceUrl = feed.url;
     doc.feed_id = feed._id;
+    feed.last_date = Math.max( feed.last_date  || 0, doc.date );
     var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
     if ( doc.date > keepLimitDate ){
       Articles.insert( doc, function( error ) {
@@ -52,13 +50,11 @@ function bindEnvironmentError( error ){
 function _fp( feed ) {
   var future = new Future();
 
-  function onError( err ){
-    console.log(feed.url + " got feedparser error: " + err);
-    feed.error = err;
+  function onError( error ){
+    feed.error = error;
   };
 
   function onMeta( meta ) {
-
     //console.log( "feedparser emmitted meta for url: " + url );
     if (meta !== null ){
       feed.url = meta.xmlurl || feed.url;
@@ -67,49 +63,34 @@ function _fp( feed ) {
       feed.date = new Date( meta.date );
       feed.author = meta.author;
     }
-
-    onEnd();
   };
 
-  function onEnd(){
-    if( ! future.isResolved() )
-      future.return( feed );
-
-  };
-
-
-  var r = _request( feed )
-    .on( 'error', function( error ){
-      feed.error = error;
-    })
-
-    .on( 'response', Meteor.bindEnvironment(
+  // need to request and pipe result so use events rather than callback
+  // response event fires before callback, piping won't work inside callback
+  var r = _request( feed, function ( err, res) {
+    if ( err ){
+      feed.error = err;
+      if ( res && res.statusCode ) {
+        feed.statusCode = res.statusCode;
+      }
+    }
+    future.return( feed );
+  }).on( 'response', Meteor.bindEnvironment(
       function( response ){
-        var self = this;
         feed.statusCode = response.statusCode;
         if ( feed.statusCode === 200 ){
           if ( response.headers['last-modified'] ) feed.lastModified = response.headers[ 'last-modified' ] ;
           if ( response.headers['etag'] )  feed.etag = response.headers['etag'];
-          var encoding = response.headers['content-encoding'] || 'identity'
-            , charset = getParams(response.headers['content-type'] || '').charset;
-          r = maybeDecompress( r, encoding );
 
           //now try parsing the feed
           var fp = r.pipe( new FeedParser());
           fp.on( 'error', onError )
             .on('meta', onMeta )
-            .on('readable',  lodash.partial( onReadable, fp, feed ) )
-            .on( 'end', onEnd );
-
-        } else if ( feed.statusCode !== 304 ) {
-
-          console.error( "url: ", feed.url, "response: ", feed.statusCode );
+            .on('readable',  lodash.partial( onReadable, fp, feed ) );
         }
       },
       function ( e ) { throw e;}
-    ))
-    .on( 'end', onEnd );
-
+    ));
   return future;
 };
 
@@ -131,25 +112,4 @@ FeedParser.readAndInsertArticles = function ( fp, feed ){
 
   fp.on( 'readable', lodash.partial( onReadable, fp, feed ) );
   return;
-};
-
-function maybeDecompress (res, encoding) {
-  var decompress;
-  if (encoding.match(/\bdeflate\b/)) {
-    decompress = zlib.createInflate();
-  } else if (encoding.match(/\bgzip\b/)) {
-    decompress = zlib.createGunzip();
-  }
-  return decompress ? res.pipe(decompress) : res;
-};
-
-function getParams(str) {
-  var params = str.split(';').reduce(function (params, param) {
-    var parts = param.split('=').map(function (part) { return part.trim(); });
-    if (parts.length === 2) {
-      params[parts[0]] = parts[1];
-    }
-    return params;
-  }, {});
-  return params;
 };
