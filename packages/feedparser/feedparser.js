@@ -15,7 +15,7 @@ function _request( feed, cb ){
       'Accept-Encoding': "gzip, deflate"
     },
     timeout: 7000,
-    gzip: true,
+    //gzip: true,  // the request stream remains compressed so don't use until 3.0
     pool: false
   };
 
@@ -50,6 +50,7 @@ function bindEnvironmentError( error ){
 };
 
 function _fp( feed ) {
+  var future = new Future();
 
   function onError( err ){
     console.log(feed.url + " got feedparser error: " + err);
@@ -66,15 +67,17 @@ function _fp( feed ) {
       feed.date = new Date( meta.date );
       feed.author = meta.author;
     }
-    future.return( feed );
+
+    onEnd();
   };
 
   function onEnd(){
     if( ! future.isResolved() )
       future.return( feed );
+
   };
 
-  var future = new Future();
+
   var r = _request( feed )
     .on( 'error', function( error ){
       feed.error = error;
@@ -82,21 +85,25 @@ function _fp( feed ) {
 
     .on( 'response', Meteor.bindEnvironment(
       function( response ){
+        var self = this;
         feed.statusCode = response.statusCode;
         if ( feed.statusCode === 200 ){
-
           if ( response.headers['last-modified'] ) feed.lastModified = response.headers[ 'last-modified' ] ;
           if ( response.headers['etag'] )  feed.etag = response.headers['etag'];
+          var encoding = response.headers['content-encoding'] || 'identity'
+            , charset = getParams(response.headers['content-type'] || '').charset;
+          r = maybeDecompress( r, encoding );
 
+          //now try parsing the feed
           var fp = r.pipe( new FeedParser());
           fp.on( 'error', onError )
             .on('meta', onMeta )
             .on('readable',  lodash.partial( onReadable, fp, feed ) )
             .on( 'end', onEnd );
 
-        } else {
-          if ( feed.statusCode !== 304 )
-            console.error( "url: ", feed.url, "response: ", feed.statusCode );
+        } else if ( feed.statusCode !== 304 ) {
+
+          console.error( "url: ", feed.url, "response: ", feed.statusCode );
         }
       },
       function ( e ) { throw e;}
@@ -124,4 +131,25 @@ FeedParser.readAndInsertArticles = function ( fp, feed ){
 
   fp.on( 'readable', lodash.partial( onReadable, fp, feed ) );
   return;
+};
+
+function maybeDecompress (res, encoding) {
+  var decompress;
+  if (encoding.match(/\bdeflate\b/)) {
+    decompress = zlib.createInflate();
+  } else if (encoding.match(/\bgzip\b/)) {
+    decompress = zlib.createGunzip();
+  }
+  return decompress ? res.pipe(decompress) : res;
+};
+
+function getParams(str) {
+  var params = str.split(';').reduce(function (params, param) {
+    var parts = param.split('=').map(function (part) { return part.trim(); });
+    if (parts.length === 2) {
+      params[parts[0]] = parts[1];
+    }
+    return params;
+  }, {});
+  return params;
 };
