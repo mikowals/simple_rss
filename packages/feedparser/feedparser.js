@@ -12,8 +12,8 @@ function _request( feed, cb ){
   var options = {
     headers: {},
     url: feed.url,
-    timeout: 7000,
-    gzip: true,  // the request stream remains compressed so don't use until 3.0
+    timeout: 5000,
+    gzip: true,
   };
 
   if ( feed.lastModified ) options.headers['If-Modified-Since'] = new Date ( feed.lastModified ).toUTCString();
@@ -70,17 +70,18 @@ function _fp( feed ) {
   var r = _request( feed, function ( err, res) {
     if ( err ){
       feed.error = err;
-      if ( res && res.statusCode ) {
+      if ( res ) {
         feed.statusCode = res.statusCode;
+        feed.lastModified = response.headers[ 'last-modified' ] ;
+        feed.etag = response.headers['etag'];
       }
     }
+    feed = _.pick( feed, _.identity );
     future.return( feed );
   }).on( 'response', Meteor.bindEnvironment(
       function( response ){
         feed.statusCode = response.statusCode;
         if ( feed.statusCode === 200 ){
-          if ( response.headers['last-modified'] ) feed.lastModified = response.headers[ 'last-modified' ] ;
-          if ( response.headers['etag'] )  feed.etag = response.headers['etag'];
 
           //now try parsing the feed
           var fp = r.pipe( new FeedParser());

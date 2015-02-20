@@ -16,6 +16,13 @@ body {
   line-height: 19px;
 }
 
+.text-right{
+  text-align: right;
+}
+
+.feed {
+
+}
 .container {
   /*border: 1px solid #1E68A6;
   border-radius: 5px;*/
@@ -24,10 +31,8 @@ body {
 }
 
 #stream {
-
     min-height:100px;
     padding:0 5px;
-
 }
 
 
@@ -122,10 +127,6 @@ time {
   height:32px;
   margin:20px auto;
   background:url(/loader.gif) no-repeat 0 0;
-}
-
-#feeds_modal td.count, #feeds_modal td.lastDate {
-  white-space: nowrap;
 }
 
 #login-buttons {

@@ -15,7 +15,6 @@ filesaver
 facts
 browser-policy
 accounts-ui
-simison:bootstrap3-less
 mikowals:find-async
 percolatestudio:fastclick
 meteorhacks:fast-render
@@ -37,3 +36,4 @@ mquandalle:harmony
 mizzao:animated-each
 jquery-waypoints
 mizzao:jquery-ui
+nemo64:bootstrap
