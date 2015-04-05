@@ -217,7 +217,7 @@ Template.newriver.helpers({
   }
 });
 
-Template.newriver.rendered = function(){
+Template.newriver.onRendered(function () {
   this.firstNode._uihooks = {
     insertElement: function(node, next) {
       //# Make the node invisible before fading in
@@ -234,7 +234,7 @@ Template.newriver.rendered = function(){
       });
     }
   };
-};
+});
 
 Template.menubar.events({
   'click #page,  tap #page': function( e ){
@@ -283,11 +283,11 @@ Template.feed.events({
     Session.set("selected_feed", this._id);
   }
 });
-Template.article.rendered = function(){
+Template.article.onRendered(function () {
   setLastArticleWaypoint( $( this.lastNode ) );
-};
+});
 
-Template.articleList.rendered = function(){
+Template.articleList.onRendered(function () {
   AnimatedEach.attachHooks( this.firstNode, this.firstNode );
   /**
   var container = this.firstNode;
@@ -311,12 +311,12 @@ Template.articleList.rendered = function(){
     }
   };
   **/
-};
+});
 
-Template.articleList.destroyed = function(){
+Template.articleList.onDestroyed(function () {
   $.waypoints('destroy');
   Session.set( "articleLimit", 20 );
-};
+});
 
 var oldTarget;
 var setLastArticleWaypoint = _.debounce( function( target ){
