@@ -1,0 +1,49 @@
+{
+  "builtBy": "meteor/10",
+  "sliceDependencies": {
+    "browser.json": {
+      "files": {
+        "/home/mikowals/simple_rss/packages/resanitize/package.js": "2984343e0273303be718541e7211f0bd29828b0f",
+        "/home/mikowals/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/home/mikowals/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119"
+      },
+      "directories": []
+    },
+    "os.json": {
+      "files": {
+        "/home/mikowals/simple_rss/packages/resanitize/package.js": "2984343e0273303be718541e7211f0bd29828b0f",
+        "/home/mikowals/simple_rss/packages/resanitize/resanitize.js": "c0ecafd601045b89aaf4a462dbf6f0b15488913d",
+        "/home/mikowals/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/home/mikowals/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119"
+      },
+      "directories": []
+    },
+    "tests.browser.json": {
+      "files": {
+        "/home/mikowals/simple_rss/packages/resanitize/package.js": "2984343e0273303be718541e7211f0bd29828b0f",
+        "/home/mikowals/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/home/mikowals/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119"
+      },
+      "directories": []
+    },
+    "tests.os.json": {
+      "files": {
+        "/home/mikowals/simple_rss/packages/resanitize/package.js": "2984343e0273303be718541e7211f0bd29828b0f",
+        "/home/mikowals/meteor/packages/meteor/package.js": "994e95dac25fa351bc0ec7d121eec875482e79d2",
+        "/home/mikowals/meteor/packages/meteor/plugin/basic-file-types.js": "711f7c01e3384ae8ed04ed823281ad2e16946119"
+      },
+      "directories": []
+    }
+  },
+  "pluginDependencies": {
+    "files": {
+      "/home/mikowals/simple_rss/packages/resanitize/package.js": "2984343e0273303be718541e7211f0bd29828b0f"
+    },
+    "directories": []
+  },
+  "pluginProviderPackages": {
+    "resanitize": "/home/mikowals/simple_rss/packages/resanitize",
+    "meteor": "/home/mikowals/meteor/packages/meteor"
+  },
+  "source": "/home/mikowals/simple_rss/packages/resanitize"
+}

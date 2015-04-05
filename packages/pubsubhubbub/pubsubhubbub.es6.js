@@ -10,7 +10,7 @@ var Stream = Npm.require( 'stream').Stream,
 // a PuSH subcription manager that wraps
 FeedSubscriber = class FeedSubscriber extends Stream {
   constructor ( options ) {
-    super.call(this);
+    super();
     var self = this;
 
     // The 'pubsubhubbub' module only exports createServer().
