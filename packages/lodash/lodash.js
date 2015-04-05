@@ -10645,7 +10645,7 @@
                                                                 lodash.prototype.head = lodash.prototype.first;
                                                                 lodash.prototype.select = lodash.prototype.filter;
                                                                 lodash.prototype.tail = lodash.prototype.rest;
-                                                                
+
                                                                 return lodash;
                                                               }
 
