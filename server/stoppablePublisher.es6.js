@@ -17,19 +17,21 @@ class stoppablePublisher {
   }
 
   _observeAndPublish (cursor) {
-    let name = this._name;
-    let sub = this._sub;
+    let self = this;
+    let name = self._name;
+    let sub = self._sub;
     // need a list of current ids to track removals
-    let oldIds = new Set(this.ids());
+    let oldIds = new Set(self.ids());
 
-    if ( this._handle )
-      this._handle.stop();
+    if ( self._handle )
+      self._handle.stop();
 
     let handle = cursor.observeChanges({
       added( id, doc ) {
-        if ( oldIds.has( id ) )
+        if ( oldIds.has( id ) ){
           oldIds.delete(id);
-        else
+          sub.changed(name, id, doc);
+        } else
           sub.added( name, id, doc );
       },
       removed ( id ){
