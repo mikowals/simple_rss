@@ -44,7 +44,7 @@ FeedSubscriber = class FeedSubscriber extends Stream {
 
     server.on( 'feed', data => {
       var stream = resumer().queue( data.feed ).end();
-      self.emit( 'feedStream', stream, data.topic );
+      self.emit( 'feedStream', stream, {url: data.topic});
     });
 
     // check that subscribe events match our requests and manage subscriptions object
@@ -71,16 +71,16 @@ FeedSubscriber = class FeedSubscriber extends Stream {
     });
 
     // check that unsubscribe events match our requests and manage subscriptions object
-    self.on ( 'unsubscribe' ,  data => {
-      var sub = self.subscriptions.get( data.topic );
+    self.on ( 'unsubscribe' ,  ({topic, hub}) => {
+      var sub = self.subscriptions.get( topic );
       if ( sub && sub.unsub ){
         if (sub.unsub instanceof Future)
-          sub.unsub.return( data );
-        console.log(" unsubscribed from : " + data.topic);
-        self.subscriptions.delete( data.topic );
+          sub.unsub.return( {topic, hub} );
+        console.log(" unsubscribed from : " + topic);
+        self.subscriptions.delete( topic );
       } else {
-        console.error("resubscribing to: " + data.topic);
-        server.subscribe( data.topic, data.hub );
+        console.error("resubscribing to: " + topic);
+        server.subscribe( topic, hub );
       }
     });
   }
@@ -88,9 +88,8 @@ FeedSubscriber = class FeedSubscriber extends Stream {
   // stop all subscriptions with one synchronous call
   stopAllSubscriptions() {
     var self = this;
-    self.subscriptions.forEach( (sub) => {
-      sub.unsub =  new Future();
-      self.server.unsubscribe( sub.url, sub.hub );
+    self.subscriptions.forEach(({url, hub, _id}) => {
+      self.unsubscribe(url, hub);
     });
     self.subscriptions.forEach( (sub) => sub.unsub.wait());
   }

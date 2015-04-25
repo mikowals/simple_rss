@@ -1,14 +1,16 @@
-class Article {
+this.Article = class Article {
   constructor({title, author, meta,sourceUrl, source,
                feed_id, date, link, origLink, description, summary} = {}) {
-
-    this.title = _.unescape( title ) || null;
-    this.author = author ||  null;
-    this.source = meta && meta.title || null;
-    this.sourceUrl = sourceUrl || ( meta && meta.xmlurl) || (source && source.url) || null;
-    this.feed_id = feed_id || null;
-    this.date = new Date();
-    this.link = link || origLink || null;
+    Object.assign(this, {
+      title: _.unescape( title ) || null,
+      author: author ||  null,
+      source: meta && meta.title || null,
+      sourceUrl: sourceUrl || ( meta && meta.xmlurl) || (source && source.url) || null,
+      feed_id: feed_id || null,
+      date: new Date(),
+      link: link || origLink || null,
+    });
+    
     this.setSummary( description || summary );
 
     if ( Object.prototype.toString.call(date) === "[object Date]" &&
@@ -26,8 +28,6 @@ class Article {
   }
 
 }
-
-this.Article = Article;
 
 function cleanSummary (text) {
   var $ = cheerio.load(text);  //relies on cheerio package

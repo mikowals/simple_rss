@@ -5,7 +5,7 @@ var Future = Npm.require('fibers/future');
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
 
-var _request = ( feed, cb ) => {
+var _request = function (feed, cb ) {
   if (! feed.url)
     throw new Error( "_request called without url");
 
@@ -29,7 +29,6 @@ var onReadable = function (fp, feed) {
     var doc = new Article( item );
     doc.sourceUrl = feed.url;
     doc.feed_id = feed._id;
-    feed.last_date = Math.max( feed.last_date  || 0, doc.date );
     var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
     if ( doc.date > keepLimitDate ){
       Articles.insert( doc, function( error ) {
@@ -44,7 +43,6 @@ var onReadable = function (fp, feed) {
 
 function bindEnvironmentError( error ){
   console.error( error );
-  return;
 };
 
 function _fp( feed ) {
@@ -52,18 +50,20 @@ function _fp( feed ) {
 
   function onError( error ){
     feed.error = error;
-  };
+  }
 
   function onMeta( meta ) {
     //console.log( "feedparser emmitted meta for url: " + url );
     if (meta !== null ){
-      feed.url = meta.xmlurl || feed.url;
-      feed.hub = meta.cloud.href;
-      feed.title = meta.title;
-      feed.date = new Date( meta.date );
-      feed.author = meta.author;
+      Object.assign( feed, {
+        url: meta.xmlurl || feed.url,
+        hub: meta.cloud.href,
+        title: meta.title,
+        date: new Date( meta.date ),
+        author: meta.author
+      });
     }
-  };
+  }
 
   // need to request and pipe result so use events rather than callback
   // response event fires before callback, piping won't work inside callback

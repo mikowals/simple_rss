@@ -21,7 +21,7 @@ Meteor.users.deny({
 });
 
 Facts.setUserIdFilter( ( userId )  => {
-  return !! Meteor.users.findOne({_id: userId, 'profile.admin': true}, {fields:{_id:1}});;
+  return !! Meteor.users.find({_id: userId, 'profile.admin': true}, {fields:{_id:1}}).count();
 });
 
 //  send feeds, articles and userdata in null publish to work with fast-render
@@ -37,14 +37,11 @@ Meteor.publish( null, function() {
   //var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
   var articleOptions = {fields: articleFields, limit: 70, sort: {date: -1, _id: 1}};
-  var feedPublisher, articlePublisher, userObserver, nullUserObserver, nullUserCursor;
+  var articlePublisher, userObserver;
 
   articlePublisher = new stoppablePublisher( self );
 
   function observeArticles( id, doc){
-    if ( ! doc || ! doc.feedList || doc.feedList.length === 0 )
-      return;
-
     var articleCursor = Articles.find( {feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions);
     articlePublisher.start( articleCursor );
   }
@@ -67,12 +64,12 @@ Meteor.startup( () => {
   Meteor.call('findArticles' );
   Meteor.call('removeOldArticles');
 
-  intervalProcesses["removeOldArticles"] = Meteor.setInterval(
+  Meteor.setInterval(
     () => Meteor.call('removeOldArticles'),
     DAY
   );
 
-  intervalProcesses[ "findArticles"] = Meteor.setInterval(
+  Meteor.setInterval(
     () => Meteor.call('findArticles', { hub: null} ),
     updateInterval
   );
@@ -80,7 +77,6 @@ Meteor.startup( () => {
 });
 
 Meteor.methods({
-
   findArticles: function( criteria = {} ) {
     check ( criteria,  Object );
     console.time("findArticles");
@@ -100,15 +96,17 @@ Meteor.methods({
         console.log( rssResult.url + " responded with " + rssResult.statusCode );
       }
     });
-
     console.timeEnd("findArticles");
-
   },
 
   removeOldArticles: function(){
     console.log("removeOldArticles method called on server");
-    var error = Articles.remove({date:  {$lt: keepLimitDate()}, clicks: 0 }, function(error){ return error;});
-    return error || 'success';
+    try {
+      Articles.remove({date:  {$lt: keepLimitDate()}, clicks: null});
+    } catch (e) {
+      throw e;
+    }
+    return 'success';
   },
 
   addSubscriberToFeeds: function(){
@@ -166,6 +164,4 @@ Meteor.methods({
   checkAdmin: function (){
     return !! Meteor.users.findOne({_id: this.userId, 'profile.admin': true}, {fields: {_id: 1}});
   }
-
-
 });

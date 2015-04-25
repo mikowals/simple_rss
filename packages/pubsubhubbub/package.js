@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "pubsubhubbub":"0.4.0",
+  "pubsubhubbub":"0.4.1",
   "resumer": "0.0.0"
 });
 
