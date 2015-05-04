@@ -5,13 +5,15 @@ Package.describe({
 });
 
 Npm.depends({
-  "lodash":"3.6.0"
+  "lodash":"3.8.0",
+  "upper-case":"1.1.2"
 });
 
 Package.on_use(function (api) {
   api.versionsFrom('METEOR-CORE@0.9.0-rc9');
-  //api.use( ['mikowals:harmony@1.2.0','webapp','random'], "server" );
-  api.add_files([ "lodash.js", 'post.js' ]);
-  //api.add_files( [ 'lodash.js', 'post.js'], 'client');
-  api.export && api.export( [ "lodash" ] );
+  api.use('cosmos:browserify','client');
+  api.addFiles(['lodash.browserify.js','test.browserify.js'],'client');
+  api.addFiles(["lodash-server.js"],'server');
+
+  api.export && api.export([ '_', 'lodash']);
 });

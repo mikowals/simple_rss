@@ -79,7 +79,7 @@ Template.feedList.helpers({
     return Session.get("feedListFlash");
   },
   admin: function() {
-    var user = Meteor.user({'profile.admin': true}, {fields: {_id:1}});
+    var user = Meteor.users.findOne({'profile.admin': true}, {fields: {_id:1}});
     return !! user;
   }
 
@@ -137,10 +137,12 @@ Template.feedList.events({
   },
 
   'click #exportOPML': function(){
+    var user = Meteor.user();
+    var name = user && (user.username || user.emails[0].address) || null;
     var exportOPML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
     "<opml version=\"1.0\">" +
     "<head>" +
-    "<title>" + Meteor.user.username + " subscriptions from New-River</title>" +
+    "<title>" + name && + " subscriptions from New-River</title>" +
     "</head>" +
     "<body>";
     Feeds.find().forEach( function( feed ) {

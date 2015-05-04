@@ -2,6 +2,7 @@
 #
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
+mikowals:lodash
 grigio:babel
 meteor
 http
@@ -20,7 +21,6 @@ mikowals:find-async
 percolatestudio:fastclick
 meteorhacks:fast-render
 meteorhacks:zones
-mikowals:lodash
 webapp
 logging
 tracker

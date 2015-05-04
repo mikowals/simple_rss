@@ -9,8 +9,8 @@ Npm.depends({
 });
 */
 
-Package.on_use(function (api) {
-	 api.versionsFrom('METEOR-CORE@0.9.0-rc5');
-	 api.add_files(["filesaver.js"], 'client');
-   api.export( 'saveAs', 'client' );
+Package.onUse(function (api) {
+  api.versionsFrom('METEOR-CORE@0.9.0-rc5');
+	api.addFiles(["filesaver.js"], 'client');
+	api.export( 'saveAs', 'client' );
 });

@@ -1,49 +1,48 @@
 stoppablePublisher = class stoppablePublisher {
-  constructor(sub) {
-    this._sub = sub;
-    this._name = null;
-    this._handle = null;
+  constructor(_sub) {
+    Object.assign(this, {
+      _sub, 
+      _name: null, 
+      _handle: null});
   }
 
   _subHasId (id) {
-    return !! Meteor._get(this, '_sub', '_documents', this._name, id);
+    return !! _.get(this, '_sub._documents.' + this._name +"." +id);
   }
 
   ids () {
-    return Reflect.ownKeys( Meteor._get( this, '_sub', '_documents', this._name) || {} );
+    return Reflect.ownKeys( _.get( this, '_sub._documents.' + this._name, {}));
   }
 
   _observeAndPublish (cursor) {
     let self = this;
-    let name = self._name;
-    let sub = self._sub;
-    let changed = lodash.partial( sub.changed.bind(sub), name);
-    let removed = lodash.partial( sub.removed.bind(sub), name);
+    let {_name, _sub, _handle} = self; 
+    let changed = lodash.partial( _sub.changed.bind(_sub), _name);
+    let removed = lodash.partial( _sub.removed.bind(_sub), _name);
     // need a list of current ids to track removals
     let oldIds = new Set(self.ids());
 
-    if ( self._handle )
-      self._handle.stop();
+    _handle && _handle.stop();
 
-    let handle = cursor.observeChanges({
+    let newHandle = cursor.observeChanges({
       added( id, doc ) {
         if ( oldIds.has( id ) ){
           oldIds.delete(id);
-          sub.changed(name, id, doc);
+          changed(doc);
         } else
-          sub.added( name, id, doc );
+          _sub.added( _name, id, doc );
       },
       removed,
       changed
     });
 
     // any id not found during add should be removed after each restart
-    if ( sub._documents && oldIds.size ) {
+    if ( _sub._documents && oldIds.size ) {
       oldIds.forEach( removed );
     }
 
     self._handle = {stop: function () {
-      handle.stop();
+      newHandle.stop();
       self._handle = null;
     }};
   }

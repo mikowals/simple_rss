@@ -19,9 +19,6 @@ FeedSubscriber = class FeedSubscriber extends Stream {
     self.server = PubSubHubbub.createServer( options );
     var server = self.server;
 
-    if ( ! (self instanceof FeedSubscriber) )
-      throw new Error('use "new" to construct a FeedSubscriber');
-
     self.subscriptions = new Map([]);
 
     WebApp.connectHandlers.use(
@@ -49,24 +46,24 @@ FeedSubscriber = class FeedSubscriber extends Stream {
 
     // check that subscribe events match our requests and manage subscriptions object
     // create resubscription event 6 hours before expected expiry
-    server.on ( 'subscribe' ,  data => {
+    server.on ( 'subscribe' ,  ({topic, lease, hub}) => {
       var interval,
       fn,
-      sub = self.subscriptions.get( data.topic );
+      sub = self.subscriptions.get( topic );
 
       if ( sub ){
-        sub.expiry = new Date( data.lease * 1000 );
+        sub.expiry = new Date( lease * 1000 );
         sub.resub && clearTimeout( sub.resub );
-        console.log (["subscribed to : ", data.hub, " : ", data.topic, " : ", sub.expiry].join());
+        console.log (["subscribed to : ", hub, " : ", topic, " : ", sub.expiry].join());
         //  interval in ms with plan to resubscribe 6 hours before expiry
         interval =  sub.expiry - new Date().getTime() - 6 * 60 * 60 * 1000;
         sub.resub = setTimeout( () => {
           sub.unsub = new Future();
-          server.unsubscribe( data.topic, data.hub );
-          server.subscribe( data.topic, data.hub );
+          server.unsubscribe( topic, hub );
+          server.subscribe( topic, hub );
         }, interval );
       } else {
-        console.error("unmatched subscription: " + data.topic);
+        console.error("unmatched subscription: " + topic);
       }
     });
 
@@ -96,14 +93,15 @@ FeedSubscriber = class FeedSubscriber extends Stream {
 
   subscribe( url, hub, _id ) {
     var self = this;
-    self.subscriptions.set(url,{url, hub, _id});
+    self.subscriptions.set(url, {url, hub, _id});
     self.server.subscribe( url, hub );
   }
 
   unsubscribe( url, hub ) {
     var self = this;
     var sub = self.subscriptions.get(url);
-    if ( sub ) sub.unsub = new Future;
-    self.server.unsubscribe( url, hub );
+    if (! sub) return;
+    sub.unsub = new Future;
+    self.server.unsubscribe( url, hub || sub.hub);
   }
 }
