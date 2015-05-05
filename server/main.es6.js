@@ -25,31 +25,40 @@ Facts.setUserIdFilter( ( userId )  => {
 
 //  send feeds, articles and userdata in null publish to work with fast-render
 //  Feeds are associated with userIds and articles are associated with feeds
-Meteor.publish( null, function() {
+
+
+FastRender.onAllRoutes(function(path) {
+  if ( ! _.any(['.js','.css', '.woff'], (s) => path.includes(s))) {
+    console.log('fast-render path: ',path);
+    this.subscribe('articles');
+    this.subscribe('feeds');
+  }
+});
+
+
+Meteor.publish( 'feeds', function() {
   var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   return Feeds.find( {subscribers: this.userId || 'nullUser'}, feedOptions );
 });
 
-Meteor.publish( null, function() {
+Meteor.publish( 'articles', function() {
   var self = this;
   var userId = self.userId || 'nullUser';
   //var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
   var articleOptions = {fields: articleFields, limit: 70, sort: {date: -1, _id: 1}};
   var articlePublisher, userObserver;
-
   articlePublisher = new stoppablePublisher( self );
-
   function observeArticles( id, doc){
-    var articleCursor = Articles.find({
-      feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions
-    );
+    var articleCursor = Articles.find({feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions);
     articlePublisher.start( articleCursor );
   }
 
   userObserver = Meteor.users.find( userId, {fields: {feedList: 1}} ).observeChanges({
     added: observeArticles,
-    changed: observeArticles
+    // for bulk adds the observer would restart constantly
+    // XXX could manage this with pause publish
+    changed: _.debounce(Meteor.bindEnvironment(observeArticles), 300, {trailing: true})
   });
 
   self.onStop( () => {
@@ -57,11 +66,11 @@ Meteor.publish( null, function() {
     articlePublisher.stop();
   });
 
-  self.ready();
+  return self.ready();
 });
 
 Meteor.startup( () => {
-
+  
   Meteor.call('findArticles' );
   Meteor.call('removeOldArticles');
 
@@ -69,12 +78,17 @@ Meteor.startup( () => {
     () => Meteor.call('removeOldArticles'),
     DAY
   );
-
-  Meteor.setInterval(
+  
+  var interval = Meteor.setInterval(
     () => Meteor.call('findArticles', { hub: null} ),
     updateInterval
   );
-
+  
+  _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
+      process.once(sig, Meteor.bindEnvironment (function () {
+        Meteor.clearInterval( interval );
+      }, function ( e ) { throw e; }));
+    });
 });
 
 Meteor.methods({

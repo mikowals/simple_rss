@@ -10,12 +10,13 @@ Session.setDefault("articleLimit", articlesOnLoad );
 Session.setDefault( "page", "articleList" );
 Session.setDefault( "offline", null);
 
-//Meteor.subscribe( 'base' );
+Meteor.subscribe('articles');
+Meteor.subscribe('feeds');
 
-Deps.autorun( function( comp ){
-  var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );
+//Deps.autorun( function( comp ){
+//  var ids = _.pluck( Feeds.find({}, {fields: {_id: 1}}).fetch(), '_id' );
 //  if ( ! comp.firstRun ) Meteor.subscribe( "articles", ids, + Session.get( "articleLimit" ) );
-});
+//});
 
 Deps.autorun( function(){
 

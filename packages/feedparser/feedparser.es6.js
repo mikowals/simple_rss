@@ -31,9 +31,9 @@ var onReadable = function (fp, feed) {
     doc.feed_id = feed._id;
     var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
     if ( doc.date > keepLimitDate ){
-      Articles.insert( doc, function( error ) {
+      Articles.insert( doc, function( error, res) {
         if ( !error ) {
-          console.log( doc.title + " : " + doc.source );
+          console.log( doc.title + " : " + doc.source + " : ", res);
           Feeds.update( { _id: doc.feed_id, last_date: {$lt: doc.date}}, { $set: { last_date: doc.date }}, lodash.noop );
         }
       });
@@ -99,7 +99,7 @@ function _fp( feed ) {
 FeedParser = {
   syncFP(feed) {
     if ( feed instanceof Array ){
-      return feed.map( _fp ).map( (f) => f.wait() );
+      return _.invoke(feed.map(_fp),'wait');
     } else {
       return _fp( feed ).wait();
     }

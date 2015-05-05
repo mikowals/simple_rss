@@ -2,7 +2,7 @@
 #
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
-mikowals:lodash
+
 grigio:babel
 meteor
 http
@@ -19,7 +19,6 @@ browser-policy
 accounts-ui
 mikowals:find-async
 percolatestudio:fastclick
-meteorhacks:fast-render
 meteorhacks:zones
 webapp
 logging
@@ -37,3 +36,5 @@ mizzao:animated-each
 jquery-waypoints
 mizzao:jquery-ui
 nemo64:bootstrap
+mikowals:lodash
+meteorhacks:fast-render

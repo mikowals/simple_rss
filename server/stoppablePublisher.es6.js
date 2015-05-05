@@ -7,30 +7,32 @@ stoppablePublisher = class stoppablePublisher {
   }
 
   _subHasId (id) {
-    return !! _.get(this, '_sub._documents.' + this._name +"." +id);
+    var self = this;
+    return _.has(self, ['_sub', 'documents', self._name, id]);
   }
 
   ids () {
-    return Reflect.ownKeys( _.get( this, '_sub._documents.' + this._name, {}));
+    var self = this;
+    return Reflect.ownKeys( _.get( self, ['_sub','_documents',self._name], {}));
   }
 
   _observeAndPublish (cursor) {
     let self = this;
     let {_name, _sub, _handle} = self; 
-    let changed = lodash.partial( _sub.changed.bind(_sub), _name);
-    let removed = lodash.partial( _sub.removed.bind(_sub), _name);
+    let changed = _.partial( _sub.changed.bind(_sub), _name);
+    let removed = _.partial( _sub.removed.bind(_sub), _name);
     // need a list of current ids to track removals
     let oldIds = new Set(self.ids());
 
     _handle && _handle.stop();
-
     let newHandle = cursor.observeChanges({
       added( id, doc ) {
         if ( oldIds.has( id ) ){
           oldIds.delete(id);
-          changed(doc);
-        } else
+          changed(id, doc);
+        } else{
           _sub.added( _name, id, doc );
+        }
       },
       removed,
       changed
@@ -56,7 +58,6 @@ stoppablePublisher = class stoppablePublisher {
         throw new Error( 'stoppablePublisher can not handle cursors from different collections. ',
           name, ' to ', cursor._cursorDescription.collectionName);
     }
-
     this._observeAndPublish( cursor );
   }
 
