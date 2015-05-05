@@ -28,7 +28,7 @@ Facts.setUserIdFilter( ( userId )  => {
 
 
 FastRender.onAllRoutes(function(path) {
-  if ( ! _.any(['.js','.css', '.woff'], (s) => path.includes(s))) {
+  if ( ! _.any(['.js','.css', '.woff', '/hubbub'], (s) => path.includes(s))) {
     console.log('fast-render path: ',path);
     this.subscribe('articles');
     this.subscribe('feeds');
