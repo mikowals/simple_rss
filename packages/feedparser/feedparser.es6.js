@@ -67,7 +67,7 @@ function _fp( feed ) {
 
   // need to request and pipe result so use events rather than callback
   // response event fires before callback, piping won't work inside callback
-  var r = _request( feed, ( err, res) => {
+  var r = _request( feed, function( err, res) {
     if ( err )
       feed.error = err;
     if ( res ) {
@@ -88,10 +88,9 @@ function _fp( feed ) {
           var fp = r.pipe( new parser());
           fp.on( 'error', onError )
             .on('meta', onMeta )
-            .on('readable',  Meteor.bindEnvironment(() => onReadable(fp, feed)));
+            .on('readable',  Meteor.bindEnvironment(function() {onReadable(fp, feed)}));
         }
-      },
-      (e) => {throw e}
+      }
     ));
   return future;
 };

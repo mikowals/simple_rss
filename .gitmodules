@@ -1,0 +1,3 @@
+[submodule "private/meteor"]
+	path = private/meteor
+	url = https://github.com/zol/meteor.git

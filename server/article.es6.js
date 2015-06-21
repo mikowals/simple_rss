@@ -59,7 +59,7 @@ function cleanSummary (text) {
       text = text.substring(0, text.indexOf('<br'));
     }
 
-    text = text.substring(0, 500);
+    text = trimHTML(text, {limit: 500}).html;
   }
 
   if (text === null || text === undefined || text === "null") {

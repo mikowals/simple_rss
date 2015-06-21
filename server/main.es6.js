@@ -1,4 +1,3 @@
-var Future = Npm.require( 'fibers/future');
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 3.0;
 var updateInterval = 1000 * 60 * 15;
@@ -27,13 +26,13 @@ Facts.setUserIdFilter( ( userId )  => {
 //  Feeds are associated with userIds and articles are associated with feeds
 
 
-FastRender.onAllRoutes(function(path) {
+/*FastRender.onAllRoutes(function(path) {
   if ( ! _.any(['.js','.css', '.woff', '/hubbub'], (s) => path.includes(s))) {
     console.log('fast-render path: ',path);
     this.subscribe('articles');
     this.subscribe('feeds');
   }
-});
+});*/
 
 
 Meteor.publish( 'feeds', function() {
@@ -46,7 +45,7 @@ Meteor.publish( 'articles', function() {
   var userId = self.userId || 'nullUser';
   //var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
-  var articleOptions = {fields: articleFields, limit: 70, sort: {date: -1, _id: 1}};
+  var articleOptions = {fields: articleFields, limit: 300, sort: {date: -1, _id: 1}};
   var articlePublisher, userObserver;
   articlePublisher = new stoppablePublisher( self );
   function observeArticles( id, doc){

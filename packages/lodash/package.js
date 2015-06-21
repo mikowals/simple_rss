@@ -9,7 +9,7 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
-  api.versionsFrom('METEOR-CORE@0.9.0-rc9');
+  //api.versionsFrom('METEOR-CORE@0.9.0-rc9');
   api.use('mikowals:browserify','client');
   api.addFiles(['lodash.browserify.js'],'client');
   api.addFiles(["lodash-server.js"],'server');

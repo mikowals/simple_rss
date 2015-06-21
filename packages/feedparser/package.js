@@ -10,7 +10,7 @@ Npm.depends({
 });
 
 Package.on_use(function (api) {
-  api.versionsFrom('METEOR@1.1.0.1');
+  //api.versionsFrom('METEOR@1.0.3.2');
   api.use( ['grigio:babel','mikowals:lodash'], 'server');
   api.add_files("feedparser.es6.js", "server");
   api.export && api.export([ "FeedParser" ], "server");

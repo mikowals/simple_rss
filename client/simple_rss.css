@@ -62,7 +62,7 @@ body {
   white-space: nowrap;
 }
 
-.section .header time {
+.section .header time, .section .header TimeAgo {
   display: table-cell;
   padding: 0 0 0 8px;
   vertical-align: middle;
@@ -110,7 +110,7 @@ span.spacer:after { /* Adds border to spacer */
     top:-1px;
 }
 
-time {
+time, TimeAgo {
   font-size: 0.6em;
   line-height: 1.2em;
 }
