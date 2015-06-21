@@ -130,6 +130,7 @@ if (Meteor.isServer) {
         //var articles = Articles.find({},{limit:40, sort:{date:-1, _id:1}}).fetch();
         //" + React.renderToString(<ArticleList articles={articles}/>) + "
         var bodyStr = React.renderToString(<ArticleList />);
+        Inject.rawHead('ssr-head', "<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>", res)
         Inject.rawBody('ssr-render', bodyStr, res);
         Inject.rawModHtml('defer scripts', function(html) {
           return html.replace(/<script/g, '<script defer');
