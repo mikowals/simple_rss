@@ -1,0 +1,1 @@
+trimHTML = Npm.require("trim-html");
