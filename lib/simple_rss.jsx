@@ -58,7 +58,7 @@ var Article = React.createClass({
   render() {
     var {_id, title, source, summary, date, link} = this.props.article;
     title = title || "Link";
-    function createMarkup() { return {__html: summary}; };
+    function createMarkup() { return {__html: UniHTML.purify(summary)}; };
     return  (<div id={_id} className="section">
               <div className="header row-fluid">
                 <h2>{source}</h2>
@@ -125,7 +125,11 @@ if (Meteor.isServer) {
   // add a raw connect handler for / that renders the body with react.
   WebApp.rawConnectHandlers.use(
     Meteor.bindEnvironment(function(req, res, next) {
-      if (Inject.appUrl(req.url) && req.url.search(/.js/) === -1 && req.url.search(/.map/) === -1) {
+      if (Inject.appUrl(req.url) 
+        && req.url.search(/.js/) === -1 
+        && req.url.search(/.map/) === -1
+        && req.url.search(/\/hubbub/) === -1
+      ) {
         console.log(req.url);
         //var articles = Articles.find({},{limit:40, sort:{date:-1, _id:1}}).fetch();
         //" + React.renderToString(<ArticleList articles={articles}/>) + "

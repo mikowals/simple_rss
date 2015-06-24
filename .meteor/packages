@@ -9,9 +9,9 @@ accounts-password
 accounts-google
 accounts-ui
 cheerio
-grigio:babel
 feedparser
 pubsubhubbub
+grigio:babel
 xml2js
 less
 filesaver
@@ -29,3 +29,4 @@ react
 reactive-dict
 meteorhacks:inject-initial
 mikowals:react-waypoint
+vazco:universe-html-purifier
