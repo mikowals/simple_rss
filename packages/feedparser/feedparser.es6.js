@@ -23,7 +23,7 @@ var _request = function (feed, cb ) {
   return request( options, cb );
 };
 
-var onReadable = function (fp, feed) {
+var onReadable = Meteor.bindEnvironment(function (fp, feed) {
   var item;
   while ( item = fp.read() ) {
     var doc = new Article( item );
@@ -39,7 +39,7 @@ var onReadable = function (fp, feed) {
       });
     }
   }
-}
+});
 
 function bindEnvironmentError( error ){
   console.error( error );
@@ -88,7 +88,7 @@ function _fp( feed ) {
           var fp = r.pipe( new parser());
           fp.on( 'error', onError )
             .on('meta', onMeta )
-            .on('readable',  Meteor.bindEnvironment(function() {onReadable(fp, feed)}));
+            .on('readable',  _.partial(onReadable, fp, feed));
         }
       }
     ));
@@ -107,7 +107,7 @@ FeedParser = {
     if ( ! ( fp instanceof parser ) )
       fp = fp.pipe( new parser() );
 
-    fp.on( 'readable', Meteor.bindEnvironment(() => onReadable(fp, feed)));
+    fp.on( 'readable', _.partial(onReadable, fp, feed));
     return;
   }
 };
