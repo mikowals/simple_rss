@@ -1,6 +1,200 @@
 
 var DAY = 1000 * 60 * 60 * 24;
 var Session = new ReactiveDict();
+
+var FeedList = React.createClass({
+  displayName: "FeedList",
+  getInitialState(){
+    return {feeds:[]};
+  },
+  componentWillMount(){
+    this.computation = Tracker.autorun( () => {
+      var feeds = this.state.feeds;
+      feeds = Feeds.find({},{sort:{title: 1}}).map((feed) => {
+        var old = _.findWhere(feeds, feed);
+        return old || feed;
+      });
+      this.setState({feeds})
+    })
+  },
+  componentWillUnmount(){
+    this.computation && this.computation.stop();
+  },
+  render(){
+    var children = this.state.feeds.map((feed) => <Feed className="feed row" feed={feed} key={feed._id}/>);
+    return (<div className="container">
+      <FeedListButtons className="feedListButtons"/>
+      <div>
+        <span className="col-xs-7 col-md-7"><h4><strong>Feed Title</strong></h4></span>
+        <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
+        <span className="col-xs-3 text-right"><h4><strong>Last update</strong></h4></span>
+      </div>
+      <div>{children}</div>
+      </div>
+    );
+  }
+});
+
+var Feed = React.createClass({
+  displayName: 'Feed',
+  shouldComponentUpdate(nextProps, nextState) {
+    return this.props.feed !== nextProps.feed || this.state.count !== nextState.count;
+  },
+  componentWillMount(){
+    this.computation = Tracker.autorun(() => {
+      this.setState({count: Articles.find({source: this.props.feed.title}).count()});
+    });
+  },
+  componentWillUnmount(){
+    this.computation && this.computation.stop();
+  },
+  render(){
+    var {title, url, last_date, _id} = this.props.feed;
+    return <div>
+      <h5 className="col-xs-8 col-md-8 pull-left">   
+        <Remove _id={_id} /> {title || url}
+      </h5>
+      <h5 className="count col-xs-1 col-md-1 text-right">{this.state.count}</h5>
+      <h5 className="lastDate time col-xs-2 col-md-3 text-right pull-right"><TimeAgo date={last_date}/></h5>
+      </div>
+  }
+});
+var Remove = React.createClass({
+  handleClick(){
+    Meteor.call('removeFeed', this.props._id);
+  },
+  render(){
+    return <a onClick={this.handleClick}>
+              <i className="glyphicon glyphicon-remove-circle"></i>
+            </a>;
+  }
+});
+var Main = React.createClass({
+  displayName: 'Main',
+  getInitialState(){
+    return {page: 'ArticleList'};
+  },
+  handleClick(){
+    this.setState({page: this.state.page === 'ArticleList' ? 'FeedList' : 'ArticleList'});
+  },
+  render: function(){
+    var page;
+    if (this.state.page === 'ArticleList')
+      page = <ArticleList />;
+    else
+      page = <FeedList />;
+    return <div>
+            <span onClick={this.handleClick} >page</span>
+            {page}
+          </div>;
+  }
+});
+
+var FeedListButtons = React.createClass({
+  displayName: 'FeedListButtons',
+  getInitialState(){
+    return {importOPML: false, newURL: null};
+  },
+  toggleImport(){
+    this.setState({importOPML: ! this.state.importOPML});
+  },
+  
+  exportOPML(){
+    var user = Meteor.user();
+    var name = user && (user.username || user.emails[0].address) || null;
+    var exportOPML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + 
+    "<opml version=\"1.0\">" + 
+    "<head>" + 
+    "<title></title>" + 
+    "</head>" +
+    "<body>";
+    console.log( exportOPML);
+    Feeds.find().forEach( function( feed ) {
+      exportOPML += "<outline " +
+      "text=\"" + _.escape( feed.title ) + "\" " +
+      "title=\"" + _.escape( feed.title ) + "\" " +
+      "type=\"rss\" " +
+      "xmlUrl=\"" + _.escape( feed.url ) + "\"/>";
+    });
+    exportOPML += "</body></opml>";
+    //exportOPML = ( new window.DOMParser() ).parseFromString( exportOPML, "text/xml");
+    //exportOPML = (new XMLSerializer()).serializeToString( exportOPML );
+    var blob = new Blob([exportOPML], {type: "application/xml"});
+    var fname = Meteor.absoluteUrl().split( "//" )[1];
+    saveAs ( blob, fname + ".opml");
+  },
+  render(){
+    var display = null;
+    if (this.state.importOPML) {
+      display = <form className="form-inline">
+                <a id="importCancel" onClick={this.toggleImport} className="btn btn-link btn-sm col-sm-1 hidden-xs">Cancel</a>
+                  <FileHandler onComplete={this.toggleImport} />
+                </form>;
+    } else {
+      display = <form className="form-inline">
+                  <a id="importToggle" onClick={this.toggleImport} className="btn btn-link btn-sm col-sm-1 hidden-xs">Import</a>
+                  <a id="exportOPML" onClick={this.exportOPML} className="btn btn-link btn-sm col-sm-2 hidden-xs">Export</a>
+                  <AddFeed />
+                </form>;
+    }
+
+    return display;
+  }
+});
+var AddFeed = React.createClass({
+  getInitialState(){
+    return {newUrl: null};
+  },
+  setNewURL(evt){
+    this.setState({newURL: evt.target.value});
+  },
+  addFeed(){
+    if (! this.state.newURL) {
+      alert("URL can not be empty");
+      return;
+    }
+    Meteor.call('addFeed', {url: this.state.newURL} , (err, res) => {
+      if (err) alert(err);
+      else this.setState({newURL: null});
+    });
+  },
+  render(){
+    return <span className="input-group input-group-sm col-xs-12 col-sm-9 pull-right">
+              <input onChange={this.setNewURL} type="url" value={this.state.newURL} className="input-sm col-xs-12" placeholder="Feed url to add" id="feedUrl" />
+              <a id="addFeed" onClick={this.addFeed} type="submit" className="input-group-addon btn btn-primary btn-sm">Add</a>
+            </span>;
+  }
+});
+
+var FileHandler = React.createClass({
+  setFileName(evt){
+    this.setState({file: $(evt.target)[0].files[0] });
+  },
+  opmlUpload(){
+    this.props.onComplete && this.props.onComplete();
+    var opmlFile = this.state.file;
+    var fr = new FileReader();
+    fr.readAsText(opmlFile);
+    fr.onloadend = function(evt) {
+      if (evt.target.readyState === FileReader.DONE) { // DONE == 2
+        //Meteor.call( 'XML2JSparse', evt.target.result, function ( error, result ){
+        $(  evt.target.result ).find( 'outline').each( function( ){
+          var url = $( this ).attr("xmlUrl");
+          if ( url && ! Feeds.findOne( {url: url}, {fields:{_id:1}}));
+            Meteor.call('addFeed', {url: url} );
+        });
+      }
+    }
+  },
+  render(){
+    return <span className="input-group input-group-sm col-xs-12 col-sm-11 text-right">
+              <input id="opmlFile" type="file" onChange={this.setFileName} className="col-xs-12" multiple="multiple" />
+              <a id="opmlUpload" onClick={this.opmlUpload} className="input-group-addon btn btn-primary btn-sm">
+                <i className="glyphicon glyphicon-upload"></i>
+              </a>
+            </span>;
+  }
+})
 var ArticleList = React.createClass({
   displayName: 'ArticleList',
   
@@ -21,17 +215,15 @@ var ArticleList = React.createClass({
     this.setState({articles, articleLimit});
   },
   increaseArticleLimit(){
-    var self = this;
-    self.computation && self.computation.stop();
-    self.computation = Tracker.autorun( function() {
-      self.getArticles(self.state.articleLimit + 20);
+    this.computation && this.computation.stop();
+    this.computation = Tracker.autorun( () => {
+      this.getArticles(this.state.articleLimit + 20);
     });
   },
   componentWillMount: function(){
-    var self = this;
-    if (Meteor.isServer) return self.getArticles();
-    self.computation = Tracker.autorun( function() {
-      self.getArticles();
+    if (Meteor.isServer) return this.getArticles();
+    this.computation = Tracker.autorun( () => {
+      this.getArticles();
     });
   },
   
@@ -81,15 +273,14 @@ var Article = React.createClass({
 var TimeAgo = React.createClass({
   displayName: 'TimeAgo',
   componentWillMount() {
-    var self = this;
     var now;
     if (Meteor.isServer){
       now = new Date();
-      return self.setState({timeText: timeAgoText(now, self.props.date)});
+      return this.setState({timeText: timeAgoText(now, this.props.date)});
     } else {
-      self.computation = Tracker.autorun( function(c) {
+      this.computation = Tracker.autorun( (c) => {
         now = Session.get('now');
-        self.setState({timeText: timeAgoText(now, self.props.date)});
+        this.setState({timeText: timeAgoText(now, this.props.date)});
       });
     }
   },
@@ -133,7 +324,7 @@ if (Meteor.isServer) {
         console.log(req.url);
         //var articles = Articles.find({},{limit:40, sort:{date:-1, _id:1}}).fetch();
         //" + React.renderToString(<ArticleList articles={articles}/>) + "
-        var bodyStr = React.renderToString(<ArticleList />);
+        var bodyStr = React.renderToString(<Main page='ArticleList' />);
         Inject.rawHead('ssr-head', "<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>", res)
         Inject.rawBody('ssr-render', bodyStr, res);
         Inject.rawModHtml('defer scripts', function(html) {
@@ -152,8 +343,9 @@ if (Meteor.isServer) {
       Session.set('now',new Date());
     }, 1000 * 60);
     var subHandle = Meteor.subscribe('articles', function() {
-      React.render(<ArticleList />, document.body);
+      React.render(<Main page='ArticleList' />, document.body);
     });
+    var feedHandle = Meteor.subscribe('feeds');
   });
 }
 
