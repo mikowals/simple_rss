@@ -212,8 +212,9 @@ var ArticleList = React.createClass({
       var userId = this.props.userId || 'nullUser';
       var feedList = Meteor.users.findOne(userId).feedList;
     }
-    var query = Meteor.isServer ? {feedId: {$in: feedList}} : {};
-    articles = Articles.find({},{limit: articleLimit, sort:{date:-1, _id:1}}).map( function(article) {
+
+    var query = Meteor.isServer ? {feed_id: {$in: feedList}} : {};
+    articles = Articles.find(query, {limit: articleLimit, sort:{date:-1, _id:1}}).map( function(article) {
       var oldArticle = _.findWhere(articles, article);
       return oldArticle || article;
     });
