@@ -10,7 +10,8 @@ var FeedList = React.createClass({
   componentWillMount(){
     this.computation = Tracker.autorun( () => {
       var feeds = this.state.feeds;
-      feeds = Feeds.find({},{sort:{title: 1}}).map((feed) => {
+      var query = Meteor.isServer ? {_id: {$in: feedList}} : {};
+      feeds = Feeds.find(query,{sort:{title: 1}}).map((feed) => {
         var old = _.findWhere(feeds, feed);
         return old || feed;
       });
@@ -80,7 +81,7 @@ var Main = React.createClass({
   render: function(){
     var page;
     if (this.state.page === 'ArticleList')
-      page = <ArticleList />;
+      page = <ArticleList userId={this.props.userId} />;
     else
       page = <FeedList />;
     return <div>
@@ -207,6 +208,11 @@ var ArticleList = React.createClass({
   getArticles(articleLimit) {
     var articles = this.state.articles;
     articleLimit = articleLimit || this.state.articleLimit;
+    if (Meteor.isServer) {
+      var userId = this.props.userId || 'nullUser';
+      var feedList = Meteor.users.findOne(userId).feedList;
+    }
+    var query = Meteor.isServer ? {feedId: {$in: feedList}} : {};
     articles = Articles.find({},{limit: articleLimit, sort:{date:-1, _id:1}}).map( function(article) {
       var oldArticle = _.findWhere(articles, article);
       return oldArticle || article;
@@ -324,12 +330,16 @@ if (Meteor.isServer) {
         console.log(req.url);
         //var articles = Articles.find({},{limit:40, sort:{date:-1, _id:1}}).fetch();
         //" + React.renderToString(<ArticleList articles={articles}/>) + "
-        var bodyStr = React.renderToString(<Main page='ArticleList' />);
+        var loginToken = req.cookies && req.cookies['meteor_login_token'];
+        var headers = req.headers;
+
+        var context = new FastRender._Context(loginToken, { headers: headers });
+        var bodyStr = React.renderToString(<Main page='ArticleList' userId={context.userId} />);
         Inject.rawHead('ssr-head', "<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>", res)
         Inject.rawBody('ssr-render', bodyStr, res);
-        Inject.rawModHtml('defer scripts', function(html) {
+        /*Inject.rawModHtml('defer scripts', function(html) {
           return html.replace(/<script/g, '<script defer');
-        });
+        });*/
       } 
       next();
     }, 'ssr-render')
@@ -348,5 +358,4 @@ if (Meteor.isServer) {
     var feedHandle = Meteor.subscribe('feeds');
   });
 }
-
 

@@ -32,3 +32,4 @@ meteorhacks:inject-initial
 mikowals:react-waypoint
 vazco:universe-html-purifier
 meteorhacks:kadira
+meteorhacks:fast-render
