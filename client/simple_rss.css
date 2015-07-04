@@ -196,7 +196,18 @@ time, TimeAgo {
    100% { width: 3px; height: 3px; margin-right: 4px; }
 }
 
+.example-enter {
+  opacity: 0.01;
+  transition: opacity .5s ease-in;
+}
+
+.example-enter.example-enter-active {
+  opacity: 1;
+}
+
 /* end media all */ }
+
+
 
 @media screen and (max-width : 480px) {
 

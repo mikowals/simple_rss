@@ -1,9 +1,14 @@
 
 var DAY = 1000 * 60 * 60 * 24;
 var Session = new ReactiveDict();
+var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
+React.initializeTouchEvents(true);
 
 var FeedList = React.createClass({
   displayName: "FeedList",
+  propTypes: {
+    feedList: React.PropTypes.arrayOf(React.PropTypes.string),
+  },
   getInitialState(){
     return {feeds:[]};
   },
@@ -11,12 +16,19 @@ var FeedList = React.createClass({
     this.computation = Tracker.autorun( () => {
       var feeds = this.state.feeds;
       var query = Meteor.isServer ? {_id: {$in: feedList}} : {};
-      feeds = Feeds.find(query,{sort:{title: 1}}).map((feed) => {
+      feeds = Feeds.find(query,{
+        sort:{title: 1}, 
+        transform: (feed) => {
+          feed.count = function(){
+            return Articles.find({source: feed.title},{fields:{_id: 1}}).count();
+          };
+          return feed;
+        }}).map((feed) => {
         var old = _.findWhere(feeds, feed);
         return old || feed;
       });
       this.setState({feeds})
-    })
+    });
   },
   componentWillUnmount(){
     this.computation && this.computation.stop();
@@ -38,13 +50,28 @@ var FeedList = React.createClass({
 
 var Feed = React.createClass({
   displayName: 'Feed',
+  propTypes: {
+    feed: React.PropTypes.object
+  },
+  getInitialState(){
+    return {count:0}
+  },
   shouldComponentUpdate(nextProps, nextState) {
     return this.props.feed !== nextProps.feed || this.state.count !== nextState.count;
   },
-  componentWillMount(){
-    this.computation = Tracker.autorun(() => {
-      this.setState({count: Articles.find({source: this.props.feed.title}).count()});
+  
+  countAutorun(feed){
+    this.compuation && this.computation.stop();
+    this.computation = Tracker.autorun((c) => {
+      this.setState({count: feed.count()});
     });
+  },
+  componentWillReceiveProps(nextProps) {
+    if ( nextProps.feed !== this.props.feed)
+      this.countAutorun(nextProps.feed);
+  },
+  componentWillMount(){
+    this.countAutorun(this.props.feed);
   },
   componentWillUnmount(){
     this.computation && this.computation.stop();
@@ -61,31 +88,41 @@ var Feed = React.createClass({
   }
 });
 var Remove = React.createClass({
-  handleClick(){
+  propTypes: {
+    _id: React.PropTypes.string
+  },
+  handleClick(e){
+    e.stopPropagation();
+    e.preventDefault();
     Meteor.call('removeFeed', this.props._id);
   },
   render(){
-    return <a onClick={this.handleClick}>
+    return <a onClick={this.handleClick} onTouchStart={this.handleClick}>
               <i className="glyphicon glyphicon-remove-circle"></i>
             </a>;
   }
 });
 var Main = React.createClass({
   displayName: 'Main',
+  propTypes: {
+    feedList: React.PropTypes.arrayOf(React.PropTypes.string)
+  },
   getInitialState(){
     return {page: 'ArticleList'};
   },
-  handleClick(){
+  handleClick(e){
+    e.stopPropagation();
+    e.preventDefault();
     this.setState({page: this.state.page === 'ArticleList' ? 'FeedList' : 'ArticleList'});
   },
   render: function(){
     var page;
     if (this.state.page === 'ArticleList')
-      page = <ArticleList userId={this.props.userId} />;
+      page = <ArticleList feedList={this.props.feedList} />;
     else
       page = <FeedList />;
     return <div>
-            <span onClick={this.handleClick} >page</span>
+            <span onClick={this.handleClick} onTouchStart={this.handleClick}>page</span>
             {page}
           </div>;
   }
@@ -94,12 +131,65 @@ var Main = React.createClass({
 var FeedListButtons = React.createClass({
   displayName: 'FeedListButtons',
   getInitialState(){
-    return {importOPML: false, newURL: null};
+    return {importOPML: false};
   },
-  toggleImport(){
+  toggleImport(e){
+    e && e.stopPropagation();
+    e && e.preventDefault();
     this.setState({importOPML: ! this.state.importOPML});
   },
   
+  render(){
+    var display = null;
+    if (this.state.importOPML) {
+      display = <form className="form-inline">
+                <a id="importCancel" onClick={this.toggleImport} className="btn btn-link btn-sm col-sm-1 hidden-xs">Cancel</a>
+                  <FileHandler onComplete={this.toggleImport} />
+                </form>;
+    } else {
+      display = <AddFeed toggleImport={this.toggleImport}/>;
+    }
+
+    return display;
+  }
+});
+var AddFeed = React.createClass({
+  propTypes: {
+    toggleImport: React.PropTypes.func
+  },
+  getInitialState(){
+    return({newURL: null});
+  },
+  addFeed(e){
+    e.stopPropagation();
+    e.preventDefault();
+    if (! this.state.newURL) {
+      alert("URL can not be empty");
+      return;
+    }
+    Meteor.call('addFeed', {url: this.state.newURL} , (err, res) => {
+      if (err) alert(err);
+      else this.setState({newURL: null});
+    });
+  },
+  setNewURL(evt){
+    this.setState({newURL: evt.target.value});
+  },
+  render(){
+    var toggleImport = this.props.toggleImport;
+    return <form className="form-inline" onSubmit={this.addFeed}>
+              <a id="importToggle" onClick={toggleImport} onTouchStart={toggleImport} className="btn btn-link btn-sm col-sm-1 hidden-xs">Import</a>
+              <ExportOPML />
+              <span className="input-group input-group-sm col-xs-12 col-sm-9 pull-right">
+                <input onChange={this.setNewURL} type="url" value={this.state.newURL} className="input-sm col-xs-12" placeholder="Feed url to add" id="feedUrl" />
+                <a id="addFeed" onClick={this.addFeed} onTouchStart={this.addFeed} type="submit" className="input-group-addon btn btn-primary btn-sm">Add</a>
+              </span>
+            </form>;
+
+  }
+});
+
+var ExportOPML = React.createClass({
   exportOPML(){
     var user = Meteor.user();
     var name = user && (user.username || user.emails[0].address) || null;
@@ -109,7 +199,6 @@ var FeedListButtons = React.createClass({
     "<title></title>" + 
     "</head>" +
     "<body>";
-    console.log( exportOPML);
     Feeds.find().forEach( function( feed ) {
       exportOPML += "<outline " +
       "text=\"" + _.escape( feed.title ) + "\" " +
@@ -125,49 +214,14 @@ var FeedListButtons = React.createClass({
     saveAs ( blob, fname + ".opml");
   },
   render(){
-    var display = null;
-    if (this.state.importOPML) {
-      display = <form className="form-inline">
-                <a id="importCancel" onClick={this.toggleImport} className="btn btn-link btn-sm col-sm-1 hidden-xs">Cancel</a>
-                  <FileHandler onComplete={this.toggleImport} />
-                </form>;
-    } else {
-      display = <form className="form-inline">
-                  <a id="importToggle" onClick={this.toggleImport} className="btn btn-link btn-sm col-sm-1 hidden-xs">Import</a>
-                  <a id="exportOPML" onClick={this.exportOPML} className="btn btn-link btn-sm col-sm-2 hidden-xs">Export</a>
-                  <AddFeed />
-                </form>;
-    }
-
-    return display;
-  }
-});
-var AddFeed = React.createClass({
-  getInitialState(){
-    return {newUrl: null};
-  },
-  setNewURL(evt){
-    this.setState({newURL: evt.target.value});
-  },
-  addFeed(){
-    if (! this.state.newURL) {
-      alert("URL can not be empty");
-      return;
-    }
-    Meteor.call('addFeed', {url: this.state.newURL} , (err, res) => {
-      if (err) alert(err);
-      else this.setState({newURL: null});
-    });
-  },
-  render(){
-    return <span className="input-group input-group-sm col-xs-12 col-sm-9 pull-right">
-              <input onChange={this.setNewURL} type="url" value={this.state.newURL} className="input-sm col-xs-12" placeholder="Feed url to add" id="feedUrl" />
-              <a id="addFeed" onClick={this.addFeed} type="submit" className="input-group-addon btn btn-primary btn-sm">Add</a>
-            </span>;
+    return <a id="exportOPML" onClick={this.exportOPML} onTouchStart={this.exportOPML} className="btn btn-link btn-sm col-sm-2 hidden-xs">Export</a>
   }
 });
 
 var FileHandler = React.createClass({
+  propsTypes: {
+    onComplete: React.PropTypes.func
+  },
   setFileName(evt){
     this.setState({file: $(evt.target)[0].files[0] });
   },
@@ -195,10 +249,12 @@ var FileHandler = React.createClass({
               </a>
             </span>;
   }
-})
+});
 var ArticleList = React.createClass({
   displayName: 'ArticleList',
-  
+  propTypes: {
+    feedList: React.PropTypes.arrayOf(React.PropTypes.string)
+  },
   getInitialState: function() {
     return {
       articles: [],
@@ -208,12 +264,8 @@ var ArticleList = React.createClass({
   getArticles(articleLimit) {
     var articles = this.state.articles;
     articleLimit = articleLimit || this.state.articleLimit;
-    if (Meteor.isServer) {
-      var userId = this.props.userId || 'nullUser';
-      var feedList = Meteor.users.findOne(userId).feedList;
-    }
 
-    var query = Meteor.isServer ? {feed_id: {$in: feedList}} : {};
+    var query = Meteor.isServer ? {feed_id: {$in: this.props.feedList}} : {};
     articles = Articles.find(query, {limit: articleLimit, sort:{date:-1, _id:1}}).map( function(article) {
       var oldArticle = _.findWhere(articles, article);
       return oldArticle || article;
@@ -242,7 +294,9 @@ var ArticleList = React.createClass({
       return <Article article={article} key={article._id}/>;
     });
     return (<div className="container">
-              <div id="stream">{children}</div>
+              <div id="stream">
+                  {children}
+              </div>
               <Waypoint onEnter={this.increaseArticleLimit} threshold={0.1}/>
             </div>);
   } 
@@ -250,6 +304,9 @@ var ArticleList = React.createClass({
 
 var Article = React.createClass({
   displayName: 'Article',
+  propTypes: {
+    article: React.PropTypes.object
+  },
   shouldComponentUpdate(nextProps) {
     return nextProps.article !== this.props.article;
   },
@@ -333,7 +390,9 @@ if (Meteor.isServer) {
         var headers = req.headers;
 
         var context = new FastRender._Context(loginToken, { headers: headers });
-        var bodyStr = React.renderToString(<Main page='ArticleList' userId={context.userId} />);
+        var userId = context.userId || 'nullUser';
+        var feedList = Meteor.users.findOne(userId).feedList || [];
+        var bodyStr = React.renderToString(<Main page='ArticleList' feedList={feedList} />);
         Inject.rawHead('ssr-head', "<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>", res)
         Inject.rawBody('ssr-render', bodyStr, res);
         Inject.rawModHtml('defer scripts', function(html) {
