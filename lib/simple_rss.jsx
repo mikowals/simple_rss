@@ -12,6 +12,9 @@ var FeedList = React.createClass({
   getInitialState(){
     return {feeds:[]};
   },
+
+  // currently this never receives props on client 
+  // so autorun doesn't need to restart in componentWillReceiveProps
   componentWillMount(){
     this.computation = Tracker.autorun( () => {
       var feeds = this.state.feeds;
@@ -36,7 +39,7 @@ var FeedList = React.createClass({
   render(){
     var children = this.state.feeds.map((feed) => <Feed className="feed row" feed={feed} key={feed._id}/>);
     return (<div className="container">
-      <FeedListButtons className="feedListButtons"/>
+      <FeedListButtons className="feedListButtons" feeds={this.state.feeds} />
       <div>
         <span className="col-xs-7 col-md-7"><h4><strong>Feed Title</strong></h4></span>
         <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
@@ -130,6 +133,9 @@ var Main = React.createClass({
 
 var FeedListButtons = React.createClass({
   displayName: 'FeedListButtons',
+  propTypes: {
+    feeds: React.PropTypes.arrayOf(React.PropTypes.object)
+  },
   getInitialState(){
     return {importOPML: false};
   },
@@ -155,7 +161,8 @@ var FeedListButtons = React.createClass({
 });
 var AddFeed = React.createClass({
   propTypes: {
-    toggleImport: React.PropTypes.func
+    toggleImport: React.PropTypes.func,
+    feeds: React.PropTypes.arrayOf(React.PropTypes.object)
   },
   getInitialState(){
     return({newURL: null});
@@ -179,7 +186,7 @@ var AddFeed = React.createClass({
     var toggleImport = this.props.toggleImport;
     return <form className="form-inline" onSubmit={this.addFeed}>
               <a id="importToggle" onClick={toggleImport} onTouchStart={toggleImport} className="btn btn-link btn-sm col-sm-1 hidden-xs">Import</a>
-              <ExportOPML />
+              <ExportOPML feeds={this.props.feeds}/>
               <span className="input-group input-group-sm col-xs-12 col-sm-9 pull-right">
                 <input onChange={this.setNewURL} type="url" value={this.state.newURL} className="input-sm col-xs-12" placeholder="Feed url to add" id="feedUrl" />
                 <a id="addFeed" onClick={this.addFeed} onTouchStart={this.addFeed} type="submit" className="input-group-addon btn btn-primary btn-sm">Add</a>
@@ -190,6 +197,9 @@ var AddFeed = React.createClass({
 });
 
 var ExportOPML = React.createClass({
+  propTypes: {
+    feeds: React.PropTypes.arrayOf(React.PropTypes.object)
+  },
   exportOPML(){
     var user = Meteor.user();
     var name = user && (user.username || user.emails[0].address) || null;
@@ -199,7 +209,7 @@ var ExportOPML = React.createClass({
     "<title></title>" + 
     "</head>" +
     "<body>";
-    Feeds.find().forEach( function( feed ) {
+    this.props.feeds.forEach( function( feed ) {
       exportOPML += "<outline " +
       "text=\"" + _.escape( feed.title ) + "\" " +
       "title=\"" + _.escape( feed.title ) + "\" " +
@@ -253,40 +263,46 @@ var FileHandler = React.createClass({
 var ArticleList = React.createClass({
   displayName: 'ArticleList',
   propTypes: {
-    feedList: React.PropTypes.arrayOf(React.PropTypes.string)
+    feedList: React.PropTypes.arrayOf(React.PropTypes.string),
+    initialArticleLimit: React.PropTypes.number
   },
-  getInitialState: function() {
+  getDefaultProps(){
     return {
-      articles: [],
-      articleLimit: this.props.initialArticleLimit || 10
+      feedList: [],
+      initialArticleLimit: 10
     };
   },
-  getArticles(articleLimit) {
+  getInitialState() {
+    return {
+      articles: []
+    };
+  },
+
+  getArticles() {
     var articles = this.state.articles;
-    articleLimit = articleLimit || this.state.articleLimit;
+    var limit = this.articleLimit.get();
 
     var query = Meteor.isServer ? {feed_id: {$in: this.props.feedList}} : {};
-    articles = Articles.find(query, {limit: articleLimit, sort:{date:-1, _id:1}}).map( function(article) {
+    articles = Articles.find(query, {limit, sort:{date:-1, _id:1}}).map( function(article) {
       var oldArticle = _.findWhere(articles, article);
       return oldArticle || article;
     });
-    this.setState({articles, articleLimit});
+    this.setState({articles});
   },
   increaseArticleLimit(){
-    this.computation && this.computation.stop();
-    this.computation = Tracker.autorun( () => {
-      this.getArticles(this.state.articleLimit + 20);
-    });
+    this.articleLimit.set(this.articleLimit.get() + 20);
   },
-  componentWillMount: function(){
+
+  componentWillMount(){
+    this.articleLimit = new ReactiveVar(this.props.initialArticleLimit);
     if (Meteor.isServer) return this.getArticles();
     this.computation = Tracker.autorun( () => {
       this.getArticles();
     });
   },
   
-  componentWillUnmount: function(){    
-    Meteor.isClient && this.computation && this.computation.stop();
+  componentWillUnmount(){    
+    this.computation && this.computation.stop();
   },
   render: function(){
     var articles = this.state.articles;
@@ -410,8 +426,9 @@ if (Meteor.isServer) {
     Meteor.setInterval( function() {
       Session.set('now',new Date());
     }, 1000 * 60);
+    React.render(<Main page='ArticleList' />, document.body);
     var subHandle = Meteor.subscribe('articles', function() {
-      React.render(<Main page='ArticleList' />, document.body);
+      
     });
     var feedHandle = Meteor.subscribe('feeds');
   });
