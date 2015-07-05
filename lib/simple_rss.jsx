@@ -426,9 +426,8 @@ if (Meteor.isServer) {
     Meteor.setInterval( function() {
       Session.set('now',new Date());
     }, 1000 * 60);
-    React.render(<Main page='ArticleList' />, document.body);
     var subHandle = Meteor.subscribe('articles', function() {
-      
+      React.render(<Main page='ArticleList' />, document.body);
     });
     var feedHandle = Meteor.subscribe('feeds');
   });
