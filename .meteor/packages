@@ -2,16 +2,14 @@
 #
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
-
 meteor-platform
+standard-minifiers
+ecmascript
 http
 accounts-password
-accounts-google
-accounts-ui
 cheerio
 feedparser
 pubsubhubbub
-grigio:babel
 xml2js
 less
 filesaver
@@ -19,18 +17,18 @@ facts
 browser-policy
 percolatestudio:fastclick
 random
-#mizzao:animated-each
-#jquery-waypoints
-#mizzao:jquery-ui
 nemo64:bootstrap
 mikowals:lodash
 mikowals:trim-html
 react-runtime
 jsx
+react-meteor-data
 reactive-dict
 meteorhacks:inject-initial
 mikowals:react-waypoint
 vazco:universe-html-purifier
 meteorhacks:kadira
-meteorhacks:fast-render
+mikowals:fast-render
 reactive-var
+ecmascript2015-runtime-extension
+

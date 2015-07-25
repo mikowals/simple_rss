@@ -8,6 +8,7 @@ var keepLimitDate = function(){
 };
 
 BrowserPolicy.content.allowConnectOrigin("https://*.mak-play.com");
+BrowserPolicy.content.allowEval();
 
 Feeds._ensureIndex( { url: 1 }, {unique: true} );
 Articles._ensureIndex( { link: 1 }, {unique: true, dropDups: true });

@@ -1,0 +1,1 @@
+Waypoint = Npm.require('react-waypoint');

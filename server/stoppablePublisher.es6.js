@@ -1,3 +1,4 @@
+
 stoppablePublisher = class stoppablePublisher {
   constructor(_sub) {
     Object.assign(this, {
@@ -19,8 +20,8 @@ stoppablePublisher = class stoppablePublisher {
   _observeAndPublish (cursor) {
     let self = this;
     let {_name, _sub, _handle} = self; 
-    let changed = _.partial( _sub.changed.bind(_sub), _name);
-    let removed = _.partial( _sub.removed.bind(_sub), _name);
+    let changed =  _sub.changed.bind(_sub, _name);
+    let removed =  _sub.removed.bind(_sub, _name);
     // need a list of current ids to track removals
     let oldIds = new Set(self.ids());
 

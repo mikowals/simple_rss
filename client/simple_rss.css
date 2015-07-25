@@ -1,4 +1,4 @@
-/* CSS declarations go here */
+
 
 @media all {
 
@@ -24,8 +24,7 @@ body {
 
 }
 .container {
-  /*border: 1px solid #1E68A6;
-  border-radius: 5px;*/
+ 
   max-width: 540px;
   margin: 0px auto;
 }
@@ -97,7 +96,7 @@ span.spacer {
   width: 100%;
 }
 
-span.spacer:after { /* Adds border to spacer */
+span.spacer:after { 
     display:inline-block;
     width:100%;
     content:".";
@@ -114,7 +113,7 @@ time, TimeAgo {
   font-size: 0.6em;
   line-height: 1.2em;
 }
-.small-loader { /* loading graphic */
+.small-loader { 
   width:16px;
   height:16px;
   margin:1px auto;
@@ -122,7 +121,7 @@ time, TimeAgo {
 #  background:url(/ajax-loader.gif) no-repeat 0 0;
 }
 
-.loader { /* loading graphic */
+.loader { 
   width:32px;
   height:32px;
   margin:20px auto;
@@ -145,67 +144,11 @@ time, TimeAgo {
   margin-top: 8px;
   margin-bottom: 8px;
   padding-top: 15px;
-  paddig-bottom: 15px;
+  padding-bottom: 15px;
   min-height: 60px;
 }
 
-#progress
-{
-    -webkit-border-radius: 1px;
-    background-color: rgba(67,53,49,.6);
-    color: white;
-    font-size: 10px;
-    font-weight: bold;
-    height: 11px;
-    line-height: 11px;
-    #margin: 80px auto;
-    text-align: center;
-    width: 300px;
-    -webkit-transition: opacity 0.15s ease-in-out;
-    opacity: 0;
 }
-
-.msg {
-    display: inline-block;
-}
-
-.dot {
-    display: inline-block;
-    border-radius: 1px;
-    background-color: #fff;
-    -webkit-animation: dot 1.5s infinite;
-    margin-right: 4px;
-}
-
-.one {
-    -webkit-animation-delay: 0.0s;
-}
-
-.two {
-    -webkit-animation-delay: 0.5s;
-}
-
-.three {
-    -webkit-animation-delay: 1.0s;
-}
-
-@-webkit-keyframes dot {
-     0% { width: 3px; height: 3px; margin-right: 4px; }
-    25% { width: 5px; height: 5px; margin-right: 2px; }
-    33% { width: 3px; height: 3px; margin-right: 4px; }
-   100% { width: 3px; height: 3px; margin-right: 4px; }
-}
-
-.example-enter {
-  opacity: 0.01;
-  transition: opacity .5s ease-in;
-}
-
-.example-enter.example-enter-active {
-  opacity: 1;
-}
-
-/* end media all */ }
 
 
 
@@ -223,4 +166,4 @@ time, TimeAgo {
     font-size:0.8125em;
 }
 
-/* end of @media screen and (max-width : 340px) */}
+}
