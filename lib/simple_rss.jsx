@@ -32,23 +32,43 @@ var Main = React.createClass({
 });
 
 var FeedListContainer = React.createClass({
-  mixins:[ReactMeteorData],
   displayName:"FeedListContainer",
   propTypes: {
     feedList: React.PropTypes.arrayOf(React.PropTypes.string),
   },
+  getDefaultProps(){
+    return {feedList:[]}
+  },
+  getInitialState(){
+    return {feeds:[]};
+  },
 
-  getMeteorData(){
+  getBeteorData(){
+    var self = this;
     if (Meteor.isServer) return {};
-    var feeds = Feeds.find({},{ sort:{title: 1}}).fetch();
-    return {feeds};
+    var initial = true;
+    var feeds = [];
+    this.autorun = Feeds.find({},{ sort:{title: 1}}).observeChanges({
+      added(id, doc){
+        doc._id = id;
+        feeds.push(doc);
+        if (!initial) self.setState( {feeds});
+      },
+      changed(){},
+      removed(){}
+    });
+    initial = false;
+    self.setState({feeds});
   },
   componentWillMount(){
-    if (Meteor.isClient) return;
-    this.data.feeds = feeds.find({_id:{$in: this.props.feedList}}, {sort:{title: 1}}).fetch();
+    if (Meteor.isClient) this.getBeteorData();
+    this.setState({feeds: Feeds.find({_id:{$in: this.props.feedList}}, {sort:{title: 1}}).fetch()});
+  },
+  componentWillUnmount(){
+    this.autorun && this.autorun.stop();
   },
   render(){
-    return <FeedList feeds={this.data.feeds}/>;
+    return <FeedList feeds={this.state.feeds}/>;
   }
 });
 

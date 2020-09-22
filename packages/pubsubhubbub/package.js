@@ -10,7 +10,7 @@ Npm.depends({
 
 Package.on_use(function (api) {
   //api.versionsFrom('METEOR@1.0.3.2');
-  api.use( ['ecmascript','ecmascript2015-runtime-extension','webapp','random'], "server" );
-  api.add_files([ "pubsubhubbub.es6.js"], "server");
+  api.use( ['ecmascript','webapp','random'], "server" );
+  api.add_files([ "pubsubhubbub.js"], "server");
   api.export && api.export( [ "FeedSubscriber" ], "server");
 });

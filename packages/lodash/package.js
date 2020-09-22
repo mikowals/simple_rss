@@ -5,12 +5,12 @@ Package.describe({
 });
 
 Npm.depends({
-  "lodash":"3.10.0"
+  "lodash":"3.10.1"
 });
 
 Package.on_use(function (api) {
   //api.versionsFrom('METEOR-CORE@0.9.0-rc9');
-  api.use('mikowals:browserify','client');
+  api.use('cosmos:browserify','client');
   api.addFiles(['lodash.browserify.js'],'client');
   api.addFiles(["lodash-server.js"],'server');
 
