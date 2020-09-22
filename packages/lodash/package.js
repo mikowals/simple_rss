@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "lodash":"3.10.1"
+  "lodash":"4.17.20"
 });
 
 Package.on_use(function (api) {

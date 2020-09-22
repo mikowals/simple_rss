@@ -1,18 +1,24 @@
 0 info it worked if it ends with ok
-1 verbose cli [ '/usr/local/bin/node', '/usr/local/bin/npm', 'install' ]
+1 verbose cli [ '/usr/local/bin/node',
+1 verbose cli   '/usr/local/bin/npm',
+1 verbose cli   'cache',
+1 verbose cli   'cleannpm',
+1 verbose cli   'cache',
+1 verbose cli   'clean' ]
 2 info using npm@1.4.28
-3 info using node@v0.10.36
+3 info using node@v0.10.40
 4 verbose config Skipping project config: /home/mikowals/.npmrc. (matches userconfig)
-5 error install Couldn't read dependencies
-6 error package.json ENOENT, open '/home/mikowals/package.json'
-6 error package.json This is most likely not a problem with npm itself.
-6 error package.json npm can't find a package.json file in your current directory.
-7 error System Linux 3.16.0-28-generic
-8 error command "/usr/local/bin/node" "/usr/local/bin/npm" "install"
+5 error Error: Invalid cache action: cleannpm
+5 error     at EventEmitter.cache (/usr/local/lib/node_modules/npm/lib/cache.js:112:24)
+5 error     at Object.commandCache.(anonymous function) (/usr/local/lib/node_modules/npm/lib/npm.js:221:11)
+5 error     at EventEmitter.<anonymous> (/usr/local/lib/node_modules/npm/bin/npm-cli.js:84:28)
+5 error     at process._tickCallback (node.js:448:13)
+6 error If you need help, you may report this *entire* log,
+6 error including the npm and node versions, at:
+6 error     <http://github.com/npm/npm/issues>
+7 error System Linux 4.4.0-64-generic
+8 error command "/usr/local/bin/node" "/usr/local/bin/npm" "cache" "cleannpm" "cache" "clean"
 9 error cwd /home/mikowals/simple-rss
-10 error node -v v0.10.36
+10 error node -v v0.10.40
 11 error npm -v 1.4.28
-12 error path /home/mikowals/package.json
-13 error code ENOPACKAGEJSON
-14 error errno 34
-15 verbose exit [ 34, true ]
+12 verbose exit [ 1, true ]
