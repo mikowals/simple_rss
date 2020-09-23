@@ -11,7 +11,7 @@ Package.describe({
 });
 
 Npm.depends({
-  'react-waypoint': "1.0.1"
+  'react-waypoint': "9.0.3"
 });
 
 Package.onUse(function(api) {

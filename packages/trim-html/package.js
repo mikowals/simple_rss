@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "trim-html" : "0.1.6"
+  "trim-html" : "0.1.9"
 });
 
 Package.on_use(function (api) {
