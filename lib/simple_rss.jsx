@@ -1,4 +1,4 @@
-
+import React from 'react';
 var DAY = 1000 * 60 * 60 * 24;
 var Session = new ReactiveDict();
 var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
