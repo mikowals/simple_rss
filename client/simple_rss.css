@@ -117,8 +117,6 @@ time, TimeAgo {
   width:16px;
   height:16px;
   margin:1px auto;
-  content:
-#  background:url(/ajax-loader.gif) no-repeat 0 0;
 }
 
 .loader { 

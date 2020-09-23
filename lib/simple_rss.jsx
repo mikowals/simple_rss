@@ -1,9 +1,11 @@
 import React from 'react';
+import {ReactMeteorData} from 'meteor/react-meteor-data';
+import { FastRender } from 'meteor/staringatlights:fast-render'
+import ReactDOMServer from 'react-dom/server';
 
 var DAY = 1000 * 60 * 60 * 24;
 var Session = new ReactiveDict();
 var ReactCSSTransitionGroup = React.addons.CSSTransitionGroup;
-React.initializeTouchEvents(true);
 
 var Main = React.createClass({
   displayName: 'Main',
@@ -475,8 +477,9 @@ if (Meteor.isServer) {
 
         var context = new FastRender._Context(loginToken, { headers: headers });
         var userId = context.userId || 'nullUser';
-        var feedList = Meteor.users.findOne(userId).feedList || [];
-        var bodyStr = React.renderToString(<Main initialPage='ArticleListContainer' feedList={feedList} />);
+        var user = Meteor.users.findOne(userId)
+        var feedList = user && user.feedList || [];
+        var bodyStr = ReactDOMServer.renderToString(<Main initialPage='ArticleListContainer' feedList={feedList} />);
         Inject.rawHead('ssr-head', "<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no'>", res)
         Inject.rawBody('ssr-render', bodyStr, res);
         Inject.rawModHtml('defer scripts', function(html) {

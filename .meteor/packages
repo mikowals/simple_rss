@@ -42,3 +42,5 @@ shell-server
 dynamic-import
 underscore
 accounts-password
+staringatlights:fast-render
+react-meteor-data
