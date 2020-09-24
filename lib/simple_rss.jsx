@@ -1,17 +1,19 @@
-import { Meteor } from 'meteor/meteor'
+import { Meteor } from 'meteor/meteor';
 import React from 'react';
-import { render } from 'react-dom'
+import { render } from 'react-dom';
 import { withTracker } from 'meteor/react-meteor-data';
-import PropTypes from 'prop-types'
+import { Tracker } from 'meteor/tracker';
+import PropTypes from 'prop-types';
 
-function renderArticle(article) {
-  return <Article article={article} key={article._id}/>
-};
+const DAY = 1000 * 60 * 60 * 24;
 
 function ArticlesPage(props) {
-  
+  function renderArticle(article) {
+    return <Article article={article} key={article._id}/>
+  };
+
   return  <div id="stream">
-            {props.loading ? <h1>loading...</h1> : props.articles.map(renderArticle) }
+            { props.loading ? <h1>loading...</h1> : props.articles.map(renderArticle) }
           </div>;
 };
 
@@ -22,7 +24,7 @@ ArticlesPage.propTypes = {
 };
 
 const ArticlesPageContainer = withTracker(() => {
-  const articlesHandle = Meteor.subscribe('Articles');
+  const articlesHandle = Meteor.subscribe('articles');
   const loading = !articlesHandle.ready();
   const list = Articles.find();
   const listExists = !loading && !!list;
@@ -32,19 +34,6 @@ const ArticlesPageContainer = withTracker(() => {
     articles: listExists ? list.fetch() : [],
   };
 })(ArticlesPage);
-
-/*const ArticlesPageContainer = withTracker(({}) => {
-  const articlesHandle = Meteor.subscribe("articles");
-  const loading = !articlesHandle.ready();
-  const list = Articles.find({});
-  const listExists = !loading && !!list;
-
-  return {
-    loading,
-    listExists,
-    articles: listExists ? list.fetch() : []
-  };
-})(ArticlesPage);*/
 
 class Article extends React.Component {
   shouldComponentUpdate(nextProps) {
@@ -57,7 +46,7 @@ class Article extends React.Component {
     function renderMarkup() { return {__html: UniHTML.purify(summary)}; };
     return  <ArticleSectionView _id={_id}>
               <ArticleSourceView source={source}>
-                <TimeAgo 
+                <TimeAgoContainer 
                   className="hidden-xs time pull-right" 
                   date={date}/>
               </ArticleSourceView>
@@ -71,9 +60,7 @@ class Article extends React.Component {
                   className="description" 
                   dangerouslySetInnerHTML={renderMarkup()}/>
                 <ArticleFooterView>
-                    <TimeAgo 
-                      className="timeago" 
-                      date={date}/>
+                    <TimeAgoContainer date={date}/>
                 </ArticleFooterView>
               </div>
             </ArticleSectionView>;
@@ -117,48 +104,42 @@ class ArticleFooterView extends React.Component {
 };
 
 class TimeAgo extends React.Component {
-  componentWillMount() {
-    var now;
-    if (Meteor.isServer){
-      now = new Date();
-      return this.setState({timeText: timeAgoText(now, this.props.date)});
-    } else {
-      this.computation = Tracker.autorun( (c) => {
-        now = Session.get('now');
-        this.setState({timeText: timeAgoText(now, this.props.date)});
-      });
-    }
-  };
-  shouldComponentUpdate(nextProps,nextState){
-    return this.state.timeText !== nextState.timeText;
-  };
-  componentWillUnmount() {
-    this.computation && this.computation.stop();
-  };
   render() {
-    return <span>{this.state.timeText}</span>;
+    return <span>{this.props.timeText}</span>;
   };
 };
 
-var timeAgoText = function( now, aDate) {
+TimeAgo.propTypes = {
+  timeText: PropTypes.string.isRequired
+}
+const TimeAgoContainer = withTracker ((props) => {
+  const now = Meteor.isServer ? new Date() : Session.get("now");
+  return {
+    timeText: timeAgoText(now, props.date)
+  };
+})(TimeAgo);
+
+var timeAgoText = function(now, aDate) {
   now = new Date(now);
   aDate = new Date(aDate);
-  var days = ( now -  aDate ) / DAY
-
-  var timeText = null;
-  if (Math.floor(days )  >= 2) timeText = Math.floor(days ) + " days ago";
-  else if (Math.floor(days )  >= 1) timeText = Math.floor(days ) + " day ago";
-  else if (Math.floor(days  * 24)  >= 2 ) timeText = Math.floor(days * 24) + " hours ago";
-  else if (Math.floor(days * 24)  >= 1 ) timeText = Math.floor(days  * 24) + " hour ago";
-  else if (Math.floor(days  * 24 * 60) >= 2) timeText = Math.floor(days * 24 * 60) + " minutes ago";
-  else {
-    timeText = "about a minute ago";
-  }
-  return timeText;
+  var timeAgoMS = ( now -  aDate ) 
+  const days = Math.floor(timeAgoMS / DAY)
+  if (days >= 2) return days + " days ago";
+  if (days  >= 1) return days + " day ago";
+  const hours = Math.floor(timeAgoMS / (1000 * 60 * 60))
+  if (hours  >= 2 ) return hours + " hours ago";
+  if (hours  >= 1 ) return hours + " hour ago";
+  const minutes = Math.floor(timeAgoMS / (1000 * 60))
+  if ( minutes >= 2) return minutes + " minutes ago";
+  return "about a minute ago";
 }
 
 if (Meteor.isClient) {
   Meteor.startup(() => {
+    Session.set('now',new Date());
+    Meteor.setInterval( function() {
+      Session.set('now',new Date());
+    }, 1000 * 60);
     render(<ArticlesPageContainer/>, document.body);
   });
 }
