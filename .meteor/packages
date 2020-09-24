@@ -20,7 +20,6 @@ mikowals:trim-html
 jsx
 reactive-dict@1.3.0
 meteorhacks:inject-initial
-mikowals:react-waypoint
 vazco:universe-html-purifier
 mikowals:fast-render
 reactive-var@1.0.11

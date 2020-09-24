@@ -5,24 +5,6 @@ var Future = Npm.require('fibers/future');
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 2;
 
-var _request = function (feed, cb ) {
-  if (! feed.url)
-    throw new Error( "_request called without url");
-
-  var options = {
-    headers: {
-      'If-Modified-Since': feed.lastModified && new Date ( feed.lastModified ).toUTCString(),
-      'If-None-Match': feed.etag
-      },
-    url: feed.url,
-    timeout: 7000,
-    gzip: true,
-  };
-
-  options.headers = lodash.pick( options.headers, lodash.identity);  // remove falsy values
-  return request( options, cb );
-};
-
 var onReadable = function (fp, feed) {
   return Meteor.bindEnvironment(function(){
     var item;
@@ -48,10 +30,36 @@ function bindEnvironmentError( error ){
 };
 
 function _fp( feed ) {
-  var future = new Future();
+  //var future = new Future();
+  var _request = function (feed, cb ) {
+    if (! feed.url)
+      throw new Error( "_request called without url");
+
+    var options = {
+      headers: {
+        'If-Modified-Since': feed.lastModified && new Date ( feed.lastModified ).toUTCString(),
+        'If-None-Match': feed.etag
+        },
+      url: feed.url,
+      timeout: 7000,
+      gzip: true,
+    };
+
+    options.headers = lodash.pick( options.headers, lodash.identity);  // remove falsy values
+    var responseStream = request( options, cb )
+      .on( 'response', Meteor.bindEnvironment(function( response ){
+        if ( response.statusCode === 200 ){
+        //now try parsing the feed
+          var fp = responseStream.pipe( new parser());
+          fp.on( 'error', onError )
+            .on('meta', onMeta )
+            .on('readable',  onReadable(fp, feed));
+        }
+    }));
+    return responseStream;
+  };
 
   function onError( error ){
-    console.log(error);
     feed.error = error;
   }
 
@@ -68,43 +76,23 @@ function _fp( feed ) {
     }
   }
 
-  // need to request and pipe result so use events rather than callback
-  // response event fires before callback, piping won't work inside callback
-  var r = _request( feed, function( err, res) {
-    if ( err )
-      feed.error = err;
-    if ( res ) {
-      feed.statusCode = res.statusCode;
-      feed.lastModified = res.headers[ 'last-modified' ] ;
-      feed.etag = res.headers['etag'];
-    }
-
-    feed = lodash.pick( feed, lodash.identity ); // remove falsy values
-    future.return( feed );
-  })
-    // this response fires before the callback written above
-    .on( 'response', Meteor.bindEnvironment(
-      function( response ){
-        if ( response.statusCode === 200 ){
-          //now try parsing the feed
-          var fp = r.pipe( new parser());
-          fp.on( 'error', onError )
-            .on('meta', onMeta )
-            .on('readable',  onReadable(fp, feed));
-        }
-      }
-    ));
-  return future;
+  var res = Meteor.wrapAsync(_request)( feed );
+  feed.statusCode = res.statusCode;
+  feed.lastModified = res.headers[ 'last-modified' ] || feed.lastModified;
+  feed.etag = res.headers['etag'] || feed.etag;
+  return feed;
 };
 
-FeedParser = {
-  syncFP(feed) {
+var syncFP = function(feed) {
     if ( feed instanceof Array ){
-      return _.invoke(feed.map(_fp),'wait');
+      return feed.map(_fp);
     } else {
-      return  _fp( feed ).wait();
+      return  _fp( feed );
     }
-  },
+  }
+
+FeedParser = {
+  syncFP,
   readAndInsertArticles( fp, feed ) {
     if ( ! ( fp instanceof parser ) )
       fp = fp.pipe( new parser() );

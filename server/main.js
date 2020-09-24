@@ -99,7 +99,6 @@ Meteor.methods({
     var feeds = Feeds.find( criteria );
     if ( feeds.count() < 1) return;
     var rssResults = FeedParser.syncFP( feeds.fetch() );
-
     rssResults.forEach(({_id, statusCode, lastModified, etag, lastDate, error, url}) => {
       if ( statusCode === 200 ) {
         Feeds.update(_id, {$set: {lastModified, etag, lastDate}} , _.noop );
