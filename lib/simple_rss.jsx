@@ -1,9 +1,11 @@
 import { Meteor } from 'meteor/meteor';
 import React from 'react';
-import { render } from 'react-dom';
+import { hydrate } from 'react-dom';
+import { renderToNodeStream } from 'react-dom/server'
 import { withTracker } from 'meteor/react-meteor-data';
-import { Tracker } from 'meteor/tracker';
 import PropTypes from 'prop-types';
+import { onPageLoad } from 'meteor/server-render'
+import { ServerStyleSheet } from "styled-components"
 
 const DAY = 1000 * 60 * 60 * 24;
 
@@ -13,7 +15,7 @@ function ArticlesPage(props) {
   };
 
   return  <div id="stream">
-            { props.loading ? <h1>loading...</h1> : props.articles.map(renderArticle) }
+            { props.articles.map(renderArticle) }
           </div>;
 };
 
@@ -135,12 +137,33 @@ var timeAgoText = function(now, aDate) {
 }
 
 if (Meteor.isClient) {
+  onPageLoad(async sink => {
+    Meteor.subscribe('articles', function(){
+      const list = Articles.find({}, {limit: 20});
+      hydrate(<ArticlesPage articles={list.fetch()} loading={false} listExists={true}/>,
+        document.getElementById("app")
+      );
+    });
+    (await import("/lib/simple_rss.jsx")).default;
+  });
   Meteor.startup(() => {
     Session.set('now',new Date());
     Meteor.setInterval( function() {
       Session.set('now',new Date());
     }, 1000 * 60);
-    render(<ArticlesPageContainer/>, document.body);
+  });
+} else {
+  onPageLoad(sink => {
+    const start = new Date()
+    const sheet = new ServerStyleSheet();
+    const list = Articles.find({}, {limit: 20, sort: {date: -1}});
+    const appJSX = sheet.collectStyles(
+      <ArticlesPage articles={list.fetch()} loading={false} listExists={true}/>
+    );
+    const htmlStream = sheet.interleaveWithNodeStream(
+      renderToNodeStream(appJSX)
+    );
+    sink.renderIntoElementById("app", htmlStream);
   });
 }
 

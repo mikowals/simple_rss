@@ -10,7 +10,6 @@ pubsubhubbub
 xml2js
 less
 filesaver
-facts
 browser-policy@1.1.0
 random@1.2.0
 nemo64:bootstrap
@@ -36,3 +35,6 @@ shell-server
 underscore
 accounts-password
 react-meteor-data
+server-render
+static-html
+
