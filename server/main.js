@@ -20,10 +20,6 @@ Meteor.users.deny({
   update: () => true
 });
 
-Facts.setUserIdFilter( ( userId )  => {
-  return !! Meteor.users.find({_id: userId, 'profile.admin': true}, {fields:{_id:1}}).count();
-});
-
 //  send feeds, articles and userdata in null publish to work with fast-render
 //  Feeds are associated with userIds and articles are associated with feeds
 
