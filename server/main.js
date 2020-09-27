@@ -20,16 +20,41 @@ Meteor.users.deny({
   update: () => true
 });
 
-//  send feeds, articles and userdata in null publish to work with fast-render
-//  Feeds are associated with userIds and articles are associated with feeds
+var options = {
+  callbackUrl: Meteor.absoluteUrl("hubbub"),
+  secret: Random.id()
+};
 
+var feedSubscriber = new FeedSubscriber(options);
 
-/*FastRender.onAllRoutes(function(path) {
-  if ( ! _.any(['.js','.css', '.woff', '/hubbub'], (s) => path.includes(s))) {
-    this.subscribe('articles');
-    this.subscribe('feeds');
-  }
-});*/
+Meteor.startup( function () {
+
+  feedSubscriber.on(
+    'feedStream',
+    FeedParser.readAndInsertArticles.bind(FeedParser)
+  );
+
+  Feeds.find(
+    {hub: {$ne: null}},
+    {fields:{_id:1, hub:1, url:1}}
+  ).forEach( function (feed) {
+    feedSubscriber.subscribe( feed.url, feed.hub, feed._id );
+  });
+  process.on('exit', Meteor.bindEnvironment ( function (){
+    feedSubscriber.stopAllSubscriptions();
+    console.log( "paused to allow subscriptions to end");
+
+  }, function ( e ) { throw e; }));
+
+  _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
+    process.once(sig, Meteor.bindEnvironment (function () {
+      console.log ( "process received : " + sig);
+      feedSubscriber.stopAllSubscriptions();
+      process.kill( process.pid, sig);
+    }, function ( e ) { throw e; }));
+  });
+
+});
 
 
 Meteor.publish( 'feeds', function() {
@@ -66,7 +91,7 @@ Meteor.publish( 'articles', function() {
 });
 
 Meteor.startup( () => {
-  
+
   Meteor.call('findArticles' );
   Meteor.call('removeOldArticles');
 
@@ -74,12 +99,12 @@ Meteor.startup( () => {
     () => Meteor.call('removeOldArticles'),
     DAY
   );
-  
+
   var interval = Meteor.setInterval(
     () => Meteor.call('findArticles', { hub: null} ),
     updateInterval
   );
-  
+
   _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
       process.once(sig, Meteor.bindEnvironment (function () {
         Meteor.clearInterval( interval );
@@ -121,9 +146,9 @@ Meteor.methods({
   markRead: function( link ){
     var self = this;
     check( link, String );
-    Articles.update({link: link}, 
+    Articles.update({link: link},
       {$addToSet: {readBy: self.userId }, $inc: {clicks: 1, readCount: 1}},
-       _.noop 
+       _.noop
     );
   },
 
@@ -138,5 +163,15 @@ Meteor.methods({
       Meteor.users.update( user._id, {$set: {feedList: feedList}, $pull:{feedList: null}});
     //  Meteor.users.update( user._id, { $pull:{feedList: null}});
     });
+  },
+
+  stopAndRestartPubSub: function(){
+    function subscribe(feed){
+      feedSubscriber.subscribe( feed.url, feed.hub, feed._id);
+    };
+
+    feedSubscriber.stopAllSubscriptions();
+    Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).forEach( subscribe );
   }
+
 });

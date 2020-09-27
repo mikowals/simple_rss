@@ -29,12 +29,7 @@ function bindEnvironmentError( error ){
   console.error( error );
 };
 
-function _fp( feed ) {
-  //var future = new Future();
-  var _request = function (feed, cb ) {
-    if (! feed.url)
-      throw new Error( "_request called without url");
-
+function makeRequestOptions( feed ) {
     var options = {
       headers: {
         'If-Modified-Since': feed.lastModified && new Date ( feed.lastModified ).toUTCString(),
@@ -44,9 +39,18 @@ function _fp( feed ) {
       timeout: 7000,
       gzip: true,
     };
+    // remove falsy values
+    options.headers = lodash.pick( options.headers, lodash.identity);
+    return options;
+}
 
-    options.headers = lodash.pick( options.headers, lodash.identity);  // remove falsy values
-    var responseStream = request( options, cb )
+function _fp( feed ) {
+  //var future = new Future();
+  var _request = function (feed, cb ) {
+    if (! feed.url)
+      throw new Error( "_request called without url");
+
+    var responseStream = request( makeRequestOptions(feed), cb )
       .on( 'response', Meteor.bindEnvironment(function( response ){
         if ( response.statusCode === 200 ){
         //now try parsing the feed
@@ -76,10 +80,15 @@ function _fp( feed ) {
     }
   }
 
-  var res = Meteor.wrapAsync(_request)( feed );
-  feed.statusCode = res.statusCode;
-  feed.lastModified = res.headers[ 'last-modified' ] || feed.lastModified;
-  feed.etag = res.headers['etag'] || feed.etag;
+  try {
+    var res = Meteor.wrapAsync(_request)( feed );
+    
+    feed.statusCode = res.statusCode;
+    feed.lastModified = res.headers[ 'last-modified' ] || feed.lastModified;
+    feed.etag = res.headers['etag'] || feed.etag;
+  } catch (e) {
+    feed.error = e.message
+  }
   return feed;
 };
 
