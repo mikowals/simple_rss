@@ -20,43 +20,6 @@ Meteor.users.deny({
   update: () => true
 });
 
-var options = {
-  callbackUrl: Meteor.absoluteUrl("hubbub"),
-  secret: Random.id()
-};
-
-var feedSubscriber = new FeedSubscriber(options);
-
-Meteor.startup( function () {
-
-  feedSubscriber.on(
-    'feedStream',
-    FeedParser.readAndInsertArticles.bind(FeedParser)
-  );
-
-  Feeds.find(
-    {hub: {$ne: null}},
-    {fields:{_id:1, hub:1, url:1}}
-  ).forEach( function (feed) {
-    feedSubscriber.subscribe( feed.url, feed.hub, feed._id );
-  });
-  process.on('exit', Meteor.bindEnvironment ( function (){
-    feedSubscriber.stopAllSubscriptions();
-    console.log( "paused to allow subscriptions to end");
-
-  }, function ( e ) { throw e; }));
-
-  _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
-    process.once(sig, Meteor.bindEnvironment (function () {
-      console.log ( "process received : " + sig);
-      feedSubscriber.stopAllSubscriptions();
-      process.kill( process.pid, sig);
-    }, function ( e ) { throw e; }));
-  });
-
-});
-
-
 Meteor.publish( 'feeds', function() {
   var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   return Feeds.find( {subscribers: this.userId || 'nullUser'}, feedOptions );
@@ -67,19 +30,24 @@ Meteor.publish( 'articles', function() {
   var userId = self.userId || 'nullUser';
   //var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   var articleFields = {_id: 1, title: 1, source: 1, date: 1, summary: 1, link: 1, feed_id: 1};
-  var articleOptions = {fields: articleFields, limit: 300, sort: {date: -1, _id: 1}};
+  var articleOptions = {fields: articleFields, limit: 200, sort: {date: -1, _id: 1}};
   var articlePublisher, userObserver;
   articlePublisher = new stoppablePublisher( self );
   function observeArticles( id, doc){
-    var articleCursor = Articles.find({feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}}, articleOptions);
+    var articleCursor = Articles.find(
+      {feed_id: {$in: doc.feedList}, date: {$gt: keepLimitDate()}},
+      articleOptions
+    );
     articlePublisher.start( articleCursor );
   }
 
+  //Observing the Users collection to watch changes in the feedLists.
+  //removes don't matter because the user will always exist or log out.
   userObserver = Meteor.users.find( userId, {fields: {feedList: 1}} ).observeChanges({
     added: observeArticles,
     // for bulk adds the observer would restart constantly
     // XXX could manage this with pause publish
-    changed: _.debounce(Meteor.bindEnvironment(observeArticles), 300, {trailing: true})
+    changed:  _.debounce(Meteor.bindEnvironment(observeArticles), 300, {trailing: true})
   });
 
   self.onStop( () => {

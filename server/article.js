@@ -10,7 +10,7 @@ this.Article = class Article {
       date: new Date(),
       link: link || origLink || null,
     });
-    
+
     this.setSummary( description || summary );
 
     if ( Object.prototype.toString.call(date) === "[object Date]" &&
@@ -18,7 +18,6 @@ this.Article = class Article {
         this.date = date;
     }
   }
-
   setSourceUrl(sourceUrl) {
     this.sourceUrl = sourceUrl;
   }

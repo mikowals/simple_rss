@@ -2,8 +2,8 @@
 stoppablePublisher = class stoppablePublisher {
   constructor(_sub) {
     _.extend(this, {
-      _sub, 
-      _name: null, 
+      _sub,
+      _name: null,
       _handle: null});
   }
 
@@ -14,34 +14,38 @@ stoppablePublisher = class stoppablePublisher {
 
   ids () {
     var self = this;
-    return _.keys( _.get( self, ['_sub','_documents',self._name], {}));
+    let mappedKeys = _.get(self, '_sub._documents', {});
+    return mappedKeys.get(self._name, []);
   }
 
   _observeAndPublish (cursor) {
     let self = this;
-    let {_name, _sub, _handle} = self; 
-    let changed =  _sub.changed.bind(_sub, _name);
-    let removed =  _sub.removed.bind(_sub, _name);
-    // need a list of current ids to track removals
+    let {_name, _sub, _handle} = self;
+    // list to track ids already published but not observed after restart
     let oldIds = new Set(self.ids());
+    let removedIds = new Set([]);
+    let changed =  _sub.changed.bind(_sub, _name);
+    let removed = _sub.removed.bind(_sub, _name)
 
     _handle && _handle.stop();
     let newHandle = cursor.observeChanges({
       added( id, doc ) {
-        if ( oldIds.has( id ) ){
+        //If the id is already published but its new to the observer treat it as changed.
+        if ( oldIds.has( id ) && ! removedIds.has(id)){
           oldIds.delete(id);
-          changed(id, doc);
-        } else{
+          //changed(id, doc);
+        } else {
           _sub.added( _name, id, doc );
         }
       },
       removed,
       changed
     });
-
-    // any id not found during add should be removed after each restart
+    // any id published but not found after restart needs to be removed.
     if ( _sub._documents && oldIds.size ) {
       oldIds.forEach( removed );
+      //After removals oldIds are no longer necessary and misleading if kept.
+      oldIds = new Set([]);
     }
 
     self._handle = {stop: function () {
@@ -51,6 +55,7 @@ stoppablePublisher = class stoppablePublisher {
   }
 
   start (cursor) {
+    let self = this;
     var name = this._name;
     if ( cursor._cursorDescription.collectionName !== name ){
       if ( ! name )

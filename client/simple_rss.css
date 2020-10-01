@@ -9,6 +9,10 @@ div {
     margin:0;
 }
 
+.mt-1 {
+  margin-top: ($spacer * .25) !important;
+}
+
 body {
   font-family: AppleSDGothicNeo-Medium, Avenir-Light, sans-serif;
   font-size: 18px;
@@ -24,16 +28,19 @@ body {
 
 }
 .container {
- 
+
   max-width: 540px;
-  margin: 0px auto;
+  margin: 10px auto;
 }
 
 #stream {
     min-height:100px;
-    padding:0 5px;
+    padding:4px 5px;
 }
 
+i {
+  cursor: pointer;
+}
 
 #footer {
   border-top: 1px solid #bbb;
@@ -96,12 +103,12 @@ span.spacer {
   width: 100%;
 }
 
-span.spacer:after { 
+span.spacer:after {
     display:inline-block;
     width:100%;
     content:".";
     font-size:0;
-    color: transparent;
+    color: black;
     height:1px;
     background:#bbb;
     vertical-align:middle;
@@ -113,13 +120,13 @@ time, TimeAgo {
   font-size: 0.6em;
   line-height: 1.2em;
 }
-.small-loader { 
+.small-loader {
   width:16px;
   height:16px;
   margin:1px auto;
 }
 
-.loader { 
+.loader {
   width:32px;
   height:32px;
   margin:20px auto;
@@ -147,8 +154,6 @@ time, TimeAgo {
 }
 
 }
-
-
 
 @media screen and (max-width : 480px) {
 
