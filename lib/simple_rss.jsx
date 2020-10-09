@@ -1,23 +1,22 @@
+
 import { Meteor } from 'meteor/meteor';
-import { Session } from 'meteor/session';
-import React from 'react';
-import { hydrate } from 'react-dom';
-import { renderToNodeStream } from 'react-dom/server'
 import { withTracker } from 'meteor/react-meteor-data';
+import { Session } from 'meteor/session';
+import React, { useState, useEffect, memo } from 'react';
+import { unstable_createRoot } from 'react-dom';
 import PropTypes from 'prop-types';
 import { onPageLoad } from 'meteor/server-render';
 import { ServerStyleSheet } from "styled-components";
-import formatDistanceToNow from 'date-fns/formatDistanceToNow'
+import { renderToNodeStream } from 'react-dom/server';
+import formatDistanceToNow  from 'date-fns/formatDistanceToNow';
 
 const DAY = 1000 * 60 * 60 * 24;
-const initialArticleLimit = 200;
+const initialArticleLimit = 40;
 
-class App extends React.Component {
-  render(){
-    return this.props.location === "articles" ?
+const App = (props) => {
+    return props.location === "articles" ?
         <ArticlesPageContainer /> :
         <FeedsPageContainer />;
-  };
 };
 
 const AppContainer = withTracker(() => {
@@ -26,17 +25,17 @@ const AppContainer = withTracker(() => {
     }
 })(App);
 
-const renderFeed = (feed) => <Feed feed={feed} key={feed._id} />;
+// Spread the feed object (...) to avoid rerendering
+const renderFeed = (feed) => <Feed {...feed} key={feed._id} />;
+
 const FeedsPage = (props) => {
   return <div className="container">
-    <AddFeed />
-    <div>
-      <span className="pad-top-5 col-xs-6 col-md-6"><h4><strong>Feed Title</strong></h4></span>
-      <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
-      <span className="col-xs-4 text-right"><h4><strong>Last update</strong></h4></span>
-    </div>
-    <div>{props.feeds.map(renderFeed)}</div>
-    </div>;
+           <AddFeed />
+           <span className="pad-top-5 col-xs-6 col-md-6"><h4><strong>Feed Title</strong></h4></span>
+           <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
+           <span className="col-xs-4 text-right"><h4><strong>Last update</strong></h4></span>
+           <div>{props.feeds.map(renderFeed)}</div>
+         </div>;
 };
 
 FeedsPage.propTypes = {
@@ -53,30 +52,34 @@ const FeedsPageContainer = withTracker(() => {
   }
 })(FeedsPage);
 
-class Feed extends React.Component {
+FeedsPageContainer.displayName = "FeedsPageContainer";
+
+class Feed extends React.PureComponent {
   render() {
-    const {title, url, last_date, _id} = this.props.feed;
-    return<div>
-        <h5 className="col-xs-7 col-md-7 pull-left">
-          <Remove _id={_id}/><a  href={url}> {title || url}</a>
-        </h5>
-        <h5 className="count col-xs-1 col-md-1 text-right">
-          <FeedCountContainer feedId={_id}/>
-        </h5>
-        <h5 className="lastDate time col-xs-2 col-md-4 text-right pull-right">
-          <TimeAgoContainer date={last_date}/></h5>
-        </div>;
+    const {_id, url, title, last_date} = this.props;
+    return <React.Fragment>
+             <h5 className="col-xs-7 col-md-7 pull-left">
+               <Remove _id={_id}/>
+               <a  href={url}> {title || ""}</a>
+             </h5>
+             <h5 className="count col-xs-1 col-md-1 text-right">
+               <FeedCountContainer feedId={_id}/>
+             </h5>
+             <h5 className="lastDate time col-xs-2 col-md-4 text-right pull-right">
+               <TimeAgoContainer date={last_date}/>
+             </h5>
+           </React.Fragment>;
   }
 };
 
 Feed.propTypes = {
   title: PropTypes.string,
-  url: PropTypes.string,
-  last_date: PropTypes.string,
-  _id: PropTypes.string
+  url: PropTypes.string.isRequired,
+  last_date: PropTypes.number,
+  _id: PropTypes.string.isRequired
 };
 
-const FeedCount = React.memo((props) => {
+const FeedCount = memo((props) => {
   return <span>{props.count}</span>;
 });
 
@@ -87,10 +90,10 @@ const FeedCountContainer = withTracker((props) => {
   return { count };
 })(FeedCount);
 
+FeedCountContainer.displayName = "FeedCountContainer";
 
-const Remove = React.memo((props) => {
+const Remove = memo((props) => {
   const handleClick = (e) => Meteor.call('removeFeed', props._id);
-
   return <a onClick={handleClick}>
            <i className="glyphicon glyphicon-remove-circle"></i>
          </a>;
@@ -104,6 +107,9 @@ class AddFeed extends React.Component {
     this.handleInput = this.handleInput.bind(this);
   }
   handleSubmit(e) {
+    //Stop submit from navigating away from feeds page
+    e.preventDefault();
+    e.stopPropagation();
     if (! this.state.newURL) {
       alert("URL can not be empty");
       return;
@@ -112,8 +118,7 @@ class AddFeed extends React.Component {
       if (err) alert(err);
       else this.setState({newURL: ""});
     });
-    //Stop submit from navigating away from feeds page
-    e.preventDefault();
+
   }
 
   handleInput(e) {
@@ -122,11 +127,11 @@ class AddFeed extends React.Component {
 
   render() {
     return <React.Fragment>
-           <form className="form-inline pull-right col-sm-12" onSubmit={this.addFeed}>
+           <form className="form-inline pull-right col-sm-12" onSubmit={this.handleSubmit}>
              <span className="mt-1 col-xs-0 col-sm-0"/>
              <span className="input-group input-group-sm col-xs-12 col-sm-12 pull-right">
                <input onChange={this.handleInput} type="url" value={this.state.newURL} className="input-sm col-xs-12" placeholder="http://new URL/rss.xml" id="feedUrl" />
-               <a id="addFeed" onClick={this.handleSubmit} onTouchStart={this.addFeed} type="submit" className="input-group-addon btn btn-primary btn-sm pull-right">Subscribe</a>
+               <a id="addFeed" onClick={this.handleSubmit} onTouchStart={this.handleSubmit} type="submit" className="input-group-addon btn btn-primary btn-sm pull-right">Subscribe</a>
              </span>
            </form>
            <hr className="col-sm-12"/>
@@ -134,20 +139,39 @@ class AddFeed extends React.Component {
   }
 };
 
-const renderArticle = (article) => <Article article={article} key={article._id} />;
-const ArticlesPage =  (props) => {
-  return <React.Fragment>
-           <div id="stream">{props.articles.map(renderArticle)}</div>
-        </React.Fragment>;
+// Spread the article object (...) to avoid new object causing rerender.
+const renderArticle = (article) => {
+  return <ArticleWithTimeAgo {...article} key={article._id} />;
 };
+
+const articlesEqual = (prev, next) => {
+  if (prev.articles.length !== next.articles.length) return false;
+  for (let ii = 0; ii < prev.articles.length; ii++) {
+    const prevValues = Object.values(prev.articles[ii]);
+    const nextValues = Object.values(next.articles[ii]);
+    for (let jj = 0; jj < prevValues.length; jj++){
+      if (prevValues[jj] !== nextValues[jj]) {
+        console.log("Articles not equal ", ii, prevValues, nextValues);
+        return false;
+      }
+    }
+  }
+  return true;
+};
+
+const ArticlesPage = memo((props) => {
+  return <div id="stream">{props.articles.map(renderArticle)}</div>
+}, articlesEqual);
 
 ArticlesPage.propTypes = {
   articles: PropTypes.array
 };
 
+ArticlesPage.displayName = "ArticlesPage";
+
 const ArticlesPageContainer = withTracker(() => {
     let limit = Session.get('articleLimit')
-    var list = Articles.find({}, {limit: limit, sort: {date: -1, title: 1}});
+    var list = Articles.find({}, {limit: limit, sort: {date: -1, _id: 1}});
     return {
       articles: list.map((article) => {
         // Convert date so simple equality checks work and avoid rerender.
@@ -159,56 +183,116 @@ const ArticlesPageContainer = withTracker(() => {
     };
 })(ArticlesPage);
 
-const renderMarkup = (summary) => {
-  return {__html: UniHTML.purify(summary)};
-};
+ArticlesPageContainer.displayName = "ArticlesPageContainer";
 
-class Article extends React.PureComponent {
-  // This could use more components but only the time ago really changes.
-  render() {
-    var {_id, title, source, summary, date, link} = this.props.article;
+const Article = (props) => {
+    var {_id, title, source, summary, link, timeText} = props;
+    // TimeAgo occurs twice.  Once in SourceHeader and once in the footer.
     return  <div id={_id} className="section">
-              <div className="header row-fluid" name="source">
-                <h2>{source}</h2>
-                <span className="spacer"/>
-                <time><TimeAgoContainer date={date} /></time>
-              </div>
+              <SourceHeader source={source} timeText={timeText} />
               <div className="article">
-                <div className="header">
-                  <h3>
-                    <a href={link}>{title}</a>
-                  </h3>
+                <TitleAndSummary link={link} title={title} summary={summary} />
+                <div className="footer visible-xs">
+                  <time><TimeAgo timeText={timeText} /></time>
                 </div>
-                <div
-                  className="description"
-                  dangerouslySetInnerHTML={renderMarkup(summary)}/>
-                  <div className="footer visible-xs">
-                    <time><TimeAgoContainer date={date} /></time>
-                  </div>
               </div>
             </div>;
-  }
 };
 
 Article.propTypes = {
-  article: PropTypes.object.isRequired
+  _id: PropTypes.string.isRequired,
+  timeText: PropTypes.string.isRequired,
+  title: PropTypes.string,
+  source: PropTypes.string.isRequired,
+  summary: PropTypes.string,
+  link: PropTypes.string.isRequired,
 };
 
-class ArticleSourceView extends React.PureComponent {
-  render() {
+const SourceHeader = (props) => {
+    const {source, timeText} = props;
     return <div className="header row-fluid" name="source">
-              <h2>{this.props.source}</h2>
-              <span className="spacer"/>
-              {this.props.children}
-            </div>;
-  }
+             <h2>{source}</h2>
+             <span className="spacer"/>
+             <time><TimeAgo timeText={timeText} /></time>
+           </div>;
 };
 
+const TitleAndSummary = React.memo((props) => {
+    const {link, title, summary} = props;
+    return <React.Fragment>
+           <div className="header">
+             <h3>
+               <a href={link}>{title}</a>
+            </h3>
+          </div>
+          <div className="description"
+               dangerouslySetInnerHTML={{__html: UniHTML.purify(summary)}}/>
+          </React.Fragment>;
+});
+
+TitleAndSummary.displayName = "TitleAndSummary";
 const TimeAgo = React.memo((props) => <span>{props.timeText}</span>);
 
 TimeAgo.propTypes = {
   timeText: PropTypes.string.isRequired
 }
+
+TimeAgo.displayName = "TimeAgo";
+
+function getDisplayName(WrappedComponent) {
+  return WrappedComponent.displayName || WrappedComponent.name || 'Component';
+}
+
+// Transform date property into time ago text that updates automatically.
+// Only past times in minues require frequent text changes.
+const withTimeText = (WrappedComponent) => {
+  const getTimeText = (date) => {
+    return (date && formatDistanceToNow(date) + " ago") || "";
+  };
+  // Set time update frequency to be longer when time text will only change hourly.
+  // Sync time updates with system clock so times render together for user.
+  const msUntilUpdate = (timeText) => {
+    const timeToUpdate = (timeText.includes("hour") ? 15 : 1) * 60 * 1000;
+    const msSinceClockMinute = (Date.now() % (60 * 1000));
+    return timeToUpdate - msSinceClockMinute;
+  };
+
+  // Memo because given the same props a rerender should produce the same
+  // output as is currently displayed.
+  const NewComponent = memo((props) => {
+    const {date, ...passThroughProps} = props;
+    const [timeText, setTimeText] = useState(getTimeText(props.date));
+    useEffect(() => {
+      let innerTimeout = null;
+      // Each run sets a new timeout length based on current text.
+      let intervalFn = () => {
+        newTimeText = getTimeText(props.date);
+        setTimeText(newTimeText);
+        innerTimeout = setTimeout(intervalFn, msUntilUpdate(newTimeText));
+      }
+      const timeout = setTimeout(intervalFn, msUntilUpdate(timeText));
+      return () => {
+        timeout && clearTimeout(timeout);
+        innerTimeout && clearTimeout(innerTimeout);
+      };
+    }, [props.date]);
+
+    return <WrappedComponent {...passThroughProps} timeText={timeText} />;
+  });
+
+  NewComponent.displayName = "withTimeText(" + getDisplayName(WrappedComponent) + ")";
+  return NewComponent;
+}
+
+const ArticleWithTimeAgo = withTimeText(Article);
+//ArticleWithTimeAgo.displayName = "ArticleWithTimeAgo";
+
+const TimeAgoContainer = withTimeText(TimeAgo);
+TimeAgoContainer.propTypes = {
+  date: PropTypes.number.isRequired
+};
+
+/*
 
 const TimeAgoContainer = withTracker ((props) => {
   //Session.get triggers the autorun on the client
@@ -218,46 +302,45 @@ const TimeAgoContainer = withTracker ((props) => {
   };
 })(TimeAgo);
 
+TimeAgoContainer.displayName = "TimeAgoContainer";
+*/
 if (Meteor.isClient) {
-  onPageLoad(async sink => {
+  onPageLoad( sink => {
     Meteor.subscribe('articles', function(){
-      hydrate(<AppContainer />,
-        document.getElementById("app")
-      );
+      const rootElement = document.getElementById("app");
+      unstable_createRoot(rootElement, {
+        hydrate: true
+      }).render(<AppContainer location="articles"/>);
+      //hydrate(<AppContainer />,
+      //  document.getElementById("app")
+      //);
     });
-    (await import("/lib/simple_rss.jsx")).default;
+    //(await import("/lib/simple_rss.jsx")).default;
   });
   Meteor.startup(() => {
     Meteor.subscribe('feeds');
-    Session.set('now',Date.now());
     Session.set('page', 'articles');
     Session.set('articleLimit', initialArticleLimit);
-    Meteor.setInterval( function() {
-      Session.set('now',new Date());
-    }, 1000 * 60);
   });
 } else {
   onPageLoad(sink => {
-    const start = new Date()
     const sheet = new ServerStyleSheet();
-    //need to rewrite this for userID;
+    //need to rewrite this for real userID using cookies;
     const userId = "nullUser";
     const feedList = Meteor.users.findOne(
       {_id: userId},
       {fields: {feedList: 1}}
     ).feedList;
-    const rawList = Articles.find(
+    const articlesCursor = Articles.find(
       {feed_id: {$in: feedList}},
-      {limit: initialArticleLimit, sort: {date: -1, title: 1}}
+      {limit: initialArticleLimit, sort: {date: -1, _id: 1}}
     );
-    const list = rawList.map((article) => {
+    const articles = articlesCursor.map((article) => {
       article.date = new Date(article.date).getTime();
       article.title = article.title || "Link";
       return article;
     });
-    const appJSX = sheet.collectStyles(
-      <ArticlesPage articles={list} />
-    );
+    const appJSX = sheet.collectStyles(<ArticlesPage articles={articles} />);
     const htmlStream = sheet.interleaveWithNodeStream(
       renderToNodeStream(appJSX)
     );

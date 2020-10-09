@@ -5,12 +5,12 @@
     "date-fns": "^2.16.1",
     "jquery": "^3.5.1",
     "prop-types": "^15.7.2",
-    "react": "^16.13.1",
+    "react": "0.0.0-experimental-94c0244ba",
     "react-addons-create-fragment": "^15.6.2",
     "react-addons-linked-state-mixin": "^15.6.2",
     "react-addons-pure-render-mixin": "^15.6.2",
     "react-addons-update": "^15.6.2",
-    "react-dom": "^16.13.1",
+    "react-dom": "0.0.0-experimental-94c0244ba",
     "styled-components": "^5.2.0"
   }
 }

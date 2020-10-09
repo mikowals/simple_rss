@@ -60,8 +60,12 @@ Meteor.publish( 'articles', function() {
 
 Meteor.startup( () => {
 
-  Meteor.call('findArticles' );
-  Meteor.call('removeOldArticles');
+  // Delayed to avoid client requests at startup getting mismatched rssResult
+  // as new articles flood in.
+  Meteor.setTimeout(() => {
+    Meteor.call('findArticles' );
+    Meteor.call('removeOldArticles');
+  }, 5000);
 
   Meteor.setInterval(
     () => Meteor.call('removeOldArticles'),
