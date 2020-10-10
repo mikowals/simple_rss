@@ -1,8 +1,9 @@
 import { Meteor } from 'meteor/meteor';
 import { FeedParser } from '/imports/api/server/feedparser';
-import { Feeds, Articles } from '/imports/api/simple_rss';
-//Maybe this can move to server/main.js.
-//It is here so methods below have FeedSubscriber.
+import { Feeds, Articles, DAY, daysStoreArticles } from '/imports/api/simple_rss';
+
+var updateInterval = 1000 * 60 * 15;
+
 const feedSubscriber = new FeedSubscriber({
   callbackUrl: Meteor.absoluteUrl("hubbub"),
   secret: Random.id()
@@ -33,4 +34,27 @@ Meteor.startup( function () {
       process.kill( process.pid, sig);
     }, function ( e ) { throw e; }));
   });
+
+  // Delayed to avoid client requests at startup getting mismatched rssResult
+  // as new articles flood in.
+  Meteor.setTimeout(() => {
+    Meteor.call('findArticles' );
+    Meteor.call('removeOldArticles');
+  }, 5000);
+
+  Meteor.setInterval(
+    () => Meteor.call('removeOldArticles'),
+    DAY
+  );
+
+  var interval = Meteor.setInterval(
+    () => Meteor.call('findArticles', { hub: null} ),
+    updateInterval
+  );
+
+  _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
+      process.once(sig, Meteor.bindEnvironment (function () {
+        Meteor.clearInterval( interval );
+      }, function ( e ) { throw e; }));
+    });
 });

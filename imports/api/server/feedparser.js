@@ -1,4 +1,5 @@
 import { Articles, Feeds } from '/imports/api/simple_rss';
+import { Article } from '/imports/api/server/article';
 
 var parser = Npm.require('feedparser');
 var request = Npm.require('request');

@@ -1,5 +1,5 @@
 
-stoppablePublisher = class stoppablePublisher {
+export class StoppablePublisher {
   constructor(_sub) {
     _.extend(this, {
       _sub,
@@ -30,7 +30,8 @@ stoppablePublisher = class stoppablePublisher {
     _handle && _handle.stop();
     let newHandle = cursor.observeChanges({
       added( id, doc ) {
-        //If the id is already published but its new to the observer treat it as changed.
+        //If the id is already published but its new to the observer don't
+        // republish but remove it from oldIds so it isn't unpublished later.
         if ( oldIds.has( id ) && ! removedIds.has(id)){
           oldIds.delete(id);
           //changed(id, doc);

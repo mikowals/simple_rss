@@ -1,4 +1,5 @@
-this.Article = class Article {
+
+export class Article {
   constructor({title, author, meta,sourceUrl, source,
                feed_id, date, link, origLink, description, summary} = {}) {
     _.extend(this, {
