@@ -1,3 +1,11 @@
+import { Feeds, Articles } from '/imports/api/simple_rss';
+import { ArticlesPage, initialArticleLimit } from '/imports/ui/simple_rss';
+import React from 'react';
+import { FeedParser } from '/imports/api/server/feedparser';
+import { onPageLoad } from 'meteor/server-render';
+import { ServerStyleSheet } from "styled-components";
+import { renderToNodeStream, renderToString } from 'react-dom/server';
+
 var DAY = 1000 * 60 * 60 * 24;
 var daysStoreArticles = 3.0;
 var updateInterval = 1000 * 60 * 15;
@@ -146,4 +154,27 @@ Meteor.methods({
     Feeds.find({hub: {$ne: null}},{fields: {_id: 1, hub:1, url:1}}).forEach( subscribe );
   }
 
+});
+
+onPageLoad(sink => {
+  //const sheet = new ServerStyleSheet();
+  //need to rewrite this for real userID using cookies;
+  const userId = "nullUser";
+  const feedList = Meteor.users.findOne(
+    {_id: userId},
+    {fields: {feedList: 1}}
+  ).feedList;
+  const articlesCursor = Articles.find(
+    {feed_id: {$in: feedList}},
+    {limit: initialArticleLimit, sort: {date: -1, _id: 1}}
+  );
+  console.log(initialArticleLimit, articlesCursor.count());
+  const articles = articlesCursor.map((article) => {
+    article.date = new Date(article.date).getTime();
+    article.title = article.title || "Link";
+    return article;
+  });
+  //console.log(renderToString(<ArticlesPage articles={articles} />));
+  const htmlStream = renderToNodeStream(<ArticlesPage articles={articles} />);
+  sink.renderIntoElementById("app", htmlStream);
 });

@@ -1,4 +1,4 @@
-import { Articles } from '/imports/api/simple_rss';
+import { Articles, Feeds } from '/imports/api/simple_rss';
 
 var parser = Npm.require('feedparser');
 var request = Npm.require('request');
@@ -102,7 +102,7 @@ var syncFP = function(feed) {
     }
   }
 
-FeedParser = {
+export const FeedParser = {
   syncFP,
   readAndInsertArticles( fp, feed ) {
     if ( ! ( fp instanceof parser ) )

@@ -1,17 +1,13 @@
 
 import { Meteor } from 'meteor/meteor';
 import { withTracker } from 'meteor/react-meteor-data';
-import { Session } from 'meteor/session';
 import React, { useState, useEffect, memo } from 'react';
-import { unstable_createRoot } from 'react-dom';
 import PropTypes from 'prop-types';
-import { onPageLoad } from 'meteor/server-render';
-import { ServerStyleSheet } from "styled-components";
-import { renderToNodeStream } from 'react-dom/server';
 import formatDistanceToNow  from 'date-fns/formatDistanceToNow';
+import { Articles, Feeds } from '/imports/api/simple_rss';
 
-const DAY = 1000 * 60 * 60 * 24;
-const initialArticleLimit = 40;
+
+export const initialArticleLimit = 2;
 
 const App = (props) => {
     return props.location === "articles" ?
@@ -19,7 +15,7 @@ const App = (props) => {
         <FeedsPageContainer />;
 };
 
-const AppContainer = withTracker(() => {
+export const AppContainer = withTracker(() => {
     return {
         location: Session.get('page')
     }
@@ -99,7 +95,7 @@ const Remove = memo((props) => {
          </a>;
 });
 
-class AddFeed extends React.Component {
+class AddFeed extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {newURL: new String("")};
@@ -159,7 +155,7 @@ const articlesEqual = (prev, next) => {
   return true;
 };
 
-const ArticlesPage = memo((props) => {
+export const ArticlesPage = memo((props) => {
   return <div id="stream">{props.articles.map(renderArticle)}</div>
 }, articlesEqual);
 
@@ -291,59 +287,3 @@ const TimeAgoContainer = withTimeText(TimeAgo);
 TimeAgoContainer.propTypes = {
   date: PropTypes.number.isRequired
 };
-
-/*
-
-const TimeAgoContainer = withTracker ((props) => {
-  //Session.get triggers the autorun on the client
-  if (Meteor.isClient) { Session.get('now') }
-  return {
-    timeText: props.date && formatDistanceToNow(props.date) + " ago" || ""
-  };
-})(TimeAgo);
-
-TimeAgoContainer.displayName = "TimeAgoContainer";
-*/
-if (Meteor.isClient) {
-  onPageLoad( sink => {
-    Meteor.subscribe('articles', function(){
-      const rootElement = document.getElementById("app");
-      unstable_createRoot(rootElement, {
-        hydrate: true
-      }).render(<AppContainer location="articles"/>);
-      //hydrate(<AppContainer />,
-      //  document.getElementById("app")
-      //);
-    });
-    //(await import("/lib/simple_rss.jsx")).default;
-  });
-  Meteor.startup(() => {
-    Meteor.subscribe('feeds');
-    Session.set('page', 'articles');
-    Session.set('articleLimit', initialArticleLimit);
-  });
-} else {
-  onPageLoad(sink => {
-    const sheet = new ServerStyleSheet();
-    //need to rewrite this for real userID using cookies;
-    const userId = "nullUser";
-    const feedList = Meteor.users.findOne(
-      {_id: userId},
-      {fields: {feedList: 1}}
-    ).feedList;
-    const articlesCursor = Articles.find(
-      {feed_id: {$in: feedList}},
-      {limit: initialArticleLimit, sort: {date: -1, _id: 1}}
-    );
-    const articles = articlesCursor.map((article) => {
-      article.date = new Date(article.date).getTime();
-      article.title = article.title || "Link";
-      return article;
-    });
-    const appJSX = sheet.collectStyles(<ArticlesPage articles={articles} />);
-    const htmlStream = sheet.interleaveWithNodeStream(
-      renderToNodeStream(appJSX)
-    );
-    sink.renderIntoElementById("app", htmlStream);
-  });
-}
