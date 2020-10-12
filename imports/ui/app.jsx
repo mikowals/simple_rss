@@ -1,13 +1,16 @@
 import React from 'react';
 import { Session } from 'meteor/session';
-import { withTracker } from 'meteor/react-meteor-data';
-import { ArticlesPageContainer } from '/imports/ui/articles';
-import { FeedsPageContainer } from '/imports/ui/feeds';
+import { withTracker, useTracker } from 'meteor/react-meteor-data';
+import { UseTrackerArticlesPage } from '/imports/ui/articles';
+import { FeedsPage } from '/imports/ui/feeds';
 
-const App = (props) => {
-    return props.location === "articles" ?
-        <ArticlesPageContainer /> :
-        <FeedsPageContainer />;
+export const App = (props) => {
+  const location = useTracker(() => {
+    return Session.get('page')
+  }, []);
+  return location === "articles" ?
+    <UseTrackerArticlesPage /> :
+    <FeedsPage />;
 };
 
 export const AppContainer = withTracker(() => {

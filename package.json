@@ -2,6 +2,7 @@
   "dependencies": {
     "@babel/runtime": "^7.11.2",
     "bcrypt": "^5.0.0",
+    "cheerio": "^1.0.0-rc.3",
     "date-fns": "^2.16.1",
     "feedparser": "^2.2.10",
     "jquery": "^3.5.1",

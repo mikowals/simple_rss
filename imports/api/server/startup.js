@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { FeedParser } from '/imports/api/server/feedparser';
 import { Feeds, Articles, DAY, daysStoreArticles } from '/imports/api/simple_rss';
+import { FeedSubscriber } from 'meteor/pubsubhubbub';
 
 var updateInterval = 1000 * 60 * 15;
 

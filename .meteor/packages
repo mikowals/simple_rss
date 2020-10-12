@@ -4,7 +4,6 @@
 # but you can also edit it by hand.
 ecmascript@0.14.3
 http@1.4.2
-cheerio
 pubsubhubbub
 xml2js
 less

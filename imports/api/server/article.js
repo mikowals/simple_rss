@@ -1,3 +1,4 @@
+import cheerio from 'cheerio';
 
 export class Article {
   constructor({title, author, meta,sourceUrl, source,

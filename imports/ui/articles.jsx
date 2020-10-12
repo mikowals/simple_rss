@@ -1,21 +1,37 @@
 import { Meteor } from 'meteor/meteor';
-import { withTracker } from 'meteor/react-meteor-data';
-import React, { useState, useEffect, memo } from 'react';
+import { withTracker, useTracker } from 'meteor/react-meteor-data';
+import React, { useState, useEffect, memo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Articles } from '/imports/api/simple_rss';
-import { withTimeText, TimeAgo } from './timeAgo';
+import { withTimeText, useTimeAgoText, TimeAgo } from './timeAgo';
 import { initialArticleLimit } from '/imports/api/simple_rss';
 
 // Spread the article object (...) to avoid new object causing rerender.
 const renderArticle = (article) => {
-  return <ArticleWithTimeAgo {...article} key={article._id} />;
+  return <Article {...article} key={article._id} />;
+};
+
+export const UseTrackerArticlesPage = (props) => {
+  const articles = useTracker(() => {
+    const limit = Session.get('articleLimit');
+    const list = Articles.find({}, {limit: limit, sort: {date: -1, _id: 1}});
+    return list.map((article) => {
+      // Convert date so simple equality checks work and avoid rerender.
+      article.date = new Date(article.date).getTime();
+      // Some articles don't have titles and display nicer with placeholder.
+      article.title = article.title || "Link";
+      return article;
+    });
+  }, []); // '[]' here allows memoization without dependencies.
+
+  return <div id="stream">{articles.map(renderArticle)}</div>;
 };
 
 const articlesEqual = (prev, next) => {
-  if (prev.articles.length !== next.articles.length) return false;
-  for (let ii = 0; ii < prev.articles.length; ii++) {
-    const prevValues = Object.values(prev.articles[ii]);
-    const nextValues = Object.values(next.articles[ii]);
+  if (prev.length !== next.length) return false;
+  for (let ii = 0; ii < prev.length; ii++) {
+    const prevValues = Object.values(prev[ii]);
+    const nextValues = Object.values(next[ii]);
     for (let jj = 0; jj < prevValues.length; jj++){
       if (prevValues[jj] !== nextValues[jj]) {
         console.log("Articles not equal ", ii, prevValues, nextValues);
@@ -36,25 +52,11 @@ ArticlesPage.propTypes = {
 
 ArticlesPage.displayName = "ArticlesPage";
 
-export const ArticlesPageContainer = withTracker(() => {
-    let limit = Session.get('articleLimit')
-    var list = Articles.find({}, {limit: limit, sort: {date: -1, _id: 1}});
-    return {
-      articles: list.map((article) => {
-        // Convert date so simple equality checks work and avoid rerender.
-        article.date = new Date(article.date).getTime();
-        // Some articles don't have titles and display nicer with placeholder.
-        article.title = article.title || "Link";
-        return article;
-      })
-    };
-})(ArticlesPage);
-
-ArticlesPageContainer.displayName = "ArticlesPageContainer";
-
 const Article = (props) => {
-    var {_id, title, source, summary, link, timeText} = props;
+    var {_id, title, source, summary, link, date} = props;
     // TimeAgo occurs twice.  Once in SourceHeader and once in the footer.
+    // Keep time state here in common parent.
+    const timeText = useTimeAgoText(date);
     return  <div id={_id} className="section">
               <SourceHeader source={source} timeText={timeText} />
               <div className="article">
@@ -68,14 +70,12 @@ const Article = (props) => {
 
 Article.propTypes = {
   _id: PropTypes.string.isRequired,
-  timeText: PropTypes.string.isRequired,
+  date: PropTypes.number.isRequired,
   title: PropTypes.string,
   source: PropTypes.string.isRequired,
   summary: PropTypes.string,
   link: PropTypes.string.isRequired,
 };
-
-const ArticleWithTimeAgo = withTimeText(Article);
 
 const SourceHeader = (props) => {
     const {source, timeText} = props;

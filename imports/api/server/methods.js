@@ -56,7 +56,6 @@ Meteor.methods({
     // check existence with findOne since we need the feedId anyway to update user
     var existing = Feeds.findOne( {url: doc.url} , {fields: { _id:1 }} );
     if ( existing ) {
-
       Feeds.update( {url: doc.url}, {$addToSet:{ subscribers: userId }}, _.noop );
       Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: existing._id }}, _.noop );
       return true;
