@@ -1,7 +1,5 @@
 import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
-import { onPageLoad } from 'meteor/server-render';
-import { renderToNodeStream, renderToString } from 'react-dom/server';
 import React from 'react';
 import { unstable_createRoot } from 'react-dom';
 import { ArticlesPage } from '/imports/ui/articles';
@@ -29,31 +27,5 @@ if (Meteor.isServer) {
   //Accounts.config({sendVerificationEmail: true});
   Meteor.users.deny({
     update: () => true
-  });
-
-  onPageLoad(sink => {
-    //need to rewrite this for real userID using cookies;
-    const userId = "nullUser";
-    const feedList = Meteor.users.findOne(
-      {_id: userId},
-      {fields: {feedList: 1}}
-    ).feedList;
-    const articlesCursor = Articles.find(
-      {feed_id: {$in: feedList}},
-      {limit: initialArticleLimit, sort: {date: -1, _id: 1}}
-    );
-    const articles = articlesCursor.fetch();
-
-    const htmlStream = renderToNodeStream(<ArticlesPage articlesFromServer={articles}/>);
-    sink.renderIntoElementById("app", htmlStream);
-  });
-} else {
-  onPageLoad( sink => {
-    Meteor.subscribe('articles', function(){
-      const rootElement = document.getElementById("app");
-      unstable_createRoot(rootElement, {
-        hydrate: true
-      }).render(<App />);
-    });
   });
 }

@@ -10,7 +10,7 @@ import { initialArticleLimit } from '/imports/api/simple_rss';
 // Spread the feed object (...) to avoid rerendering
 const renderFeed = (feed) => <Feed {...feed} key={feed._id} />;
 
-export const FeedsPage = () => {
+export const FeedsPage1 = () => {
   const feeds = useTracker(() => {
     const list = Feeds.find({}, {sort: {title: 1}})
     return list.map((feed) => {
@@ -28,6 +28,19 @@ export const FeedsPage = () => {
     </div>
   );
 };
+
+export const FeedsPage = ({feeds}) => {
+  return (
+    <div className="container">
+      <AddFeed />
+      <span className="pad-top-5 col-xs-6 col-md-6"><h4><strong>Feed Title</strong></h4></span>
+      <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
+      <span className="col-xs-4 text-right"><h4><strong>Last update</strong></h4></span>
+      <div>{feeds.map(renderFeed)}</div>
+    </div>
+  );
+};
+
 
 const Feed = memo(({_id, url, title, last_date}) => {
     return <React.Fragment>
@@ -76,7 +89,7 @@ Remove.displayName = "Remove";
 const AddFeed = memo((props) => {
   let [newURL, setNewURL] = useState("");
   const handleSubmit = (e) => {
-    //Stop submit from navigating away from feeds page
+    //Stop submit from navigating away from feeds page.
     e.preventDefault();
     e.stopPropagation();
     if (! newURL) {
