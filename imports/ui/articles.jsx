@@ -8,20 +8,25 @@ import { initialArticleLimit } from '/imports/api/simple_rss';
 
 // Spread the article object (...) to avoid new object causing rerender.
 const renderArticle = (article) => {
+  // Convert date so simple equality checks work and avoid rerender.
+  article.date = new Date(article.date).getTime();
+  // Some articles don't have titles and display nicer with placeholder.
+  article.title = article.title || "Link";
   return <Article {...article} key={article._id} />;
 };
 
-export const UseTrackerArticlesPage = (props) => {
+export const ArticlesPage = ({articlesFromServer}) => {
   const articles = useTracker(() => {
-    const limit = Session.get('articleLimit');
-    const list = Articles.find({}, {limit: limit, sort: {date: -1, _id: 1}});
-    return list.map((article) => {
-      // Convert date so simple equality checks work and avoid rerender.
-      article.date = new Date(article.date).getTime();
-      // Some articles don't have titles and display nicer with placeholder.
-      article.title = article.title || "Link";
-      return article;
-    });
+    // Separate paths. Bug on server when query not on meteor fiber.
+    if (Meteor.isServer) {
+      return articlesFromServer;
+    } else {
+      const limit = initialArticleLimit//Session.get('articleLimit');
+      // Empty queries are frowned on.  Commented code needs user info.
+      //const user = Meteor.users.findOne({_id: Meteor.userId || "nullUser"});
+      const criteria = {}; // {feed_id: {$in: user.feedList}}
+      return Articles.find(criteria, {limit: limit, sort: {date: -1, _id: 1}}).fetch();
+    }
   }, []); // '[]' here allows memoization without dependencies.
 
   return <div id="stream">{articles.map(renderArticle)}</div>;
@@ -42,18 +47,9 @@ const articlesEqual = (prev, next) => {
   return true;
 };
 
-export const ArticlesPage = memo((props) => {
-  return <div id="stream">{props.articles.map(renderArticle)}</div>
-}, articlesEqual);
-
-ArticlesPage.propTypes = {
-  articles: PropTypes.array
-};
-
 ArticlesPage.displayName = "ArticlesPage";
 
-const Article = (props) => {
-    var {_id, title, source, summary, link, date} = props;
+const Article = memo(({_id, title, source, summary, link, date}) => {
     // TimeAgo occurs twice.  Once in SourceHeader and once in the footer.
     // Keep time state here in common parent.
     const timeText = useTimeAgoText(date);
@@ -66,7 +62,7 @@ const Article = (props) => {
                 </div>
               </div>
             </div>;
-};
+});
 
 Article.propTypes = {
   _id: PropTypes.string.isRequired,
@@ -76,6 +72,8 @@ Article.propTypes = {
   summary: PropTypes.string,
   link: PropTypes.string.isRequired,
 };
+
+Article.displayName = "Article";
 
 const SourceHeader = (props) => {
     const {source, timeText} = props;

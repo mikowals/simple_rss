@@ -5,6 +5,7 @@ import '/imports/api/client/methods.js';
 
 Meteor.startup(() => {
   Meteor.subscribe('feeds');
+  Meteor.subscribe('users');
   Session.set('page', 'articles');
   Session.set('articleLimit', initialArticleLimit);
 });

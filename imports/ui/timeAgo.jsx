@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import formatDistanceToNow  from 'date-fns/formatDistanceToNow';
 
 export const TimeAgo = memo(({timeText}) => <span>{timeText}</span>);
-
+TimeAgo.displayName = "TimeAgo";
 // Hook version of date -> timeText.
 export const useTimeAgoText = (date) => {
   const getTimeText = (date) => {
@@ -20,15 +20,14 @@ export const useTimeAgoText = (date) => {
   const [timeText, setTimeText] = useState(getTimeText(date));
   useEffect(() => {
     // Each run sets a new timeout length based on current text.
+    let intervalHandle;
     let intervalFn = () => {
       const newTimeText = getTimeText(date);
       setTimeText(newTimeText);
-      return setTimeout(intervalFn, msUntilUpdate(newTimeText));
+      intervalHandle = setTimeout(intervalFn, msUntilUpdate(newTimeText));
     }
-    const timeout = intervalFn();
-    return () => {
-      timeout && clearTimeout(timeout);
-    };
+    intervalFn();
+    return () => intervalHandle && clearTimeout(intervalHandle);
   }, [date]);
 
   return timeText;

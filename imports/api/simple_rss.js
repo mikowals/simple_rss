@@ -42,18 +42,13 @@ if (Meteor.isServer) {
       {feed_id: {$in: feedList}},
       {limit: initialArticleLimit, sort: {date: -1, _id: 1}}
     );
-    const articles = articlesCursor.map((article) => {
-      article.date = new Date(article.date).getTime();
-      article.title = article.title || "Link";
-      return article;
-    });
-    //console.log(renderToString(<ArticlesPage articles={articles} />));
-    const htmlStream = renderToNodeStream(<ArticlesPage articles={articles} />);
+    const articles = articlesCursor.fetch();
+
+    const htmlStream = renderToNodeStream(<ArticlesPage articlesFromServer={articles}/>);
     sink.renderIntoElementById("app", htmlStream);
   });
 } else {
-  onPageLoad( async sink => {
-    (await import('/client/main')).default;
+  onPageLoad( sink => {
     Meteor.subscribe('articles', function(){
       const rootElement = document.getElementById("app");
       unstable_createRoot(rootElement, {

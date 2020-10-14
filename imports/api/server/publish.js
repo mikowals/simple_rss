@@ -8,6 +8,14 @@ Meteor.publish( 'feeds', function() {
   var feedOptions = {fields: {_id: 1, title: 1, url: 1, last_date:1}};
   return Feeds.find( {subscribers: this.userId || 'nullUser'}, feedOptions );
 });
+/* Could publish this so client has knowledge of feeds subscribed.
+Meteor.publish('users', function() {
+  var self = this;
+  const userId = self.userId || "nullUser";
+  const options = {limit: 1, fields: {_id: 1, feedList: 1}};
+  return Meteor.users.find({_id: userId}, options);
+})
+*/
 
 Meteor.publish( 'articles', function() {
   var self = this;
