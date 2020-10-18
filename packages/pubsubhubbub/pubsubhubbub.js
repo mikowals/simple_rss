@@ -86,22 +86,22 @@ FeedSubscriber = class FeedSubscriber extends Stream {
   stopAllSubscriptions() {
     var self = this;
     self.subscriptions.forEach(({url, hub, _id}) => {
-      self.unsubscribe(url, hub);
+      self.unsubscribe(_id);
     });
     self.subscriptions.forEach( (sub) => sub.unsub.wait());
   }
 
   subscribe( url, hub, _id ) {
     var self = this;
-    self.subscriptions.set(url, {url, hub, _id});
+    self.subscriptions.set(_id, {url, hub, _id});
     self.server.subscribe( url, hub );
   }
 
-  unsubscribe( url, hub ) {
+  unsubscribe( _id ) {
     var self = this;
-    var sub = self.subscriptions.get(url);
+    var sub = self.subscriptions.get(_id);
     if (! sub) return;
     sub.unsub = new Future;
-    self.server.unsubscribe( url, hub || sub.hub);
+    self.server.unsubscribe( sub.url, sub.hub);
   }
 }

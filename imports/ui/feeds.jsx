@@ -1,60 +1,52 @@
 
 import { Meteor } from 'meteor/meteor';
+import { Random } from 'meteor/random';
 import { withTracker, useTracker } from 'meteor/react-meteor-data';
 import React, { useState, useEffect, memo } from 'react';
 import PropTypes from 'prop-types';
 import { Feeds, Articles } from '/imports/api/simple_rss';
 import { TimeAgoContainer } from './timeAgo';
 import { initialArticleLimit } from '/imports/api/simple_rss';
-
+import { useQuery, useMutation } from '@apollo/client';
+import { FEED_QUERY, FEED_COUNT } from '/imports/api/query';
+import { ADD_FEED, REMOVE_FEED } from '/imports/api/mutation';
 // Spread the feed object (...) to avoid rerendering
 const renderFeed = (feed) => <Feed {...feed} key={feed._id} />;
 
-export const FeedsPage1 = () => {
-  const feeds = useTracker(() => {
-    const list = Feeds.find({}, {sort: {title: 1}})
-    return list.map((feed) => {
-        feed.last_date = new Date(feed.last_date).getTime();
-        return feed;
-    });
-  }, []); // '[]' here allows memoization.
+export const FeedsPage = () => {
+  const self = this;
+
+  const {loading, error, data, refetch} = useQuery(FEED_QUERY, {variables: {id: "nullUser"}});
+  if (error) { console.log(error) }
+  let feedDiv = <div />;
+  if (data) {
+    feedDiv = <div>{data.feedsBySubscriber.map(renderFeed)}</div>;
+  }
   return (
     <div className="container">
       <AddFeed />
       <span className="pad-top-5 col-xs-6 col-md-6"><h4><strong>Feed Title</strong></h4></span>
       <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
       <span className="col-xs-4 text-right"><h4><strong>Last update</strong></h4></span>
-      <div>{feeds.map(renderFeed)}</div>
+      {feedDiv}
     </div>
   );
 };
-
-export const FeedsPage = ({feeds}) => {
-  return (
-    <div className="container">
-      <AddFeed />
-      <span className="pad-top-5 col-xs-6 col-md-6"><h4><strong>Feed Title</strong></h4></span>
-      <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
-      <span className="col-xs-4 text-right"><h4><strong>Last update</strong></h4></span>
-      <div>{feeds.map(renderFeed)}</div>
-    </div>
-  );
-};
-
 
 const Feed = memo(({_id, url, title, last_date}) => {
-    return <React.Fragment>
-             <h5 className="col-xs-7 col-md-7 pull-left">
-               <Remove _id={_id}/>
-               <a  href={url}> {title || ""}</a>
-             </h5>
-             <h5 className="count col-xs-1 col-md-1 text-right">
-               <FeedCount feedId={_id}/>
-             </h5>
-             <h5 className="lastDate time col-xs-2 col-md-4 text-right pull-right">
-               <TimeAgoContainer date={last_date} />
-             </h5>
-           </React.Fragment>;
+  const self = this;
+  return <React.Fragment>
+           <h5 className="col-xs-7 col-md-7 pull-left">
+             <Remove _id={_id} />
+             <a  href={url}> {title || ""}</a>
+           </h5>
+           <h5 className="count col-xs-1 col-md-1 text-right">
+             <FeedCount feedId={_id}/>
+           </h5>
+           <h5 className="lastDate time col-xs-2 col-md-4 text-right pull-right">
+             <TimeAgoContainer date={last_date} />
+           </h5>
+         </React.Fragment>;
 });
 
 Feed.propTypes = {
@@ -67,10 +59,13 @@ Feed.propTypes = {
 Feed.displayName = 'Feed';
 
 const FeedCount = ({feedId}) => {
-  const count = useTracker(() => {
-    const articles = Articles.find({feed_id: feedId},{fields:{_id:1}});
-    return articles.count();
-  }, [feedId]);
+  const {loading, error, data} = useQuery(FEED_COUNT, {variables: {id: feedId}});
+  let count = 0;
+  if (data) {
+    count = data.articlesCountByFeed;
+  } else if (error) {
+    console.log(error);
+  }
 
   return <span>{count}</span>;
 };
@@ -78,7 +73,31 @@ const FeedCount = ({feedId}) => {
 FeedCount.propTypes = {feedId: PropTypes.string.isRequired};
 
 const Remove = memo(({_id}) => {
-  const handleClick = (e) => Meteor.call('removeFeed', _id);
+  const [onDeleteHandler] = useMutation(REMOVE_FEED, {
+    update(cache, { data: { removeFeed } }) {
+      cache.modify({
+        fields: {
+          feedsBySubscriber(existingFeedRefs, { readField }) {
+            return existingFeedRefs.filter(
+              feedRef => removeFeed._id !== readField('_id', feedRef)
+            );
+          },
+        },
+      });
+    }
+  });
+  const handleClick = (e) => {
+    onDeleteHandler({
+      variables: {id: _id},
+      optimisticResponse: {
+        __typename: "Mutation",
+        removeFeed: {
+          __typname: "Feed",
+          _id: _id
+        }
+      }
+    })
+  };
   return <a onClick={handleClick}>
            <i className="glyphicon glyphicon-remove-circle"></i>
          </a>;
@@ -86,8 +105,38 @@ const Remove = memo(({_id}) => {
 
 Remove.displayName = "Remove";
 
-const AddFeed = memo((props) => {
+const AddFeed = memo(() => {
   let [newURL, setNewURL] = useState("");
+  let [addHandler] = useMutation( ADD_FEED, {
+    update(cache, { data: { addFeed } }) {
+      cache.modify({
+        fields: {
+          feedsBySubscriber(existingRefs, { readField }) {
+            let newRef = cache.writeFragment({
+              id: "Feed:" + addFeed._id,
+              data: addFeed,
+              fragment: gql`
+                fragment NewFeed on Feed {
+                  _id
+                  title
+                  url
+                  last_date
+                }
+              `
+            });
+            if (existingRefs.some(
+              ref => readField('url', ref) === addFeed.url
+            )) {
+              return existingRefs;
+            }
+            return [...existingRefs, newRef].sort((a,b) => {
+              return readField('title', a) > readField('title', b) ? 1 : -1
+            });
+          }
+        },
+      })
+    }
+  });
   const handleSubmit = (e) => {
     //Stop submit from navigating away from feeds page.
     e.preventDefault();
@@ -96,15 +145,22 @@ const AddFeed = memo((props) => {
       alert("URL can not be empty");
       return;
     }
+
     // Getting the new feed info can be slow.
     // Switch URL to blank so users see action before calling server.
     // Replace with erroring URL so user can check for typos.
     const url = newURL
     setNewURL("");
-    Meteor.call('addFeed', {url: url} , (err, res) => {
-      if (err) {
-        setNewURL(url);
-        alert(err);
+    addHandler({variables: {url: url},
+      optimisticResponse: {
+        __typename: "Mutation",
+        addFeed: {
+          _id: Random.id(12),
+          title: "adding...",
+          url: url,
+          last_date: Date.now(),
+          __typename: "Feed"
+        }
       }
     });
   };

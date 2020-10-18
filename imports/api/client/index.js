@@ -1,46 +1,21 @@
 import React from 'react';
 import { unstable_createRoot } from 'react-dom';
 import { Meteor } from 'meteor/meteor';
-import { ApolloClient, InMemoryCache, ApolloProvider, createHttpLink, gql, useQuery } from '@apollo/client';
-import { FeedsPage } from '/imports/ui/feeds';
+import { ApolloClient, InMemoryCache, createHttpLink } from '@apollo/client';
+import { ApolloApp } from '/imports/ui/app';
+import { onPageLoad } from "meteor/server-render";
 
-const cache = new InMemoryCache();
-const link = createHttpLink({
-  uri: 'http://localhost:3000/graphql',
+export const client = new ApolloClient({
+  cache: new InMemoryCache().restore(window.__APOLLO_STATE__),
+  link: createHttpLink({uri: 'http://localhost:3000/graphql'}),
+  connectToDevTools: true
 });
-
-const client = new ApolloClient({
-  // Provide required constructor fields
-  cache: cache,
-  link: link,
-  connectToDevTools: false
-});
-
-const feeds = gql`
-  {
-    feeds {
-      _id
-      title
-      url
-      last_date
-    }
-  }
-`;
-
-function Feeds() {
-  const { loading, error, data } = useQuery(feeds);
-  //console.log(data.feeds);
-  if (loading) return <p>Loading...</p>;
-  if (error) return <p>Error! ${error.message}</p>;
-  return <FeedsPage feeds={data.feeds} />;
-};
-
-const ApolloApp = () => {
-  return <ApolloProvider client={client}>
-           <Feeds />
-         </ApolloProvider>;
-};
 
 Meteor.startup(
-  () => unstable_createRoot(document.getElementById('app'), {hydrate: false}).render(<ApolloApp />)
+  //() => unstable_createRoot(document.getElementById('app'), {hydrate: false}).render(<ApolloApp />)
 )
+
+onPageLoad(sink => {
+  //const App = (await import("/imports/Client.js")).default;
+  unstable_createRoot(document.getElementById('app'), {hydrate: true}).render(<ApolloApp client={client} />)
+});

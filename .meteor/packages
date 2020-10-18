@@ -33,6 +33,7 @@ shell-server
 underscore
 accounts-password
 react-meteor-data
-static-html
 autoupdate
 apollo
+static-html
+server-render

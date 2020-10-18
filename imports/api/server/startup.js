@@ -5,7 +5,7 @@ import { FeedSubscriber } from 'meteor/pubsubhubbub';
 
 var updateInterval = 1000 * 60 * 15;
 
-const feedSubscriber = new FeedSubscriber({
+export const feedSubscriber = new FeedSubscriber({
   callbackUrl: Meteor.absoluteUrl("hubbub"),
   secret: Random.id()
 });

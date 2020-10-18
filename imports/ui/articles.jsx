@@ -5,31 +5,35 @@ import PropTypes from 'prop-types';
 import { Articles } from '/imports/api/simple_rss';
 import { withTimeText, useTimeAgoText, TimeAgo } from './timeAgo';
 import { initialArticleLimit } from '/imports/api/simple_rss';
+import { useQuery } from '@apollo/client';
+import { ARTICLES_QUERY } from '/imports/api/query';
+//This stream div is important for CSS.
+// SSR needs a div to unsafely render text into so this needs to wrap ArticlesPage.
+export const ArticlesPageWithStream = () => <div id="stream"><ArticlesPage /></div>;
 
-// Spread the article object (...) to avoid new object causing rerender.
 const renderArticle = (article) => {
   // Convert date so simple equality checks work and avoid rerender.
   article.date = new Date(article.date).getTime();
   // Some articles don't have titles and display nicer with placeholder.
   article.title = article.title || "Link";
+
+  // Spread the article object (...) to avoid new object causing rerender.
   return <Article {...article} key={article._id} />;
 };
 
-export const ArticlesPage = ({articlesFromServer}) => {
-  const articles = useTracker(() => {
-    // Separate paths. Bug on server when query not on meteor fiber.
-    if (Meteor.isServer) {
-      return articlesFromServer;
-    } else {
-      const limit = initialArticleLimit//Session.get('articleLimit');
-      // Empty queries are frowned on.  Commented code needs user info.
-      //const user = Meteor.users.findOne({_id: Meteor.userId || "nullUser"});
-      const criteria = {}; // {feed_id: {$in: user.feedList}}
-      return Articles.find(criteria, {limit: limit, sort: {date: -1, _id: 1}}).fetch();
-    }
-  }, []); // '[]' here allows memoization without dependencies.
+export const ArticlesPage = () => {
 
-  return <div id="stream">{articles.map(renderArticle)}</div>;
+  const {loading, error, data} = useQuery(ARTICLES_QUERY, {
+    variables: {id: "nullUser"},
+    pollInterval: 2 * 60 * 1000
+  });
+  if (error) {
+    console.log(error);
+  }
+  if (! data) {
+    return <div />;
+  }
+  return data.articlesBySubscriber.map(renderArticle);
 };
 
 const articlesEqual = (prev, next) => {
