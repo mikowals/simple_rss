@@ -1,35 +1,42 @@
 
-import { Meteor } from 'meteor/meteor';
 import { Random } from 'meteor/random';
-import { withTracker, useTracker } from 'meteor/react-meteor-data';
 import React, { useState, useEffect, memo } from 'react';
 import PropTypes from 'prop-types';
 import { Feeds, Articles } from '/imports/api/simple_rss';
 import { TimeAgoContainer } from './timeAgo';
 import { initialArticleLimit } from '/imports/api/simple_rss';
-import { useQuery, useMutation } from '@apollo/client';
-import { FEED_QUERY, FEED_COUNT } from '/imports/api/query';
+import { useQuery, useMutation, gql } from '@apollo/client';
+import { FEED_IDS, FEEDS_QUERY, FEED_COUNT } from '/imports/api/query';
 import { ADD_FEED, REMOVE_FEED } from '/imports/api/mutation';
+
+export const FeedsPageWithContainer = () => (
+  <div id="feed-container">
+    <FeedsPage />
+  </div>
+);
+
 // Spread the feed object (...) to avoid rerendering
 const renderFeed = (feed) => <Feed {...feed} key={feed._id} />;
 
 export const FeedsPage = () => {
   const self = this;
-
-  const {loading, error, data, refetch} = useQuery(FEED_QUERY, {variables: {id: "nullUser"}});
+  const {loading, error,  data} = useQuery(
+    FEEDS_QUERY,
+    {variables: {id: "nullUser"}}
+  );
   if (error) { console.log(error) }
   let feedDiv = <div />;
   if (data) {
-    feedDiv = <div>{data.feedsBySubscriber.map(renderFeed)}</div>;
+    feedDiv = <div>{data.feeds.map(renderFeed)}</div>;
   }
   return (
-    <div className="container">
+      <>
       <AddFeed />
       <span className="pad-top-5 col-xs-6 col-md-6"><h4><strong>Feed Title</strong></h4></span>
       <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
       <span className="col-xs-4 text-right"><h4><strong>Last update</strong></h4></span>
       {feedDiv}
-    </div>
+      </>
   );
 };
 
@@ -59,7 +66,11 @@ Feed.propTypes = {
 Feed.displayName = 'Feed';
 
 const FeedCount = ({feedId}) => {
-  const {loading, error, data} = useQuery(FEED_COUNT, {variables: {id: feedId}});
+  const {loading, error, data} = useQuery(FEED_COUNT, {
+    variables: {id: feedId},
+    pollInterval: 2 * 60 * 1000,
+    fetchPolicy: "cache-and-network"
+  });
   let count = 0;
   if (data) {
     count = data.articlesCountByFeed;
@@ -77,11 +88,11 @@ const Remove = memo(({_id}) => {
     update(cache, { data: { removeFeed } }) {
       cache.modify({
         fields: {
-          feedsBySubscriber(existingFeedRefs, { readField }) {
+          feeds(existingFeedRefs, { readField }) {
             return existingFeedRefs.filter(
               feedRef => removeFeed._id !== readField('_id', feedRef)
             );
-          },
+          }
         },
       });
     }
@@ -111,7 +122,7 @@ const AddFeed = memo(() => {
     update(cache, { data: { addFeed } }) {
       cache.modify({
         fields: {
-          feedsBySubscriber(existingRefs, { readField }) {
+          feeds(existingRefs, { readField }) {
             let newRef = cache.writeFragment({
               id: "Feed:" + addFeed._id,
               data: addFeed,
@@ -129,12 +140,17 @@ const AddFeed = memo(() => {
             )) {
               return existingRefs;
             }
-            return [...existingRefs, newRef].sort((a,b) => {
-              return readField('title', a) > readField('title', b) ? 1 : -1
-            });
+            let ii = 0;
+            while (
+              readField('title', existingRefs[ii]).toLowerCase()
+                < addFeed.title.toLowerCase()
+            ) {
+              ii++
+            }
+            return [...existingRefs.slice(0, ii), newRef, ...existingRefs.slice(ii)];
           }
-        },
-      })
+        }
+      });
     }
   });
   const handleSubmit = (e) => {

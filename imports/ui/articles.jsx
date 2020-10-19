@@ -1,5 +1,3 @@
-import { Meteor } from 'meteor/meteor';
-import { withTracker, useTracker } from 'meteor/react-meteor-data';
 import React, { useState, useEffect, memo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { Articles } from '/imports/api/simple_rss';
@@ -9,7 +7,9 @@ import { useQuery } from '@apollo/client';
 import { ARTICLES_QUERY } from '/imports/api/query';
 //This stream div is important for CSS.
 // SSR needs a div to unsafely render text into so this needs to wrap ArticlesPage.
-export const ArticlesPageWithStream = () => <div id="stream"><ArticlesPage /></div>;
+export const ArticlesPageWithStream = () => (
+  <div id="stream"><ArticlesPage /></div>
+);
 
 const renderArticle = (article) => {
   // Convert date so simple equality checks work and avoid rerender.
@@ -23,7 +23,7 @@ const renderArticle = (article) => {
 
 export const ArticlesPage = () => {
 
-  const {loading, error, data} = useQuery(ARTICLES_QUERY, {
+  const {loading, error, data, fetchMore} = useQuery(ARTICLES_QUERY, {
     variables: {id: "nullUser"},
     pollInterval: 2 * 60 * 1000
   });
@@ -33,7 +33,7 @@ export const ArticlesPage = () => {
   if (! data) {
     return <div />;
   }
-  return data.articlesBySubscriber.map(renderArticle);
+  return data.articles.map(renderArticle);
 };
 
 const articlesEqual = (prev, next) => {

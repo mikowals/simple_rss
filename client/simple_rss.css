@@ -27,7 +27,7 @@ body {
 .feed {
 
 }
-.container {
+#feed-container {
 
   max-width: 540px;
   margin: 10px auto;

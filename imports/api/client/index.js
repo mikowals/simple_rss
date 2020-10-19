@@ -12,10 +12,12 @@ export const client = new ApolloClient({
 });
 
 Meteor.startup(
-  //() => unstable_createRoot(document.getElementById('app'), {hydrate: false}).render(<ApolloApp />)
+  unstable_createRoot(
+    document.getElementById('app'),
+    {hydrate: true}
+  ).render(<ApolloApp client={client} location={window.location.pathname} />)
 )
 
 onPageLoad(sink => {
-  //const App = (await import("/imports/Client.js")).default;
-  unstable_createRoot(document.getElementById('app'), {hydrate: true}).render(<ApolloApp client={client} />)
+
 });

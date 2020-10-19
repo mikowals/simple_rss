@@ -3,27 +3,21 @@ import { Articles, Feeds } from '/imports/api/simple_rss'
 
 export const resolvers = {
   Query: {
-    feeds(ids) {
-      let feeds = Feeds.find(
-        {_id: {$in: ids}},
-        {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, last_date: 1}})
-        .fetch();
-      return feeds;
+    feedIds(parent, args, context, info) {
+      const user = Meteor.users.findOne({_id: args.id}, {fields: {feedList: 1}});
+      return user && user.feedList || [];
     },
 
-    feedsBySubscriber(parent, args, context, info) {
-      console.log(args.id);
+    feeds(parent, args, context, info) {
       const user = Meteor.users.findOne({_id: args.id}, {fields: {feedList: 1}});
-      let feeds = Feeds.find(
+      if (! user) return [];
+      return Feeds.find(
         {_id: {$in: user.feedList}},
         {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, last_date: 1}})
         .fetch();
-      return feeds;
     },
 
-    articlesBySubscriber(parent, args, context, info) {
-      console.log("articlesBySubscriber with id: ", args.id);
-      const user = Meteor.users.findOne({_id: args.id}, {fields: {feedList: 1}});
+    articles(parent, args, context, info) {
       const fields = {
         _id: 1,
         source: 1,
@@ -38,6 +32,8 @@ export const resolvers = {
         sort: {date: -1, source: 1, title: 1},
         fields: fields
       };
+      const user = Meteor.users.findOne({_id: args.id}, {fields: {feedList: 1}});
+      if (! user) return [];
       return Articles.find({feed_id: {$in: user.feedList}}, options).fetch();
     },
 

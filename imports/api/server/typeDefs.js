@@ -24,9 +24,9 @@ export const typeDefs = gql`
   }
 
   type Query {
-    feeds(ids: [String]): [Feed]!
-    feedsBySubscriber(id: String): [Feed]!
-    articlesBySubscriber(id: String): [Article]!
+    feeds(id: String): [Feed]!
+    feedIds(id: String): [String]
+    articles(id: String): [Article]!
     articlesCountByFeed(id: String): Int
   }
 

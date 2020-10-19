@@ -29,7 +29,8 @@ Meteor.methods({
     Meteor.users.update( userId, {$pull: {feedList: feedId}});
     Feeds.update({_id: feedId}, {$pull: {subscribers: userId }});
     Feeds.remove({_id: feedId, subscribers: {$size: 0}}, (err, removed) => {
-      // Success means no more subscribers so remove Feed from db and listeners.
+      // Success means no more subscribers so remove articles from db.
+      // Unsubscribe to pubsub listeners also.
       if (removed) {
         Articles.remove({feed_id: feedId});
         feedSubscriber.unsubscribe(feedId);
@@ -55,6 +56,7 @@ Meteor.methods({
     );
     if ( existing ) {
       if (existing.subscribers.includes(userId)) {
+        console.log("existing feed being subscribed: ", existing);
         throw new Meteor.Error(500, existing.title + " already subscribed to.");
       }
       Feeds.update( {url: doc.url}, {$addToSet:{ subscribers: userId }}, _.noop );

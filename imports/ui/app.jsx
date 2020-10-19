@@ -1,18 +1,17 @@
 import React from 'react';
-import { Session } from 'meteor/session';
-import { withTracker, useTracker } from 'meteor/react-meteor-data';
 import { ArticlesPageWithStream } from '/imports/ui/articles';
-import { FeedsPage } from '/imports/ui/feeds';
-import { ApolloProvider } from '@apollo/client';
+import { FeedsPageWithContainer } from '/imports/ui/feeds';
+import { ApolloProvider, useQuery } from '@apollo/client';
+import { FEED_IDS } from '/imports/api/query';
 
 export const App = ({location}) => {
-  return location === "articles" ?
-    <ArticlesPageWithStream /> :
-    <FeedsPage />;
+  return location === "/feeds" ?
+    <FeedsPageWithContainer /> :
+    <ArticlesPageWithStream />;
 };
 
-export const ApolloApp = ({client}) => {
+export const ApolloApp = ({client, location}) => {
   return <ApolloProvider client={client}>
-           <App location="articles" />
+           <App location={location} />
          </ApolloProvider>;
 };

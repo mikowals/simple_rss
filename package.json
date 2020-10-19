@@ -11,14 +11,16 @@
     "feedparser": "^2.2.10",
     "graphql": "^15.3.0",
     "graphql-tools": "^6.2.4",
+    "history": "^5.0.0",
     "jquery": "^3.5.1",
     "prop-types": "^15.7.2",
-    "react": "0.0.0-experimental-94c0244ba",
+    "react": "0.0.0-experimental-4ead6b530",
     "react-addons-create-fragment": "^15.6.2",
     "react-addons-linked-state-mixin": "^15.6.2",
     "react-addons-pure-render-mixin": "^15.6.2",
     "react-addons-update": "^15.6.2",
-    "react-dom": "0.0.0-experimental-94c0244ba",
+    "react-dom": "0.0.0-experimental-4ead6b530",
+    "react-router": "^5.2.0",
     "request": "^2.88.2",
     "styled-components": "^5.2.0"
   }
