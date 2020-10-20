@@ -92,9 +92,12 @@ const Remove = memo(({_id}) => {
             return existingFeedRefs.filter(
               feedRef => removeFeed._id !== readField('_id', feedRef)
             );
-          }
+          },
+          // articles(...)
         },
       });
+      cache.evict({ id: cache.identify(removeFeed) });
+      cache.gc();
     }
   });
   const handleClick = (e) => {
@@ -124,7 +127,7 @@ const AddFeed = memo(() => {
         fields: {
           feeds(existingRefs, { readField }) {
             let newRef = cache.writeFragment({
-              id: "Feed:" + addFeed._id,
+              id: cache.identify(addFeed),
               data: addFeed,
               fragment: gql`
                 fragment NewFeed on Feed {
@@ -142,8 +145,8 @@ const AddFeed = memo(() => {
             }
             let ii = 0;
             while (
-              readField('title', existingRefs[ii]).toLowerCase()
-                < addFeed.title.toLowerCase()
+              ii < existingRefs.length &&
+                readField('title', existingRefs[ii]).toLowerCase() < addFeed.title.toLowerCase()
             ) {
               ii++
             }

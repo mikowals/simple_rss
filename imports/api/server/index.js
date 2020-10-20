@@ -6,6 +6,7 @@ import { renderToStaticMarkup, renderToNodeStream, renderToString } from 'react-
 import { ApolloClient, InMemoryCache, ApolloProvider, createHttpLink} from '@apollo/client';
 import { renderToStringWithData } from "@apollo/client/react/ssr";
 import fetch from 'cross-fetch';
+import { ApolloApp } from '/imports/ui/app';
 import { FeedsPage } from '/imports/ui/feeds';
 import { ArticlesPage } from '/imports/ui/articles'
 import { ServerStyleSheet } from "styled-components";
@@ -97,13 +98,10 @@ WebApp.connectHandlers.use('/static', (req, res, next) => {
   })
 });
 
-onPageLoad(async sink => {
+onPageLoad(sink => {
   const sheet = new ServerStyleSheet();
   const location = sink.request.url.pathname;
-  const content = await renderToStringWithData(SSRPage({client, location}));
-
-  const initialState = client.extract();
-  const appJSX = <AppWithCache content={content} state={initialState} location={location} />;
+  const appJSX = <ApolloApp client={client} location={location} />;
 
   const htmlStream = renderToNodeStream(appJSX);
   sink.renderIntoElementById("app", htmlStream);

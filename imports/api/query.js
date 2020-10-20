@@ -24,6 +24,7 @@ export const MORE_ARTICLES_QUERY = gql`
         title
         link
         summary
+        feed_id
       }
     }
   }
