@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { Articles } from '/imports/api/simple_rss';
 import { withTimeText, useTimeAgoText, TimeAgo } from './timeAgo';
 import { initialArticleLimit } from '/imports/api/simple_rss';
-import { useQuery } from '@apollo/client';
+import { useQuery, useLazyQuery} from '@apollo/client';
 import { ARTICLES_QUERY } from '/imports/api/query';
 //This stream div is important for CSS.
 // SSR needs a div to unsafely render text into so this needs to wrap ArticlesPage.
@@ -24,12 +24,19 @@ const renderArticle = (article) => {
 
 export const ArticlesPage = () => {
 
-  const {loading, error, data, fetchMore} = useQuery(ARTICLES_QUERY, {
+  const [runUseQuery, {loading, error, data, stopPolling}] = useLazyQuery(ARTICLES_QUERY, {
     variables: {userId: "nullUser"},
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
     pollInterval: 2 * 60 * 1000
   });
+
+  // Schedule stopPolling to be called on component unmount.
+  useEffect(() => {
+    runUseQuery();
+    return stopPolling;
+  }, [runUseQuery])
+
   if (error) {
     console.log(error);
   }

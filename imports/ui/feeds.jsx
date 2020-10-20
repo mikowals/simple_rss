@@ -6,7 +6,7 @@ import PropTypes from 'prop-types';
 import { Feeds, Articles } from '/imports/api/simple_rss';
 import { TimeAgoContainer } from './timeAgo';
 import { initialArticleLimit } from '/imports/api/simple_rss';
-import { useQuery, useMutation, gql } from '@apollo/client';
+import { useQuery, useMutation, gql, useLazyQuery } from '@apollo/client';
 import { FEED_IDS, FEEDS_QUERY, FEED_COUNT } from '/imports/api/query';
 import { ADD_FEED, REMOVE_FEED } from '/imports/api/mutation';
 import { Meteor } from 'meteor/meteor';
@@ -26,13 +26,18 @@ const renderFeed = (feed) => <Feed {...feed} key={feed._id} />;
 
 export const FeedsPage = () => {
   const self = this;
-  const {loading, error, data} = useQuery(
+  const [runUseQuery, {loading, error, data}] = useLazyQuery(
     FEEDS_QUERY,{
       variables: {userId: "nullUser"},
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-first"
     }
   );
+
+  useEffect(()=>{
+    runUseQuery();
+  }, [runUseQuery]);
+
   if (error) { console.log(error) }
   let feedDiv = <div />;
   if (data) {
@@ -76,11 +81,18 @@ Feed.propTypes = {
 Feed.displayName = 'Feed';
 
 const FeedCount = ({feedId}) => {
-  const {loading, error, data} = useQuery(FEED_COUNT, {
+  // Lazy version avoids state changes after unmount warnings.
+  const [runUseQuery, {loading, error, data, stopPolling}] = useLazyQuery(FEED_COUNT, {
     variables: {id: feedId},
     pollInterval: 7 * 60 * 1000,
     fetchPolicy: "cache-and-network"
   });
+  // Schedule stopPolling to be called on component unmount.
+  useEffect(() => {
+    runUseQuery();
+    return stopPolling;
+  }, [runUseQuery, feedId])
+
   let count = 0;
   if (data) {
     count = data.articlesCountByFeed;
