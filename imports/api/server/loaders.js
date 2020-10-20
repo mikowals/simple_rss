@@ -10,7 +10,6 @@ export const countLoader = new DataLoader(keys => {
 });
 
 const articleCountByKeys = async (keys) => {
-  console.log("countByKeys keys: ", keys);
   const rawCounts = await Articles.rawCollection().aggregate([
     { $match: {feed_id: {$in: keys}} },
     { $group: { _id: "$feed_id", count: { $sum: 1 } } }
@@ -19,6 +18,5 @@ const articleCountByKeys = async (keys) => {
   for await (row of rawCounts) {
     results[keys.indexOf(row._id)] = row.count;
   }
-  console.log("countByKeys counts: ", results);
   return results;
 }

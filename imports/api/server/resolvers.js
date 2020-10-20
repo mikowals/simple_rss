@@ -41,7 +41,6 @@ export const resolvers = {
     // This countLoader caches which will share data between users.
     // This function is identical across users but beware if copying this pattern.
     articlesCountByFeed(parent, {id}, context, info) {
-      console.log("resolver - countByFeed key: ", id);
       return countLoader.load(id);
     }
   },
