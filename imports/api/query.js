@@ -9,6 +9,7 @@ export const ARTICLES_QUERY = gql`
       title
       link
       summary
+      feed_id
     }
   }
 `;

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { Articles } from '/imports/api/simple_rss';
 import { withTimeText, useTimeAgoText, TimeAgo } from './timeAgo';
@@ -25,6 +26,8 @@ export const ArticlesPage = () => {
 
   const {loading, error, data, fetchMore} = useQuery(ARTICLES_QUERY, {
     variables: {id: "nullUser"},
+    fetchPolicy: "cache-and-network",
+    nextFetchPolicy: "cache-first",
     pollInterval: 2 * 60 * 1000
   });
   if (error) {

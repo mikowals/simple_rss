@@ -98,10 +98,13 @@ WebApp.connectHandlers.use('/static', (req, res, next) => {
   })
 });
 
-onPageLoad(sink => {
+onPageLoad(async sink => {
   const sheet = new ServerStyleSheet();
   const location = sink.request.url.pathname;
-  const appJSX = <ApolloApp client={client} location={location} />;
+  const content = await renderToStringWithData(SSRPage({client, location}));
+
+  const initialState = client.extract();
+  const appJSX = <AppWithCache content={content} state={initialState} location={location} />;
 
   const htmlStream = renderToNodeStream(appJSX);
   sink.renderIntoElementById("app", htmlStream);

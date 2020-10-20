@@ -106,7 +106,6 @@ Meteor.methods({
       feedSubscriber.subscribe(rssResult.url, rssResult.hub, rssResult._id);
 
     Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: rssResult._id }}, _.noop );
-    console.log("rssResult returning: ", rssResult);
     return {
       _id: rssResult._id,
       url: rssResult.url,

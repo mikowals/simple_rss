@@ -1,6 +1,7 @@
 
 import { Random } from 'meteor/random';
 import React, { useState, useEffect, memo } from 'react';
+import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { Feeds, Articles } from '/imports/api/simple_rss';
 import { TimeAgoContainer } from './timeAgo';
@@ -8,7 +9,12 @@ import { initialArticleLimit } from '/imports/api/simple_rss';
 import { useQuery, useMutation, gql } from '@apollo/client';
 import { FEED_IDS, FEEDS_QUERY, FEED_COUNT } from '/imports/api/query';
 import { ADD_FEED, REMOVE_FEED } from '/imports/api/mutation';
+import { Meteor } from 'meteor/meteor';
 
+const MaybeLink = () => {
+  if (Meteor.isServer) return null;
+  return <Link to="/articles">Articles</Link>;
+}
 export const FeedsPageWithContainer = () => (
   <div id="feed-container">
     <FeedsPage />
@@ -21,8 +27,11 @@ const renderFeed = (feed) => <Feed {...feed} key={feed._id} />;
 export const FeedsPage = () => {
   const self = this;
   const {loading, error,  data} = useQuery(
-    FEEDS_QUERY,
-    {variables: {id: "nullUser"}}
+    FEEDS_QUERY,{
+      variables: {id: "nullUser"},
+      fetchPolicy: "cache-and-network",
+      nextFetchPolicy: "cache-first"
+    }
   );
   if (error) { console.log(error) }
   let feedDiv = <div />;
@@ -36,6 +45,7 @@ export const FeedsPage = () => {
       <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
       <span className="col-xs-4 text-right"><h4><strong>Last update</strong></h4></span>
       {feedDiv}
+      {MaybeLink}
       </>
   );
 };
@@ -86,6 +96,7 @@ FeedCount.propTypes = {feedId: PropTypes.string.isRequired};
 const Remove = memo(({_id}) => {
   const [onDeleteHandler] = useMutation(REMOVE_FEED, {
     update(cache, { data: { removeFeed } }) {
+      let articlesToRemove = [];
       cache.modify({
         fields: {
           feeds(existingFeedRefs, { readField }) {
@@ -93,10 +104,18 @@ const Remove = memo(({_id}) => {
               feedRef => removeFeed._id !== readField('_id', feedRef)
             );
           },
-          // articles(...)
+          articles(existingArticleRefs, { readField }) {
+            articlesToRemove = existingArticleRefs.filter(
+              ref => readField("feed_id", ref) === removeFeed._id
+            );
+            return existingArticleRefs.filter(
+              ref => readField("feed_id", ref) !== removeFeed._id
+            );
+          }
         },
       });
       cache.evict({ id: cache.identify(removeFeed) });
+      articlesToRemove.forEach(ref => cache.evict({id: cache.identify(ref)}));
       cache.gc();
     }
   });
@@ -151,6 +170,9 @@ const AddFeed = memo(() => {
               ii++
             }
             return [...existingRefs.slice(0, ii), newRef, ...existingRefs.slice(ii)];
+          },
+          articles(articleRefs, { INVALIDATE }) {
+            return INVALIDATE;
           }
         }
       });

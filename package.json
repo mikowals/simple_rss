@@ -2,6 +2,7 @@
   "dependencies": {
     "@babel/runtime": "^7.11.2",
     "apollo-client": "^2.6.10",
+    "apollo-link-batch-http": "^1.2.14",
     "apollo-server-express": "^2.18.2",
     "bcrypt": "^5.0.0",
     "body-parser": "^1.19.0",
@@ -21,6 +22,7 @@
     "react-addons-update": "^15.6.2",
     "react-dom": "0.0.0-experimental-4ead6b530",
     "react-router": "^5.2.0",
+    "react-router-dom": "^5.2.0",
     "request": "^2.88.2",
     "styled-components": "^5.2.0"
   }
