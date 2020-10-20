@@ -1,23 +1,26 @@
 import { Meteor } from 'meteor/meteor';
-import { Articles, Feeds } from '/imports/api/simple_rss'
+import { Articles, Feeds } from '/imports/api/simple_rss';
+import { countLoader } from '/imports/api/server/loaders';
 
 export const resolvers = {
   Query: {
-    feedIds(parent, args, context, info) {
-      const user = Meteor.users.findOne({_id: args.id}, {fields: {feedList: 1}});
+    feedIds(parent, {userId}, context, info) {
+      // This needs to check the userID and preferably get it from server.
+      const user = Meteor.users.findOne({_id: userId}, {fields: {feedList: 1}});
       return user && user.feedList || [];
     },
 
-    feeds(parent, args, context, info) {
-      const user = Meteor.users.findOne({_id: args.id}, {fields: {feedList: 1}});
-      if (! user) return [];
-      return Feeds.find(
+    feeds(parent, {userId}, context, info) {
+      const user = Meteor.users.findOne({_id: userId}, {fields: {feedList: 1}});
+      const feeds = Feeds.find(
         {_id: {$in: user.feedList}},
         {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, last_date: 1}})
         .fetch();
+      return feeds;
     },
 
-    articles(parent, args, context, info) {
+    articles(parent, {userId}, context, info) {
+      const user = Meteor.users.findOne({_id: userId}, {fields: {feedList: 1}});
       const fields = {
         _id: 1,
         source: 1,
@@ -32,13 +35,14 @@ export const resolvers = {
         sort: {date: -1, source: 1, title: 1},
         fields: fields
       };
-      const user = Meteor.users.findOne({_id: args.id}, {fields: {feedList: 1}});
-      if (! user) return [];
       return Articles.find({feed_id: {$in: user.feedList}}, options).fetch();
     },
 
-    articlesCountByFeed(parent, args, context, info) {
-      return Articles.find({feed_id: args.id}, {_id: 1}).count();
+    // This countLoader caches which will share data between users.
+    // This function is identical across users but beware if copying this pattern.
+    articlesCountByFeed(parent, {id}, context, info) {
+      console.log("resolver - countByFeed key: ", id);
+      return countLoader.load(id);
     }
   },
   Mutation: {

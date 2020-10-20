@@ -26,9 +26,9 @@ const renderFeed = (feed) => <Feed {...feed} key={feed._id} />;
 
 export const FeedsPage = () => {
   const self = this;
-  const {loading, error,  data} = useQuery(
+  const {loading, error, data} = useQuery(
     FEEDS_QUERY,{
-      variables: {id: "nullUser"},
+      variables: {userId: "nullUser"},
       fetchPolicy: "cache-and-network",
       nextFetchPolicy: "cache-first"
     }
@@ -78,7 +78,7 @@ Feed.displayName = 'Feed';
 const FeedCount = ({feedId}) => {
   const {loading, error, data} = useQuery(FEED_COUNT, {
     variables: {id: feedId},
-    pollInterval: 2 * 60 * 1000,
+    pollInterval: 7 * 60 * 1000,
     fetchPolicy: "cache-and-network"
   });
   let count = 0;

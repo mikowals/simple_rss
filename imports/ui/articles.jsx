@@ -25,7 +25,7 @@ const renderArticle = (article) => {
 export const ArticlesPage = () => {
 
   const {loading, error, data, fetchMore} = useQuery(ARTICLES_QUERY, {
-    variables: {id: "nullUser"},
+    variables: {userId: "nullUser"},
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
     pollInterval: 2 * 60 * 1000

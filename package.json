@@ -7,6 +7,7 @@
     "bcrypt": "^5.0.0",
     "body-parser": "^1.19.0",
     "cheerio": "^1.0.0-rc.3",
+    "data-loader": "^3.0.0",
     "date-fns": "^2.16.1",
     "express": "^4.17.1",
     "feedparser": "^2.2.10",

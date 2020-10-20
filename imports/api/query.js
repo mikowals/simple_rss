@@ -1,8 +1,8 @@
 import { gql } from '@apollo/client';
 
 export const ARTICLES_QUERY = gql`
-  query($id: String) {
-    articles(id: $id) {
+  query($userId: String) {
+    articles(userId: $userId) {
       _id
       source
       date
@@ -14,26 +14,9 @@ export const ARTICLES_QUERY = gql`
   }
 `;
 
-export const MORE_ARTICLES_QUERY = gql`
-  query moreArticles($id: String, $date: Float) {
-    moreArticles(id: $id, date: $date) {
-      date
-      articles {
-        _id
-        source
-        date
-        title
-        link
-        summary
-        feed_id
-      }
-    }
-  }
-`
-
 export const FEEDS_QUERY = gql`
-  query feeds($id: String) {
-    feeds(id: $id) {
+  query feeds($userId: String!) {
+    feeds(userId: $userId) {
         _id
         title
         url
@@ -49,7 +32,7 @@ export const FEED_COUNT = gql`
 `;
 
 export const FEED_IDS = gql`
-  query feedIds($id: String) {
-    feedIds(id: $id)
+  query feedIds($userId: String!) {
+    feedIds(userId: $userId)
   }
 `

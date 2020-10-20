@@ -18,15 +18,10 @@ export const typeDefs = gql`
     last_date: Float
   }
 
-  type RemoveResponse {
-    id: String
-    result: Boolean
-  }
-
   type Query {
-    feeds(id: String): [Feed]!
-    feedIds(id: String): [String]
-    articles(id: String): [Article]!
+    feeds(userId: String!): [Feed]!
+    feedIds(userId: String!): [String]
+    articles(userId: String!): [Article]!
     articlesCountByFeed(id: String): Int
   }
 
