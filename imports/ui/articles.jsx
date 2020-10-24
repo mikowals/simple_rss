@@ -6,6 +6,8 @@ import { withTimeText, useTimeAgoText, TimeAgo } from './timeAgo';
 import { initialArticleLimit } from '/imports/api/simple_rss';
 import { useQuery, useLazyQuery} from '@apollo/client';
 import { ARTICLES_QUERY } from '/imports/api/query';
+import orderBy from 'lodash.orderby';
+
 //This stream div is important for CSS.
 // SSR needs a div to unsafely render text into so this needs to wrap ArticlesPage.
 export const ArticlesPageWithStream = () => (
@@ -24,7 +26,8 @@ const renderArticle = (article) => {
 
 export const ArticlesPage = () => {
 
-  const [runUseQuery, {loading, error, data, stopPolling}] = useLazyQuery(ARTICLES_QUERY, {
+  const [runUseQuery, {loading, error, data, stopPolling}] = useLazyQuery(
+    ARTICLES_QUERY, {
     variables: {userId: "nullUser"},
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",

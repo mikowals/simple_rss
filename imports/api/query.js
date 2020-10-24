@@ -21,18 +21,37 @@ export const FEEDS_QUERY = gql`
         title
         url
         last_date
+        count
     }
   }
 `;
 
 export const FEED_COUNT = gql`
   query articlesCountByFeed($id: String) {
-    articlesCountByFeed(id: $id)
+    articlesCountByFeed(id: $id) {
+      _id
+      count
+    }
   }
 `;
 
 export const FEED_IDS = gql`
   query feedIds($userId: String!) {
     feedIds(userId: $userId)
+  }
+`
+
+export const USER_QUERY = gql`
+  query user($userId: String!) {
+    user(userId: $userId) {
+      _id
+      feeds {
+        _id
+        title
+        url
+        last_date
+        count
+      }
+    }
   }
 `

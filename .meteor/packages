@@ -3,7 +3,7 @@
 # 'meteor add' and 'meteor remove' will edit this file for you,
 # but you can also edit it by hand.
 ecmascript@0.14.3
-http@1.4.2
+http
 pubsubhubbub
 less
 browser-policy@1.1.0
@@ -30,3 +30,4 @@ autoupdate
 apollo
 static-html
 server-render
+mikowals:batch-insert

@@ -11,7 +11,10 @@ import { onPageLoad } from "meteor/server-render";
 
 export const client = new ApolloClient({
   cache: new InMemoryCache().restore(window.__APOLLO_STATE__),
-  link: new BatchHttpLink({uri: 'http://localhost:3000/graphql', batchInterval: 20}),
+  link: new BatchHttpLink({
+    uri: '/graphql',
+    credentials: 'same-origin',
+    batchInterval: 10}),
   connectToDevTools: true
 });
 

@@ -15,6 +15,7 @@ mutation addFeed($url: String) {
     title
     last_date
     url
+    count
   }
 }
 `

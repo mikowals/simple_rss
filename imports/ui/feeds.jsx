@@ -1,20 +1,14 @@
-
-import { Random } from 'meteor/random';
 import React, { useState, useEffect, memo } from 'react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { Feeds, Articles } from '/imports/api/simple_rss';
+import { Feeds } from '/imports/api/simple_rss';
 import { TimeAgoContainer } from './timeAgo';
 import { initialArticleLimit } from '/imports/api/simple_rss';
 import { useQuery, useMutation, gql, useLazyQuery } from '@apollo/client';
-import { FEED_IDS, FEEDS_QUERY, FEED_COUNT } from '/imports/api/query';
+import { USER_QUERY, FEEDS_QUERY } from '/imports/api/query';
 import { ADD_FEED, REMOVE_FEED } from '/imports/api/mutation';
-import { Meteor } from 'meteor/meteor';
+import orderBy from 'lodash.orderby';
 
-const MaybeLink = () => {
-  if (Meteor.isServer) return null;
-  return <Link to="/articles">Articles</Link>;
-}
 export const FeedsPageWithContainer = () => (
   <div id="feed-container">
     <FeedsPage />
@@ -26,36 +20,31 @@ const renderFeed = (feed) => <Feed {...feed} key={feed._id} />;
 
 export const FeedsPage = () => {
   const self = this;
-  const [runUseQuery, {loading, error, data}] = useLazyQuery(
+  const {loading, error, data} = useQuery(
     FEEDS_QUERY,{
       variables: {userId: "nullUser"},
-      fetchPolicy: "cache-and-network",
-      nextFetchPolicy: "cache-first"
+      fetchPolicy: "cache-and-network"
     }
   );
-
-  useEffect(()=>{
-    runUseQuery();
-  }, [runUseQuery]);
 
   if (error) { console.log(error) }
   let feedDiv = <div />;
   if (data) {
-    feedDiv = <div>{data.feeds.map(renderFeed)}</div>;
+    const sortedFeeds = orderBy(data.feeds, [feed => feed.title.toLowerCase()]);
+    feedDiv = <div>{sortedFeeds.map(renderFeed)}</div>;
   }
   return (
-      <>
+    <>
       <AddFeed />
       <span className="pad-top-5 col-xs-6 col-md-6"><h4><strong>Feed Title</strong></h4></span>
       <span className="col-xs-2 col-md-2 text-right"><h4><strong>Count</strong></h4></span>
       <span className="col-xs-4 text-right"><h4><strong>Last update</strong></h4></span>
       {feedDiv}
-      {MaybeLink}
-      </>
+    </>
   );
 };
 
-const Feed = memo(({_id, url, title, last_date}) => {
+const Feed = memo(({_id, url, title, last_date, count}) => {
   const self = this;
   return <React.Fragment>
            <h5 className="col-xs-7 col-md-7 pull-left">
@@ -63,7 +52,7 @@ const Feed = memo(({_id, url, title, last_date}) => {
              <a  href={url}> {title || ""}</a>
            </h5>
            <h5 className="count col-xs-1 col-md-1 text-right">
-             <FeedCount feedId={_id}/>
+             <FeedCount count={count}/>
            </h5>
            <h5 className="lastDate time col-xs-2 col-md-4 text-right pull-right">
              <TimeAgoContainer date={last_date} />
@@ -75,41 +64,25 @@ Feed.propTypes = {
   title: PropTypes.string,
   url: PropTypes.string.isRequired,
   last_date: PropTypes.number,
-  _id: PropTypes.string.isRequired
+  _id: PropTypes.string.isRequired,
+  count: PropTypes.number.isRequired
 };
 
 Feed.displayName = 'Feed';
 
-const FeedCount = ({feedId}) => {
-  // Lazy version avoids state changes after unmount warnings.
-  const [runUseQuery, {loading, error, data, stopPolling}] = useLazyQuery(FEED_COUNT, {
-    variables: {id: feedId},
-    pollInterval: 7 * 60 * 1000,
-    fetchPolicy: "cache-and-network"
-  });
-  // Schedule stopPolling to be called on component unmount.
-  useEffect(() => {
-    runUseQuery();
-    return stopPolling;
-  }, [runUseQuery, feedId])
-
-  let count = 0;
-  if (data) {
-    count = data.articlesCountByFeed;
-  } else if (error) {
-    console.log(error);
-  }
+const FeedCount = ({count}) => {
 
   return <span>{count}</span>;
 };
 
-FeedCount.propTypes = {feedId: PropTypes.string.isRequired};
+FeedCount.propTypes = {count: PropTypes.number};
 
 const Remove = memo(({_id}) => {
   const [onDeleteHandler] = useMutation(REMOVE_FEED, {
     update(cache, { data: { removeFeed } }) {
       let articlesToRemove = [];
       cache.modify({
+        id: "ROOT_QUERY",
         fields: {
           feeds(existingFeedRefs, { readField }) {
             return existingFeedRefs.filter(
@@ -155,10 +128,10 @@ const AddFeed = memo(() => {
   let [addHandler] = useMutation( ADD_FEED, {
     update(cache, { data: { addFeed } }) {
       cache.modify({
+        id: "ROOT_QUERY",
         fields: {
           feeds(existingRefs, { readField }) {
             let newRef = cache.writeFragment({
-              id: cache.identify(addFeed),
               data: addFeed,
               fragment: gql`
                 fragment NewFeed on Feed {
@@ -166,6 +139,7 @@ const AddFeed = memo(() => {
                   title
                   url
                   last_date
+                  count
                 }
               `
             });
@@ -174,18 +148,9 @@ const AddFeed = memo(() => {
             )) {
               return existingRefs;
             }
-            let ii = 0;
-            while (
-              ii < existingRefs.length &&
-                readField('title', existingRefs[ii]).toLowerCase() < addFeed.title.toLowerCase()
-            ) {
-              ii++
-            }
-            return [...existingRefs.slice(0, ii), newRef, ...existingRefs.slice(ii)];
+
+            return [...existingRefs, newRef];
           },
-          articles(articleRefs, { INVALIDATE }) {
-            return INVALIDATE;
-          }
         }
       });
     }
@@ -208,10 +173,11 @@ const AddFeed = memo(() => {
       optimisticResponse: {
         __typename: "Mutation",
         addFeed: {
-          _id: Random.id(12),
+          _id: Feeds._makeNewID(),
           title: "adding...",
           url: url,
           last_date: Date.now(),
+          count: 0,
           __typename: "Feed"
         }
       }

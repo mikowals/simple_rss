@@ -16,17 +16,25 @@ export const typeDefs = gql`
     title: String
     url: String
     last_date: Float
+    count: Int
   }
 
   type Query {
+    articles(userId: String!): [Article]!
     feeds(userId: String!): [Feed]!
     feedIds(userId: String!): [String]
-    articles(userId: String!): [Article]!
-    articlesCountByFeed(id: String): Int
+    user(userId: String!): User
   }
 
   type Mutation {
     removeFeed(id: String): Feed
     addFeed(url: String): Feed
+  }
+
+  type User {
+    _id: String!
+    feedList: [String]
+    feeds: [Feed]
+    articles: [Article]
   }
 `;

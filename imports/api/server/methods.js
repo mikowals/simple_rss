@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Articles, Feeds, DAY, keepLimitDate,  } from '/imports/api/simple_rss';
-import { FeedParser } from '/imports/api/server/feedparser';
+import { getFeed, getFeeds } from '/imports/api/server/feedParser2';
 import { feedSubscriber } from '/imports/api/server/startup';
 
 var handleError = function( error ){
@@ -39,7 +39,7 @@ Meteor.methods({
     return true;
   },
 
-  addFeed: function( doc ){
+  addFeed: async function( doc ){
     var self = this;
     self.unblock();
     check ( doc, { url: String});
@@ -64,24 +64,26 @@ Meteor.methods({
       delete existing.subscribers;
       return existing;
     }
-    var rssResult = FeedParser.syncFP( doc );
-    console.log(rssResult);
-    if ( rssResult.error || rssResult.statusCode !== 200 ){
-      console.log(JSON.stringify (rssResult) + " has no data to insert");
-      var err = new Meteor.Error( 500, "bad url for new feed", "The server at " + doc.url + " responded with statusCode " + rssResult.statusCode + " and content " + rssResult.content);
-      console.log(err);
+    const {feed, articles, error} = await getFeed( doc );
+    console.log(feed);
+    if ( error ){
+      console.log(JSON.stringify (feed) + " has no data to insert");
+      var err = new Meteor.Error(
+        500,
+        "bad url for new feed", "The server at " + doc.url +
+        " responded with statusCode " + feed.statusCode +
+        " and message " + error);
       throw err;
     }
 
     // the url sets a different feed url so check if we have that one
-    if ( rssResult.url !== originalUrl ) {
-      console.log( "added url: " +  originalUrl + ", canonical url: " + rssResult.url );
+    if ( feed.url !== originalUrl ) {
+      console.log( "added url: " +  originalUrl + ", canonical url: " + feed.url );
       var existing = Feeds.findOne(
-        { url: rssResult.url },
+        { url: feed.url },
         {fields: { _id:1 , title: 1, url: 1, last_date: 1}}
       );
       if ( existing ) {
-        Articles.remove( {feed_id: doc._id }, _.noop );
         Feeds.update( existing._id, {$addToSet: { subscribers: userId }}, _.noop );
         Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: existing._id }}, _.noop );
         return existing;
@@ -89,47 +91,63 @@ Meteor.methods({
     }
 
     // all checks pass so insert the new feed.
-    console.log( "insertedFeed: ", rssResult.title );
+    console.log( "insertedFeed: ", feed.title );
 
     Feeds.insert({
-      _id: rssResult._id,
-      url: rssResult.url,
-      hub: rssResult.hub || null,
-      title: rssResult.title,
-      last_date: rssResult.date,
-      lastModified: rssResult.lastModified,
-      etag: rssResult.etag,
+      _id: feed._id,
+      url: feed.url,
+      hub: feed.hub || null,
+      title: feed.title,
+      last_date: feed.date,
+      lastModified: feed.lastModified,
+      etag: feed.etag,
       subscribers: [ userId ]
     }, _.noop);
 
-    if (rssResult.hub)
-      feedSubscriber.subscribe(rssResult.url, rssResult.hub, rssResult._id);
+    if (feed.hub)
+      feedSubscriber.subscribe(feed.url, feed.hub, feed._id);
 
-    Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: rssResult._id }}, _.noop );
+    Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: feed._id }}, _.noop );
+    Articles.batchInsert(articles, _.noop );
+
     return {
-      _id: rssResult._id,
-      url: rssResult.url,
-      title: rssResult.title,
-      last_date: rssResult.date
+      _id: feed._id,
+      url: feed.url,
+      title: feed.title,
+      last_date: feed.date
     }
   },
 
-  findArticles: function( criteria = {} ) {
+  findArticles: async function( criteria = {} ) {
     check ( criteria,  Object );
     console.time("findArticles");
 
-    var feeds = Feeds.find( criteria );
-    if ( feeds.count() < 1) return;
-    var rssResults = FeedParser.syncFP( feeds.fetch() );
-    rssResults.forEach(({_id, statusCode, lastModified, etag, lastDate, error, url}) => {
-      if ( statusCode === 200 ) {
-        Feeds.update(_id, {$set: {lastModified, etag, lastDate}} , _.noop );
-      }
-      else if ( error ) console.log (url + " returned " + error);
-      else if ( typeof statusCode === "number" && statusCode !== 304 ){
-        console.log( url + " responded with " + statusCode );
-      }
+    var fetchedFeeds = Feeds.find( criteria ).fetch();
+    if ( fetchedFeeds.length < 1) return;
+    let {articles, error, feeds} = await getFeeds( fetchedFeeds );
+    feeds.forEach(
+      ({_id, statusCode, lastModified, etag, lastDate, error, url}) => {
+        if ( statusCode === 200 ) {
+          Feeds.update(_id, {$set: {lastModified, etag, lastDate}} , _.noop );
+        }
+        else if ( error ) console.log (url + " returned " + error);
+        else if ( typeof statusCode === "number" && statusCode !== 304 ){
+          console.log( url + " responded with " + statusCode );
+        }
     });
+    let existingArticles = Articles.find(
+      {link: {$in: articles.map(article => article.link)}},
+      {fields: {link: 1}}
+    ).fetch()
+    const articlesToAdd = articles.filter(
+      newArticle => ! existingArticles.some(
+        (oldArticle) => oldArticle.link === newArticle.link
+    ));
+    console.log("articlesToAdd: ", articlesToAdd.length);
+    if (articlesToAdd.length > 0){
+      let addedIds = Articles.batchInsert(articlesToAdd);
+      console.log("inserted: ", addedIds.length);
+    }
     console.timeEnd("findArticles");
   },
 
