@@ -1,115 +1,93 @@
-import { Articles, Feeds } from '/imports/api/simple_rss';
+import { HTTP } from 'meteor/http';
+import FeedParser from 'feedparser';
+import { Readable } from 'stream';
 import { Article } from '/imports/api/server/article';
+import assignIn from 'lodash.assignin';
+import pick from 'lodash.pick';
+import identity from 'lodash.identity';
+import subDays from 'date-fns/subDays';
+import isAfter from 'date-fns/isAfter';
+import Future from 'fibers/future';
 
-var parser = Npm.require('feedparser');
-var request = Npm.require('request');
-var Future = Npm.require('fibers/future');
-//var zlib = Npm.require('zlib');
-var DAY = 1000 * 60 * 60 * 24;
-var daysStoreArticles = 2;
-
-var onReadable = function (fp, feed) {
-  return Meteor.bindEnvironment(function(){
-    var item;
-    while ( item = fp.read() ) {
-      var doc = new Article( item );
-      doc.sourceUrl = feed.url;
-      doc.feed_id = feed._id;
-      var keepLimitDate = new Date( new Date().getTime() - ( DAY * daysStoreArticles));
-      if ( doc.date > keepLimitDate ){
-        Articles.insert( doc, function( error, res) {
-          if ( !error ) {
-            console.log( doc.title + " : " + doc.source + " : ", res);
-            Feeds.update( { _id: doc.feed_id, last_date: {$lt: doc.date}}, { $set: { last_date: doc.date }}, lodash.noop );
-          }
-        });
-      }
+function makeHTTPOptions( feed ) {
+    var options = {headers: {}};
+    if (feed.etag) {
+      options.headers['If-None-Match'] = feed.etag;
+    } else if (feed.lastModified){
+      options.headers['If-Modified-Since'] =
+        new Date ( feed.lastModified ).toUTCString();
     }
-  });
-};
-
-function bindEnvironmentError( error ){
-  console.error( error );
-};
-
-function makeRequestOptions( feed ) {
-    var options = {
-      headers: {
-        'If-Modified-Since': feed.lastModified && new Date ( feed.lastModified ).toUTCString(),
-        'If-None-Match': feed.etag
-        },
-      url: feed.url,
-      timeout: 7000,
-      gzip: true,
-    };
-    // remove falsy values
-    options.headers = lodash.pick( options.headers, lodash.identity);
+    options["npmRequestOptions"] = {gzip: true};
     return options;
 }
 
-function _fp( feed ) {
-  //var future = new Future();
-  var _request = function (feed, cb ) {
-    if (! feed.url)
-      throw new Error( "_request called without url");
-
-    var responseStream = request( makeRequestOptions(feed), cb )
-      .on( 'response', Meteor.bindEnvironment(function( response ){
-        if ( response.statusCode === 200 ){
-        //now try parsing the feed
-          var fp = responseStream.pipe( new parser());
-          fp.on( 'error', onError )
-            .on('meta', onMeta )
-            .on('readable',  onReadable(fp, feed));
-        }
-    }));
-    return responseStream;
-  };
-
-  function onError( error ){
-    feed.error = error;
-  }
-
-  function onMeta( meta ) {
-    //console.log( "feedparser emmitted meta for url: " + url );
-    if (meta !== null ){
-      _.extend( feed, {
-        url: meta.xmlurl || feed.url,
-        hub: meta.cloud.href,
-        title: meta.title,
-        date: new Date( meta.date ),
-        author: meta.author
-      });
+// Return a future from HTTP calls to allow multiple calls in parallel.
+const _getFeed = (feed) => {
+  const twoDaysAgo = subDays(new Date(), 2);
+  let articles = [];
+  let error = null;
+  let future = new Future;
+  const options = makeHTTPOptions(feed);
+  //console.time(feed.url);
+  HTTP.get(feed.url, options, (error, res) => {
+    if (error) {
+      future.return({feed, articles: null, error});
+      return future;
     }
-  }
-
-  try {
-    var res = Meteor.wrapAsync(_request)( feed );
-
+    //console.timeEnd(feed.url)
     feed.statusCode = res.statusCode;
     feed.lastModified = res.headers[ 'last-modified' ] || feed.lastModified;
     feed.etag = res.headers['etag'] || feed.etag;
-  } catch (e) {
-    feed.error = e.message
-  }
-  return feed;
-};
 
-var syncFP = function(feed) {
-    if ( feed instanceof Array ){
-      return feed.map(_fp);
+    if (res.statusCode === 200){
+      const fp = Readable.from(res.content).pipe(new FeedParser());
+      fp.on('error', (err) => error = err);
+      fp.on('meta', (meta) => {
+        assignIn( feed, {
+          url: meta.xmlurl || feed.url,
+          hub: meta.cloud.href,
+          title: meta.title,
+          date: new Date( meta.date ),
+          author: meta.author
+        })
+      });
+      fp.on('readable', function() {
+          let item;
+          while ( item = fp.read() ) {
+            // Ignore articles older than 2 days.
+            if (isAfter(new Date(item.date || item.pubDate), twoDaysAgo)) {
+              assignIn(item, {sourceUrl: feed.url, feed_id: feed._id});
+              let doc = new Article( item );
+              articles = [...articles, doc];
+            }
+          }
+        });
+      fp.on('end', () => future.return({feed, articles, error}));
     } else {
-      return  _fp( feed );
+      future.return({
+        feed,
+        articles: null,
+        error: "URL: " + feed.url + " response status: " + res.status});
     }
-  }
-
-export const FeedParser = {
-  syncFP,
-  readAndInsertArticles( fp, feed ) {
-    if ( ! ( fp instanceof parser ) )
-      fp = fp.pipe( new parser() );
-
-    fp.on( 'readable', onReadable(fp, feed));
-    return;
-  }
+  })
+  return future;
 };
+
+export const getFeed = (feed) => _getFeed(feed).wait();
+
+export const getFeeds = (feeds) => {
+  const concatenatedFeeds = [];
+  const concatenatedArticles = [];
+  let results = feeds.map(requestedFeed => _getFeed(requestedFeed));
+  results.forEach(res => {
+    const {feed, articles} = res.wait();
+    articles && concatenatedArticles.push(...articles);
+    feed && concatenatedFeeds.push(feed);
+  });
+  Future.wait(...results);
+  return {
+    feeds: concatenatedFeeds,
+    articles: concatenatedArticles
+  };
+
+}

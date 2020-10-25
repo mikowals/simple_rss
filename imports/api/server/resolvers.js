@@ -40,12 +40,10 @@ export const resolvers = {
     },
 
     feeds(parent, {userId}, context, info) {
-      console.time("feedsResolver");
       const result =  Feeds.find(
         {subscribers: userId},
         {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, last_date: 1}})
         .fetch();
-      console.timeEnd("feedsResolver");
       return result;
     },
     //feeds: (_, {userId}) => feedLoader.load(userId),
@@ -90,8 +88,8 @@ export const resolvers = {
       return {_id: id};
     },
 
-    addFeed(parent, {url}, context, info) {
-      return Meteor.call('addFeed', {url});
+    addFeed(parent, {_id, url}, context, info) {
+      return Meteor.call('addFeed', {_id, url});
     }
   }
 };

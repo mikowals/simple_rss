@@ -9,8 +9,8 @@ export const REMOVE_FEED = gql`
 `;
 
 export const ADD_FEED = gql`
-mutation addFeed($url: String) {
-  addFeed(url: $url) {
+mutation addFeed($_id: String, $url: String!) {
+  addFeed(_id: $_id, url: $url) {
     _id
     title
     last_date

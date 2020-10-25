@@ -1,5 +1,5 @@
 import { Meteor } from 'meteor/meteor';
-import { FeedParser } from '/imports/api/server/feedparser';
+//import { FeedParser } from '/imports/api/server/feedParser';
 import { Feeds, Articles, DAY, daysStoreArticles } from '/imports/api/simple_rss';
 import { FeedSubscriber } from 'meteor/pubsubhubbub';
 
@@ -11,10 +11,10 @@ export const feedSubscriber = new FeedSubscriber({
 });
  
 Meteor.startup( function () {
-  feedSubscriber.on(
-    'feedStream',
-    FeedParser.readAndInsertArticles.bind(FeedParser)
-  );
+  //feedSubscriber.on(
+  //  'feedStream',
+  //  FeedParser.readAndInsertArticles.bind(FeedParser)
+  //);
 
   Feeds.find(
     {hub: {$ne: null}},

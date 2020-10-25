@@ -26,16 +26,14 @@ export const renderRoutes = () => (
           <Route exact path="/articles" component={ArticlesPageWithStream} />
           <Route component={ArticlesPageWithStream} />
         </Switch>
-        <Link to="/articles" >Articles</Link>
-        <Link to="/feeds" >Feeds</Link>
       </ApolloProvider>
     </BrowserRouter>
 );
 
 
-Meteor.startup(
+Meteor.startup(() => {
   unstable_createRoot(
     document.getElementById('app'),
     {hydrate: true}
   ).render(renderRoutes())
-)
+});

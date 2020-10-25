@@ -36,25 +36,11 @@ WebApp.connectHandlers.use('/graphql', (req, res) => {
 });
 
 // Wrap ArticlesPage here so that we can inject it into div id='stream'.
-const SSRPage = ({location}) => (
+const SSRPage = ({client, location}) => (
   <ApolloProvider client={client}>
     {location === "/feeds" ? <FeedsPage /> : <ArticlesPage />}
   </ApolloProvider>
 );
-
-const client = new ApolloClient({
-  ssrMode: true,
-  // Remember that this is the interface the SSR server will use to connect to the
-  // API server, so we need to ensure it isn't firewalled, etc
-  link: createHttpLink({
-    uri: 'http://localhost:3000/graphql',
-    credentials: 'same-origin',
-    fetch
-  }),
-  cache: new InMemoryCache(),
-});
-
-const context = {};
 
 function Html({ content, state }) {
   return (
@@ -86,19 +72,41 @@ function AppWithCache({ content, state, location }) {
 
 // this is faster than server-render 'onPageLoad' but lacks css and js to continue updates.
 WebApp.connectHandlers.use('/static', (req, res, next) => {
-
-    renderToStringWithData(SSRPage({client: client})).then((content) => {
-      const initialState = client.extract();
-      const html = <Html content={content} state={initialState} />;
-      res.writeHead(
-        200,
-        {'Content-Type': 'text/html'}
-      );
-      renderToNodeStream(html).pipe(res)
+  const client = new ApolloClient({
+    ssrMode: true,
+    // Remember that this is the interface the SSR server will use to connect to the
+    // API server, so we need to ensure it isn't firewalled, etc
+    link: createHttpLink({
+      uri: 'http://localhost:3000/graphql',
+      credentials: 'same-origin',
+      fetch
+    }),
+    cache: new InMemoryCache(),
+  });
+  renderToStringWithData(SSRPage({client: client})).then((content) => {
+    const initialState = client.extract();
+    const html = <Html content={content} state={initialState} />;
+    res.writeHead(
+      200,
+      {'Content-Type': 'text/html'}
+    );
+    renderToNodeStream(html).pipe(res)
   })
 });
 
 onPageLoad(async sink => {
+  const client = new ApolloClient({
+    ssrMode: true,
+    // Remember that this is the interface the SSR server will use to connect to the
+    // API server, so we need to ensure it isn't firewalled, etc
+    link: createHttpLink({
+      uri: 'http://localhost:3000/graphql',
+      credentials: 'same-origin',
+      fetch
+    }),
+    cache: new InMemoryCache(),
+  });
+
   const sheet = new ServerStyleSheet();
   const location = sink.request.url.pathname;
   const content = await renderToStringWithData(SSRPage({client, location}));

@@ -168,12 +168,13 @@ const AddFeed = memo(() => {
     // Switch URL to blank so users see action before calling server.
     // Replace with erroring URL so user can check for typos.
     const url = newURL
+    const _id = Feeds._makeNewID();
     setNewURL("");
-    addHandler({variables: {url: url},
+    addHandler({variables: {_id, url},
       optimisticResponse: {
         __typename: "Mutation",
         addFeed: {
-          _id: Feeds._makeNewID(),
+          _id: _id,
           title: "adding...",
           url: url,
           last_date: Date.now(),

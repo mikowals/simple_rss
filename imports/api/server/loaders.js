@@ -5,7 +5,6 @@ import { Meteor } from 'meteor/meteor';
 import findWhere from 'lodash.findwhere';
 
 export const countLoader = new DataLoader(async (keys) => {
-  console.time("countLoader");
   countLoader.clearAll();
   let counts = keys.map(_ => 0);
   for await ({_id, count} of Articles.rawCollection().aggregate([
@@ -14,7 +13,6 @@ export const countLoader = new DataLoader(async (keys) => {
   ])) {
     counts[keys.indexOf(_id)] = count;
   };
-  console.timeEnd("countLoader");
   return counts;
 }, {
   batchScheduleFn: callback => setTimeout(callback, 5)
@@ -31,7 +29,6 @@ export const userLoader = new DataLoader(async keys => {
 
 export const feedLoader = new DataLoader(async keys => {
   feedLoader.clearAll();
-  console.time("feedLoader");
   const feedsResult = keys.map(_ => {});
   for await ({_id, feeds} of Feeds.rawCollection().aggregate([
     {$match: {subscribers: {$in: keys}}},
@@ -41,7 +38,6 @@ export const feedLoader = new DataLoader(async keys => {
   ])) {
     feedsResult[keys.indexOf(_id)] = feeds;
   }
-  console.timeEnd("feedLoader");
   return feedsResult;
 });
 

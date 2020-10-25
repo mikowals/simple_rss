@@ -9,7 +9,7 @@ export class Article {
       source: meta && meta.title || null,
       sourceUrl: sourceUrl || ( meta && meta.xmlurl) || (source && source.url) || null,
       feed_id: feed_id || null,
-      date: new Date(),
+      date: new Date(date),
       link: link || origLink || null,
     });
 

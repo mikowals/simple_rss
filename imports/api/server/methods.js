@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
+import { check, Match } from 'meteor/check';
 import { Articles, Feeds, DAY, keepLimitDate,  } from '/imports/api/simple_rss';
-import { getFeed, getFeeds } from '/imports/api/server/feedParser2';
+import { getFeed, getFeeds } from '/imports/api/server/feedParser';
 import { feedSubscriber } from '/imports/api/server/startup';
 
 var handleError = function( error ){
@@ -39,15 +40,15 @@ Meteor.methods({
     return true;
   },
 
-  addFeed: async function( doc ){
+  addFeed: function( doc ){
     var self = this;
     self.unblock();
-    check ( doc, { url: String});
+    check(doc, Match.OneOf({_id: String, url: String}, {url: String}));
     var originalUrl = doc.url;
     var userId = self.userId || 'nullUser';
 
     // create id so we can insert articles before feed itself is inserted.
-    doc._id = Feeds._makeNewID();
+    doc._id = doc._id || Feeds._makeNewID();
 
     // check existence with findOne since we need the feedId anyway to update user
     var existing = Feeds.findOne(
@@ -64,7 +65,7 @@ Meteor.methods({
       delete existing.subscribers;
       return existing;
     }
-    const {feed, articles, error} = await getFeed( doc );
+    const {feed, articles, error} = getFeed( doc );
     console.log(feed);
     if ( error ){
       console.log(JSON.stringify (feed) + " has no data to insert");
@@ -118,13 +119,13 @@ Meteor.methods({
     }
   },
 
-  findArticles: async function( criteria = {} ) {
+  findArticles: function( criteria = {} ) {
     check ( criteria,  Object );
     console.time("findArticles");
 
     var fetchedFeeds = Feeds.find( criteria ).fetch();
     if ( fetchedFeeds.length < 1) return;
-    let {articles, error, feeds} = await getFeeds( fetchedFeeds );
+    let {articles, error, feeds} = getFeeds( fetchedFeeds );
     feeds.forEach(
       ({_id, statusCode, lastModified, etag, lastDate, error, url}) => {
         if ( statusCode === 200 ) {
@@ -139,14 +140,21 @@ Meteor.methods({
       {link: {$in: articles.map(article => article.link)}},
       {fields: {link: 1}}
     ).fetch()
+
     const articlesToAdd = articles.filter(
-      newArticle => ! existingArticles.some(
-        (oldArticle) => oldArticle.link === newArticle.link
+      article => ! existingArticles.some(
+        oldArticle => oldArticle.link === article.link
     ));
-    console.log("articlesToAdd: ", articlesToAdd.length);
-    if (articlesToAdd.length > 0){
-      let addedIds = Articles.batchInsert(articlesToAdd);
-      console.log("inserted: ", addedIds.length);
+    if (articlesToAdd.length > 0) {
+      try{
+        Articles.batchInsert(articlesToAdd, (err, res) => {
+          if (err) {
+            console.log(err);
+          } else {
+            console.log("inserted: ", res.length);
+          }
+        });
+      } catch(e) {}
     }
     console.timeEnd("findArticles");
   },

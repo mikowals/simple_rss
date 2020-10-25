@@ -26,7 +26,7 @@ const renderArticle = (article) => {
 
 export const ArticlesPage = () => {
 
-  const [runUseQuery, {loading, error, data, stopPolling}] = useLazyQuery(
+  const {loading, error, data, stopPolling} = useQuery(
     ARTICLES_QUERY, {
     variables: {userId: "nullUser"},
     fetchPolicy: "cache-and-network",
@@ -36,15 +36,14 @@ export const ArticlesPage = () => {
 
   // Schedule stopPolling to be called on component unmount.
   useEffect(() => {
-    runUseQuery();
     return stopPolling;
-  }, [runUseQuery])
+  }, [])
 
   if (error) {
     console.log(error);
   }
   if (! data) {
-    return <div />;
+    return null;
   }
   return data.articles.map(renderArticle);
 };
