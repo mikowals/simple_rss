@@ -42,7 +42,7 @@ export const resolvers = {
     feeds(parent, {userId}, context, info) {
       const result =  Feeds.find(
         {subscribers: userId},
-        {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, last_date: 1}})
+        {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, date: 1}})
         .fetch();
       return result;
     },
@@ -55,7 +55,7 @@ export const resolvers = {
     feedList: ({_id}) => feedListLoader.load(_id),
     /*feeds: ({_id}) => Feeds.find(
       {subscribers: _id},
-      {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, last_date: 1}}
+      {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, date: 1}}
     ).fetch(),*/
     feeds: ({_id}) => feedLoader.load(_id),
     articles: ({feedList}) => {

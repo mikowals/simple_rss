@@ -1,0 +1,135 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`renders without error 1`] = `
+Array [
+  <form
+    className="form-inline pull-right col-sm-12"
+    onSubmit={[Function]}
+  >
+    <span
+      className="mt-1 col-xs-0 col-sm-0"
+    />
+    <span
+      className="input-group input-group-sm col-xs-12 col-sm-12 pull-right"
+    >
+      <input
+        className="input-sm col-xs-12"
+        id="feedUrl"
+        onChange={[Function]}
+        placeholder="http://new URL/rss.xml"
+        type="url"
+        value=""
+      />
+      <a
+        className="input-group-addon btn btn-primary btn-sm pull-right"
+        id="addFeed"
+        onClick={[Function]}
+        onTouchStart={[Function]}
+        type="submit"
+      >
+        Subscribe
+      </a>
+    </span>
+  </form>,
+  <hr
+    className="col-sm-12"
+  />,
+  <span
+    className="pad-top-5 col-xs-6 col-md-6"
+  >
+    <h4>
+      <strong>
+        Feed Title
+      </strong>
+    </h4>
+  </span>,
+  <span
+    className="col-xs-2 col-md-2 text-right"
+  >
+    <h4>
+      <strong>
+        Count
+      </strong>
+    </h4>
+  </span>,
+  <span
+    className="col-xs-4 text-right"
+  >
+    <h4>
+      <strong>
+        Last update
+      </strong>
+    </h4>
+  </span>,
+  <div>
+    <li>
+      <h5
+        className="col-xs-7 col-md-7 pull-left"
+      >
+        <a
+          id="_id + _remove"
+          onClick={[Function]}
+        >
+          <i
+            className="glyphicon glyphicon-remove-circle"
+          />
+        </a>
+        <a
+          href="http://blah.blah.com"
+        >
+           
+          a publisher
+        </a>
+      </h5>
+      <h5
+        className="count col-xs-1 col-md-1 text-right"
+      >
+        <span>
+          3
+        </span>
+      </h5>
+      <h5
+        className="lastDate time col-xs-2 col-md-4 text-right pull-right"
+      >
+        <span>
+          less than a minute ago
+        </span>
+      </h5>
+    </li>
+    <li>
+      <h5
+        className="col-xs-7 col-md-7 pull-left"
+      >
+        <a
+          id="_id + _remove"
+          onClick={[Function]}
+        >
+          <i
+            className="glyphicon glyphicon-remove-circle"
+          />
+        </a>
+        <a
+          href="http://more.blah.com"
+        >
+           
+          another publisher
+        </a>
+      </h5>
+      <h5
+        className="count col-xs-1 col-md-1 text-right"
+      >
+        <span>
+          4
+        </span>
+      </h5>
+      <h5
+        className="lastDate time col-xs-2 col-md-4 text-right pull-right"
+      >
+        <span>
+          less than a minute ago
+        </span>
+      </h5>
+    </li>
+  </div>,
+]
+`;

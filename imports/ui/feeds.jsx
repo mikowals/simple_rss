@@ -1,12 +1,11 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { Feeds } from '/imports/api/simple_rss';
+import { Feeds, initialArticleLimit } from '../api/simple_rss';
 import { TimeAgoContainer } from './timeAgo';
-import { initialArticleLimit } from '/imports/api/simple_rss';
 import { useQuery, useMutation, gql, useLazyQuery } from '@apollo/client';
-import { USER_QUERY, FEEDS_QUERY } from '/imports/api/query';
-import { ADD_FEED, REMOVE_FEED } from '/imports/api/mutation';
+import { USER_QUERY, FEEDS_QUERY } from '../api/query';
+import { ADD_FEED, REMOVE_FEED } from '../api/mutation';
 import orderBy from 'lodash.orderby';
 
 export const FeedsPageWithContainer = () => (
@@ -44,9 +43,9 @@ export const FeedsPage = () => {
   );
 };
 
-const Feed = memo(({_id, url, title, last_date, count}) => {
+const Feed = memo(({_id, url, title, date, count}) => {
   const self = this;
-  return <React.Fragment>
+  return <li>
            <h5 className="col-xs-7 col-md-7 pull-left">
              <Remove _id={_id} />
              <a  href={url}> {title || ""}</a>
@@ -55,15 +54,15 @@ const Feed = memo(({_id, url, title, last_date, count}) => {
              <FeedCount count={count}/>
            </h5>
            <h5 className="lastDate time col-xs-2 col-md-4 text-right pull-right">
-             <TimeAgoContainer date={last_date} />
+             <TimeAgoContainer date={date} />
            </h5>
-         </React.Fragment>;
+         </li>;
 });
 
 Feed.propTypes = {
   title: PropTypes.string,
   url: PropTypes.string.isRequired,
-  last_date: PropTypes.number,
+  date: PropTypes.number,
   _id: PropTypes.string.isRequired,
   count: PropTypes.number.isRequired
 };
@@ -116,14 +115,14 @@ const Remove = memo(({_id}) => {
       }
     })
   };
-  return <a onClick={handleClick}>
+  return <a id={"_id + _remove"} onClick={handleClick}>
            <i className="glyphicon glyphicon-remove-circle"></i>
          </a>;
 });
 
 Remove.displayName = "Remove";
 
-const AddFeed = memo(() => {
+export const AddFeed = memo(() => {
   let [newURL, setNewURL] = useState("");
   let [addHandler] = useMutation( ADD_FEED, {
     update(cache, { data: { addFeed } }) {
@@ -138,7 +137,7 @@ const AddFeed = memo(() => {
                   _id
                   title
                   url
-                  last_date
+                  date
                   count
                 }
               `
@@ -164,10 +163,9 @@ const AddFeed = memo(() => {
       return;
     }
 
-    // Getting the new feed info can be slow.
     // Switch URL to blank so users see action before calling server.
-    // Replace with erroring URL so user can check for typos.
-    const url = newURL
+    // If there is an error put back the url so user can check for typos.
+    const url = newURL;
     const _id = Feeds._makeNewID();
     setNewURL("");
     addHandler({variables: {_id, url},
@@ -177,7 +175,7 @@ const AddFeed = memo(() => {
           _id: _id,
           title: "adding...",
           url: url,
-          last_date: Date.now(),
+          date: Date.now(),
           count: 0,
           __typename: "Feed"
         }
@@ -187,16 +185,18 @@ const AddFeed = memo(() => {
 
   const handleInput = (e) => setNewURL(e.target.value);
 
-  return <React.Fragment>
-         <form className="form-inline pull-right col-sm-12" onSubmit={handleSubmit}>
-           <span className="mt-1 col-xs-0 col-sm-0"/>
-           <span className="input-group input-group-sm col-xs-12 col-sm-12 pull-right">
-             <input onChange={handleInput} type="url" value={newURL} className="input-sm col-xs-12" placeholder="http://new URL/rss.xml" id="feedUrl" />
-             <a id="addFeed" onClick={handleSubmit} onTouchStart={handleSubmit} type="submit" className="input-group-addon btn btn-primary btn-sm pull-right">Subscribe</a>
-           </span>
-         </form>
-         <hr className="col-sm-12"/>
-        </React.Fragment>;
+  return (
+    <React.Fragment>
+      <form className="form-inline pull-right col-sm-12" onSubmit={handleSubmit}>
+        <span className="mt-1 col-xs-0 col-sm-0"/>
+        <span className="input-group input-group-sm col-xs-12 col-sm-12 pull-right">
+          <input onChange={handleInput} type="url" value={newURL} className="input-sm col-xs-12" placeholder="http://new URL/rss.xml" id="feedUrl" />
+          <a id="addFeed" onClick={handleSubmit} onTouchStart={handleSubmit} type="submit" className="input-group-addon btn btn-primary btn-sm pull-right">Subscribe</a>
+        </span>
+      </form>
+      <hr className="col-sm-12"/>
+    </React.Fragment>
+  );
 });
 
 AddFeed.diplayName = "AddFeed";

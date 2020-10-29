@@ -1,0 +1,57 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Article renders accurately 1`] = `
+<div
+  className="section"
+  id="abc123"
+>
+  <div
+    className="header row-fluid"
+    name="source"
+  >
+    <h2>
+      aPublisher
+    </h2>
+    <span
+      className="spacer"
+    />
+    <time>
+      <span>
+        less than a minute ago
+      </span>
+    </time>
+  </div>
+  <div
+    className="article"
+  >
+    <div
+      className="header"
+    >
+      <h3>
+        <a
+          href="http://test.example.com/1"
+        >
+          An Interesting Article
+        </a>
+      </h3>
+    </div>
+    <div
+      className="description"
+      dangerouslySetInnerHTML={
+        Object {
+          "__html": "blah blah blah",
+        }
+      }
+    />
+    <div
+      className="footer visible-xs"
+    >
+      <time>
+        <span>
+          less than a minute ago
+        </span>
+      </time>
+    </div>
+  </div>
+</div>
+`;

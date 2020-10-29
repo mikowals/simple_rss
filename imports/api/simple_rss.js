@@ -1,11 +1,5 @@
 import { Mongo } from 'meteor/mongo';
 import { Meteor } from 'meteor/meteor';
-import React from 'react';
-import { unstable_createRoot } from 'react-dom';
-import { ArticlesPage } from '/imports/ui/articles';
-import { AppContainer, App } from '/imports/ui/app';
-
-_ = lodash;
 
 export const Feeds = new Mongo.Collection ( "feeds" );
 export const Articles = new Mongo.Collection ( "articles" );

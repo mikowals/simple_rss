@@ -1,12 +1,12 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
-import { Articles } from '/imports/api/simple_rss';
+import { Articles, initialArticleLimit} from '../api/simple_rss';
 import { withTimeText, useTimeAgoText, TimeAgo } from './timeAgo';
-import { initialArticleLimit } from '/imports/api/simple_rss';
 import { useQuery, useLazyQuery} from '@apollo/client';
-import { ARTICLES_QUERY } from '/imports/api/query';
+import { ARTICLES_QUERY } from '../api/query';
 import orderBy from 'lodash.orderby';
+import sanitizeHtml from 'sanitize-html';
 
 //This stream div is important for CSS.
 // SSR needs a div to unsafely render text into so this needs to wrap ArticlesPage.
@@ -14,15 +14,8 @@ export const ArticlesPageWithStream = () => (
   <div id="stream"><ArticlesPage /></div>
 );
 
-const renderArticle = (article) => {
-  // Convert date so simple equality checks work and avoid rerender.
-  article.date = new Date(article.date).getTime();
-  // Some articles don't have titles and display nicer with placeholder.
-  article.title = article.title || "Link";
-
-  // Spread the article object (...) to avoid new object causing rerender.
-  return <Article {...article} key={article._id} />;
-};
+// Spread the article object (...) to avoid new object causing rerender.
+const renderArticle = (article) => <Article {...article} key={article._id} />
 
 export const ArticlesPage = () => {
 
@@ -31,13 +24,11 @@ export const ArticlesPage = () => {
     variables: {userId: "nullUser"},
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-first",
-    pollInterval: 2 * 60 * 1000
+    pollInterval: 10 * 60 * 1000
   });
 
   // Schedule stopPolling to be called on component unmount.
-  useEffect(() => {
-    return stopPolling;
-  }, [])
+  useEffect(() => stopPolling, [])
 
   if (error) {
     console.log(error);
@@ -48,24 +39,9 @@ export const ArticlesPage = () => {
   return data.articles.map(renderArticle);
 };
 
-const articlesEqual = (prev, next) => {
-  if (prev.length !== next.length) return false;
-  for (let ii = 0; ii < prev.length; ii++) {
-    const prevValues = Object.values(prev[ii]);
-    const nextValues = Object.values(next[ii]);
-    for (let jj = 0; jj < prevValues.length; jj++){
-      if (prevValues[jj] !== nextValues[jj]) {
-        console.log("Articles not equal ", ii, prevValues, nextValues);
-        return false;
-      }
-    }
-  }
-  return true;
-};
-
 ArticlesPage.displayName = "ArticlesPage";
 
-const Article = memo(({_id, title, source, summary, link, date}) => {
+export const Article = memo(({_id, title, source, summary, link, date}) => {
     // TimeAgo occurs twice.  Once in SourceHeader and once in the footer.
     // Keep time state here in common parent.
     const timeText = useTimeAgoText(date);
@@ -105,11 +81,11 @@ const TitleAndSummary = React.memo((props) => {
     return <React.Fragment>
            <div className="header">
              <h3>
-               <a href={link}>{title}</a>
+               <a href={link}>{title || "Link"}</a>
             </h3>
           </div>
           <div className="description"
-               dangerouslySetInnerHTML={{__html: UniHTML.purify(summary)}}/>
+               dangerouslySetInnerHTML={{__html: sanitizeHtml(summary)}}/>
           </React.Fragment>;
 });
 

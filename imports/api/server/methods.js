@@ -53,7 +53,7 @@ Meteor.methods({
     // check existence with findOne since we need the feedId anyway to update user
     var existing = Feeds.findOne(
       {url: doc.url},
-      {fields: { _id: 1, title: 1, url: 1, last_date: 1, subscribers: 1}}
+      {fields: { _id: 1, title: 1, url: 1, date: 1, subscribers: 1}}
     );
     if ( existing ) {
       if (existing.subscribers.includes(userId)) {
@@ -66,14 +66,11 @@ Meteor.methods({
       return existing;
     }
     const {feed, articles, error} = getFeed( doc );
-    console.log(feed);
     if ( error ){
       console.log(JSON.stringify (feed) + " has no data to insert");
       var err = new Meteor.Error(
         500,
-        "bad url for new feed", "The server at " + doc.url +
-        " responded with statusCode " + feed.statusCode +
-        " and message " + error);
+        "Bad url for new feed. Got message " + error.message);
       throw err;
     }
 
@@ -82,7 +79,7 @@ Meteor.methods({
       console.log( "added url: " +  originalUrl + ", canonical url: " + feed.url );
       var existing = Feeds.findOne(
         { url: feed.url },
-        {fields: { _id:1 , title: 1, url: 1, last_date: 1}}
+        {fields: { _id:1 , title: 1, url: 1, date: 1}}
       );
       if ( existing ) {
         Feeds.update( existing._id, {$addToSet: { subscribers: userId }}, _.noop );
@@ -93,17 +90,10 @@ Meteor.methods({
 
     // all checks pass so insert the new feed.
     console.log( "insertedFeed: ", feed.title );
-
-    Feeds.insert({
-      _id: feed._id,
-      url: feed.url,
-      hub: feed.hub || null,
-      title: feed.title,
-      last_date: feed.date,
-      lastModified: feed.lastModified,
-      etag: feed.etag,
-      subscribers: [ userId ]
-    }, _.noop);
+    feed["hub"] = feed.hub || null;
+    feed["subscribers"] = [userId];
+    delete feed.error;
+    Feeds.insert(feed, _.noop);
 
     if (feed.hub)
       feedSubscriber.subscribe(feed.url, feed.hub, feed._id);
@@ -115,27 +105,24 @@ Meteor.methods({
       _id: feed._id,
       url: feed.url,
       title: feed.title,
-      last_date: feed.date
+      date: feed.date
     }
   },
 
   findArticles: function( criteria = {} ) {
     check ( criteria,  Object );
-    console.time("findArticles");
-
     var fetchedFeeds = Feeds.find( criteria ).fetch();
-    if ( fetchedFeeds.length < 1) return;
+    if ( fetchedFeeds.length < 1) {
+      return;
+    }
+    console.time("findArticles");
     let {articles, error, feeds} = getFeeds( fetchedFeeds );
-    feeds.forEach(
-      ({_id, statusCode, lastModified, etag, lastDate, error, url}) => {
-        if ( statusCode === 200 ) {
-          Feeds.update(_id, {$set: {lastModified, etag, lastDate}} , _.noop );
-        }
-        else if ( error ) console.log (url + " returned " + error);
-        else if ( typeof statusCode === "number" && statusCode !== 304 ){
-          console.log( url + " responded with " + statusCode );
-        }
-    });
+    if (feeds.length > 0) {
+      feeds.forEach(
+        ({_id, lastModified, etag, date}) => {
+          Feeds.update(_id, {$set: {lastModified, etag, date}} , _.noop );
+      });
+    }
     let existingArticles = Articles.find(
       {link: {$in: articles.map(article => article.link)}},
       {fields: {link: 1}}

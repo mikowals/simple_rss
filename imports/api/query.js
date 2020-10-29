@@ -20,7 +20,7 @@ export const FEEDS_QUERY = gql`
         _id
         title
         url
-        last_date
+        date
         count
     }
   }
@@ -49,7 +49,7 @@ export const USER_QUERY = gql`
         _id
         title
         url
-        last_date
+        date
         count
       }
     }

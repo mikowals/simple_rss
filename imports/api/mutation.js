@@ -13,7 +13,7 @@ mutation addFeed($_id: String, $url: String!) {
   addFeed(_id: $_id, url: $url) {
     _id
     title
-    last_date
+    date
     url
     count
   }

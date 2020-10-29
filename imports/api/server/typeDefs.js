@@ -15,7 +15,7 @@ export const typeDefs = gql`
     _id: String
     title: String
     url: String
-    last_date: Float
+    date: Float
     count: Int
   }
 

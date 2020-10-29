@@ -32,7 +32,7 @@ export const feedLoader = new DataLoader(async keys => {
   const feedsResult = keys.map(_ => {});
   for await ({_id, feeds} of Feeds.rawCollection().aggregate([
     {$match: {subscribers: {$in: keys}}},
-    {$project: {subscribers: 1, title: 1, url: 1, last_date: 1}},
+    {$project: {subscribers: 1, title: 1, url: 1, date: 1}},
     {$unwind: "$subscribers"},
     {$group: {_id: "$subscribers", feeds: {$push: "$$ROOT"}}},
   ])) {

@@ -4,7 +4,7 @@ import formatDistanceToNow  from 'date-fns/formatDistanceToNow';
 
 export const TimeAgo = memo(({timeText}) => <span>{timeText}</span>);
 TimeAgo.displayName = "TimeAgo";
-// Hook version of date -> timeText.
+
 export const useTimeAgoText = (date) => {
   const getTimeText = (date) => {
     return (date && formatDistanceToNow(date) + " ago") || "";
