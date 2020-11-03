@@ -8,73 +8,53 @@ import {
   articlesLoader,
 } from '/imports/api/server/loaders';
 
+const articlesFromFeedIds = (feedIds) => {
+  const fields = {
+    _id: 1,
+    source: 1,
+    date: 1,
+    title: 1,
+    link: 1,
+    summary: 1,
+    feed_id: 1
+  };
+  const options = {
+    limit: 40,
+    sort: {date: -1, source: 1, title: 1},
+    fields: fields
+  };
+  return Articles.find({feed_id: {$in: feedIds}}, options).fetch();
+}
+
+const feedsFromUserId = (userId) => {
+  return Feeds.find(
+    {subscribers: userId},
+    {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, date: 1}}
+  ).fetch();
+}
+
 export const resolvers = {
   Query: {
     //articles: (parent, {userId}, context, info) => articlesLoader.load(userId),
-    articles: (_, {userId}) => {
-      const user = Meteor.users.findOne({_id: userId}, {fields: {feedList: 1}})
-      if (! user){
+    articles: async (_, {userId}) => {
+      const feedList = await feedListLoader.load(userId);
+      if (feedList.length === 0) {
         return [];
       }
-      const fields = {
-        _id: 1,
-        source: 1,
-        date: 1,
-        title: 1,
-        link: 1,
-        summary: 1,
-        feed_id: 1
-      };
-      const options = {
-        limit: 40,
-        sort: {date: -1, source: 1, title: 1},
-        fields: fields
-      };
-      return Articles.find({feed_id: {$in: user.feedList}}, options).fetch();
+      return articlesFromFeedIds(feedList);
     },
 
-    feedIds(parent, {userId}, context, info) {
-      // This needs to check the userID and preferably get it from server.
-      const user = Meteor.users.findOne({_id: userId}, {fields: {feedList: 1}});
-      return user && user.feedList || [];
-    },
-
-    feeds(parent, {userId}, context, info) {
-      const result =  Feeds.find(
-        {subscribers: userId},
-        {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, date: 1}})
-        .fetch();
-      return result;
-    },
+    feedIds: (_, {userId}) => feedListLoader.load(userId),
+    feeds: (_, {userId}) => feedsFromUserId(userId),
     //feeds: (_, {userId}) => feedLoader.load(userId),
-
-    user: (parent, {userId}) =>  userLoader.load(userId)
+    user: (_, {userId}) =>  userLoader.load(userId)
   },
 
   User: {
     feedList: ({_id}) => feedListLoader.load(_id),
-    /*feeds: ({_id}) => Feeds.find(
-      {subscribers: _id},
-      {sort: {title: 1}, fields: {_id: 1, title: 1, url: 1, date: 1}}
-    ).fetch(),*/
-    feeds: ({_id}) => feedLoader.load(_id),
-    articles: ({feedList}) => {
-      const fields = {
-        _id: 1,
-        source: 1,
-        date: 1,
-        title: 1,
-        link: 1,
-        summary: 1,
-        feed_id: 1
-      };
-      const options = {
-        limit: 40,
-        sort: {date: -1, source: 1, title: 1},
-        fields: fields
-      };
-      return Articles.find({feed_id: {$in: feedList}}, options).fetch();
-    }
+    feeds: ({_id}) => feedsFromUserId(_id),
+    //feeds: ({feedList}) => feedLoader.loadMany(feedList),
+    articles: ({feedList}) => articlesFromFeedIds(feedList)
   },
 
   Feed: {

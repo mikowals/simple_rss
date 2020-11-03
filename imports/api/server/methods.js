@@ -3,6 +3,24 @@ import { check, Match } from 'meteor/check';
 import { Articles, Feeds, DAY, keepLimitDate,  } from '/imports/api/simple_rss';
 import { getFeed, getFeeds } from '/imports/api/server/feedParser';
 import { feedSubscriber } from '/imports/api/server/startup';
+import { parseString } from 'xml2js';
+import Future from 'fibers/future';
+
+XML2JS = {
+  // Parses a XML document
+  //
+  // @param xml {String} XML document, represented as a string
+  // @param options {Object} (optional) See https://npmjs.org/package/xml2js
+  // @returns {Object} The same document, represented as a Javascript Object
+  parse: function (xml, options) {
+    var future = new Future;
+    // Construct a callback that will cause 'future.wait()' below to
+    // either throw or return a value appropriately
+    var cb = future.resolver();
+    parseString(xml, options || {}, cb);
+    return future.wait();
+  }
+};
 
 var handleError = function( error ){
   if ( error ) console.log( error );
@@ -60,8 +78,8 @@ Meteor.methods({
         console.log("existing feed being subscribed: ", existing);
         throw new Meteor.Error(500, existing.title + " already subscribed to.");
       }
-      Feeds.update( {url: doc.url}, {$addToSet:{ subscribers: userId }}, _.noop );
-      Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: existing._id }}, _.noop );
+      Feeds.update( {url: doc.url}, {$addToSet:{ subscribers: userId }}, () => {} );
+      Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: existing._id }}, () => {} );
       delete existing.subscribers;
       return existing;
     }
@@ -82,8 +100,8 @@ Meteor.methods({
         {fields: { _id:1 , title: 1, url: 1, date: 1}}
       );
       if ( existing ) {
-        Feeds.update( existing._id, {$addToSet: { subscribers: userId }}, _.noop );
-        Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: existing._id }}, _.noop );
+        Feeds.update( existing._id, {$addToSet: { subscribers: userId }}, () => {} );
+        Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: existing._id }}, () => {} );
         return existing;
       }
     }
@@ -93,13 +111,13 @@ Meteor.methods({
     feed["hub"] = feed.hub || null;
     feed["subscribers"] = [userId];
     delete feed.error;
-    Feeds.insert(feed, _.noop);
+    Feeds.insert(feed, () => {});
 
     if (feed.hub)
       feedSubscriber.subscribe(feed.url, feed.hub, feed._id);
 
-    Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: feed._id }}, _.noop );
-    Articles.batchInsert(articles, _.noop );
+    Meteor.users.upsert( {_id: userId}, {$addToSet:{ feedList: feed._id }}, () => {} );
+    Articles.batchInsert(articles, () => {} );
 
     return {
       _id: feed._id,
@@ -120,7 +138,7 @@ Meteor.methods({
     if (feeds.length > 0) {
       feeds.forEach(
         ({_id, lastModified, etag, date}) => {
-          Feeds.update(_id, {$set: {lastModified, etag, date}} , _.noop );
+          Feeds.update(_id, {$set: {lastModified, etag, date}} , () => {} );
       });
     }
     let existingArticles = Articles.find(
@@ -162,7 +180,7 @@ Meteor.methods({
     check( link, String );
     Articles.update({link: link},
       {$addToSet: {readBy: self.userId }, $inc: {clicks: 1, readCount: 1}},
-       _.noop
+       () => {}
     );
   },
 

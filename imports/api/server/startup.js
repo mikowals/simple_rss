@@ -28,7 +28,7 @@ Meteor.startup( function () {
 
   }, function ( e ) { throw e; }));
 
-  _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
+  ['SIGINT', 'SIGHUP', 'SIGTERM'].forEach(sig => {
     process.once(sig, Meteor.bindEnvironment (function () {
       console.log ( "process received : " + sig);
       feedSubscriber.stopAllSubscriptions();
@@ -53,7 +53,7 @@ Meteor.startup( function () {
     updateInterval
   );
 
-  _.each(['SIGINT', 'SIGHUP', 'SIGTERM'], function (sig) {
+  ['SIGINT', 'SIGHUP', 'SIGTERM'].forEach(sig => {
       process.once(sig, Meteor.bindEnvironment (function () {
         Meteor.clearInterval( interval );
       }, function ( e ) { throw e; }));

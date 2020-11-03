@@ -9,8 +9,6 @@ less
 browser-policy@1.1.0
 random@1.2.0
 nemo64:bootstrap
-mikowals:lodash
-mikowals:trim-html
 jsx
 vazco:universe-html-purifier
 meteor-base@1.4.0

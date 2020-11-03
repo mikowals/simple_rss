@@ -133,6 +133,10 @@ time, TimeAgo {
   background:url(/loader.gif) no-repeat 0 0;
 }
 
+li {
+  list-style-type: none;
+}
+
 #login-buttons {
   padding-top: 2px;
   float: right;

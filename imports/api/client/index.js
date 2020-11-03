@@ -4,7 +4,7 @@ import { BrowserRouter, Route, Switch, Link } from 'react-router-dom';
 import { createBrowserHistory } from 'history';
 import { Meteor } from 'meteor/meteor';
 import { ApolloClient, InMemoryCache, createHttpLink, ApolloProvider } from '@apollo/client';
-import { BatchHttpLink } from "apollo-link-batch-http";
+import { BatchHttpLink } from "@apollo/client/link/batch-http";
 import { FeedsPageWithContainer } from '/imports/ui/feeds';
 import { ArticlesPageWithStream } from '/imports/ui/articles';
 import { onPageLoad } from "meteor/server-render";

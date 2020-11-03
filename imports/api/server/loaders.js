@@ -6,14 +6,11 @@ import findWhere from 'lodash.findwhere';
 
 export const countLoader = new DataLoader(async (keys) => {
   countLoader.clearAll();
-  let counts = keys.map(_ => 0);
-  for await ({_id, count} of Articles.rawCollection().aggregate([
-    { $match: {feed_id: {$in: keys}} },
-    { $group: { _id: "$feed_id", count: { $sum: 1 } } }
-  ])) {
-    counts[keys.indexOf(_id)] = count;
-  };
-  return counts;
+  const articleCounts = await Articles.rawCollection().aggregate([
+      { $match: {feed_id: {$in: keys}} },
+      { $group: { _id: "$feed_id", count: { $sum: 1 } } }
+    ]).toArray();
+  return keys.map(_id => findWhere(articleCounts, {_id}).count );
 }, {
   batchScheduleFn: callback => setTimeout(callback, 5)
 });
@@ -28,21 +25,26 @@ export const userLoader = new DataLoader(async keys => {
 });
 
 export const feedLoader = new DataLoader(async keys => {
+  console.time('feedLoader');
   feedLoader.clearAll();
-  const feedsResult = keys.map(_ => {});
-  for await ({_id, feeds} of Feeds.rawCollection().aggregate([
+  const feeds = await Feeds.rawCollection().find({_id: {$in: keys}}).toArray();
+  console.timeEnd('feedLoader')
+  return keys.map(_id => findWhere(feeds, {_id}));
+});
+
+export const feedbyUserIdLoader = new DataLoader(async keys => {
+  feedbyUserIdLoader.clearAll();
+  constFeedsByUserId = await Feeds.rawCollection().aggregate([
     {$match: {subscribers: {$in: keys}}},
     {$project: {subscribers: 1, title: 1, url: 1, date: 1}},
     {$unwind: "$subscribers"},
     {$group: {_id: "$subscribers", feeds: {$push: "$$ROOT"}}},
-  ])) {
-    feedsResult[keys.indexOf(_id)] = feeds;
-  }
-  return feedsResult;
+  ]).toArray()
+  return keys.map(_id => findWhere(constFeedsByUserId, {_id}).feeds);
 });
 
 export const feedListLoader = new DataLoader(async keys => {
-  feedlistLoader.clearAll();
+  feedListLoader.clearAll();
   const feedLists = await Meteor.users.rawCollection().find(
     {_id: {$in: keys}},
     {_id: 1, feedList: 1}

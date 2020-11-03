@@ -23,7 +23,6 @@ export const ArticlesPage = () => {
     ARTICLES_QUERY, {
     variables: {userId: "nullUser"},
     fetchPolicy: "cache-and-network",
-    nextFetchPolicy: "cache-first",
     pollInterval: 10 * 60 * 1000
   });
 
@@ -45,7 +44,7 @@ export const Article = memo(({_id, title, source, summary, link, date}) => {
     // TimeAgo occurs twice.  Once in SourceHeader and once in the footer.
     // Keep time state here in common parent.
     const timeText = useTimeAgoText(date);
-    return  <div id={_id} className="section">
+    return  <li id={_id} className="section">
               <SourceHeader source={source} timeText={timeText} />
               <div className="article">
                 <TitleAndSummary link={link} title={title} summary={summary} />
@@ -53,7 +52,7 @@ export const Article = memo(({_id, title, source, summary, link, date}) => {
                   <time><TimeAgo timeText={timeText} /></time>
                 </div>
               </div>
-            </div>;
+            </li>;
 });
 
 Article.propTypes = {

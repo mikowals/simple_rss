@@ -1,10 +1,13 @@
 import cheerio from 'cheerio';
+import trimHTML from 'trim-html';
+import assignIn from 'lodash.assignin';
+import unescape from 'lodash.unescape';
 
 export class Article {
   constructor({title, author, meta,sourceUrl, source,
                feed_id, date, link, origLink, description, summary} = {}) {
-    _.extend(this, {
-      title: _.unescape( title ) || null,
+    assignIn(this, {
+      title: unescape( title ) || null,
       author: author ||  null,
       source: meta && meta.title || null,
       sourceUrl: sourceUrl || ( meta && meta.xmlurl) || (source && source.url) || null,

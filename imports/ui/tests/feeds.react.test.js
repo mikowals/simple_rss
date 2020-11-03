@@ -47,11 +47,7 @@ const feed4 = {
   __typename: "Feed",
 }
 
-let cache = new InMemoryCache();
-
-beforeEach(() => {
-  cache = new InMemoryCache();
-});
+afterEach(() => cleanup);
 
 it('renders without error', async () => {
   const mocks = [
@@ -92,6 +88,7 @@ it('can remove a feed', async () => {
         }
       },
     },{
+      // _id: '1' matches _id of list item clicked for removal.
       request: {
         query: REMOVE_FEED,
         variables: { id: '1'}
@@ -123,15 +120,33 @@ it('can remove a feed', async () => {
   );
 
   await act(wait);
-  const listItems = component.root.findAllByType('i');
+  const listItems = component.root.findAllByType('li');
   expect(listItems).toHaveLength(2)
 
-  act(listItems[0].parent.props.onClick);
+  act(listItems[0].findByType('i').parent.props.onClick);
   await act(wait);
   expect(mutationCalled).toBe(true);
-  const listItems2 = component.root.findAllByType('i');
+  const listItems2 = component.root.findAllByType('li');
   expect(listItems2).toHaveLength(1)
+  expect(listItems2[0].parent.props._id).toBe('2');
   await act(wait);
+});
+
+it('errors without input text', async () => {
+  jest.spyOn(window, 'alert').mockImplementation(() => {});
+  const component = renderer.create(
+    <MockedProvider mocks={[]} addTypename={true}>
+      <AddFeed />
+    </MockedProvider>,
+  );
+
+  const form = component.root.findByType('form');
+  act(() => form.props.onSubmit({
+    preventDefault: () => {},
+    stopPropagation: () => {}
+  }));
+  await act(wait);
+  expect(window.alert).toBeCalledWith("URL can not be empty");
 });
 
 it('can add a feed', async () => {
@@ -194,7 +209,6 @@ it('can add a feed', async () => {
       stopPropagation: () => {}
     })
   });
-  //Simulate.click(button);
   expect(input.props.value).toBe("");
   await act(wait);
 
@@ -204,6 +218,4 @@ it('can add a feed', async () => {
 });
 
 // This needs tests for failing cases.
-// Remove id that doesn't exist.
-// Add duplicate url.
-// Submitting form before input has value.
+// Add duplicate url.]

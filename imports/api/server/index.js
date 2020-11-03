@@ -1,11 +1,11 @@
-import { ApolloServer, gql } from 'apollo-server-express';
+import { ApolloServer } from 'apollo-server-express';
 import { WebApp } from 'meteor/webapp';
 import { Feeds, Articles } from '/imports/api/simple_rss';
 import React from 'react';
 import { renderToStaticMarkup, renderToNodeStream, renderToString } from 'react-dom/server';
 import { ApolloClient, InMemoryCache, ApolloProvider, createHttpLink} from '@apollo/client';
 import { renderToStringWithData } from "@apollo/client/react/ssr";
-import fetch from 'cross-fetch';
+import fetch from 'isomorphic-fetch';
 import { ApolloApp } from '/imports/ui/app';
 import { FeedsPage } from '/imports/ui/feeds';
 import { ArticlesPage } from '/imports/ui/articles'
@@ -18,6 +18,18 @@ import { typeDefs } from '/imports/api/server/typeDefs';
 //import { makeExecutableSchema } from 'graphql-tools';
 
 const server = new ApolloServer({typeDefs, resolvers});
+
+BrowserPolicy.content.allowConnectOrigin("*.mak-play.com");
+BrowserPolicy.content.allowEval();
+
+Feeds._ensureIndex( { url: 1 }, {unique: true} );
+Articles._ensureIndex( { link: 1 }, {unique: true, dropDups: true });
+Articles._ensureIndex( { feed_id: 1, date: -1} );
+
+//Accounts.config({sendVerificationEmail: true});
+Meteor.users.deny({
+  update: () => true
+});
 
 server.applyMiddleware({
   app: WebApp.connectHandlers,
@@ -42,22 +54,6 @@ const SSRPage = ({client, location}) => (
   </ApolloProvider>
 );
 
-function Html({ content, state }) {
-  return (
-    <html>
-      <body>
-        <div id="app">
-        <div id="stream" dangerouslySetInnerHTML={{ __html: content }} />
-        </div>
-        <script dangerouslySetInnerHTML={{
-          __html: `window.__APOLLO_STATE__=${JSON.stringify(state).replace(/</g, '\\u003c')};`,
-        }} />
-
-      </body>
-    </html>
-  );
-}
-
 function AppWithCache({ content, state, location }) {
   return (
     <>
@@ -69,30 +65,6 @@ function AppWithCache({ content, state, location }) {
     </>
   );
 }
-
-// this is faster than server-render 'onPageLoad' but lacks css and js to continue updates.
-WebApp.connectHandlers.use('/static', (req, res, next) => {
-  const client = new ApolloClient({
-    ssrMode: true,
-    // Remember that this is the interface the SSR server will use to connect to the
-    // API server, so we need to ensure it isn't firewalled, etc
-    link: createHttpLink({
-      uri: 'http://localhost:3000/graphql',
-      credentials: 'same-origin',
-      fetch
-    }),
-    cache: new InMemoryCache(),
-  });
-  renderToStringWithData(SSRPage({client: client})).then((content) => {
-    const initialState = client.extract();
-    const html = <Html content={content} state={initialState} />;
-    res.writeHead(
-      200,
-      {'Content-Type': 'text/html'}
-    );
-    renderToNodeStream(html).pipe(res)
-  })
-});
 
 onPageLoad(async sink => {
   const client = new ApolloClient({
