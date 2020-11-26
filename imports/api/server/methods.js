@@ -1,7 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { check, Match } from 'meteor/check';
 import { Articles, Feeds, DAY, keepLimitDate,  } from '/imports/api/simple_rss';
-import { getFeed, getFeeds } from '/imports/api/server/feedParser';
+import { getFeed, getFeeds } from '/imports/api/server/feedparser';
 import { feedSubscriber } from '/imports/api/server/startup';
 import { parseString } from 'xml2js';
 import Future from 'fibers/future';
