@@ -1,4 +1,4 @@
-import { ApolloServer } from 'apollo-server-express';
+import { ApolloServer, Express } from 'apollo-server-express';
 import { WebApp } from 'meteor/webapp';
 import { Feeds, Articles } from '/imports/api/simple_rss';
 import React from 'react';
@@ -14,8 +14,6 @@ import { Meteor } from 'meteor/meteor';
 import { onPageLoad } from 'meteor/server-render';
 import { resolvers } from '/imports/api/server/resolvers';
 import { typeDefs } from '/imports/api/server/typeDefs';
-//import { WebApp } from 'meteor/webapp'
-//import { makeExecutableSchema } from 'graphql-tools';
 
 const server = new ApolloServer({typeDefs, resolvers});
 

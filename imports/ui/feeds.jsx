@@ -22,7 +22,7 @@ export const FeedsPage = () => {
   const {loading, error, data} = useQuery(
     FEEDS_QUERY,{
       variables: {userId: "nullUser"},
-      fetchPolicy: "cache-and-network"
+      fetchPolicy: "cache-and-network",
     }
   );
 
@@ -97,6 +97,9 @@ const Remove = memo(({_id}) => {
             );
           }
         },
+        //observeQuery(observableQuery){
+        //  return observableQuery.refetch();
+        //},
       });
       cache.evict({ id: cache.identify(removeFeed) });
       articlesToRemove.forEach(ref => cache.evict({id: cache.identify(ref)}));
@@ -150,9 +153,16 @@ export const AddFeed = memo(() => {
 
             return [...existingRefs, newRef];
           },
-        }
+        },
+        //articles(_, { INVALIDATE }) {
+        //  return INVALIDATE;
+        //}
       });
-    }
+    },
+    //reobserveQuery(observableQuery) {
+    //  console.log(observableQuery);
+    //  return observableQuery.refetch();
+    //},
   });
   const handleSubmit = (e) => {
     //Stop submit from navigating away from feeds page.

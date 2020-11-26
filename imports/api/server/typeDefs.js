@@ -34,7 +34,5 @@ export const typeDefs = gql`
   type User {
     _id: String!
     feedList: [String]
-    feeds: [Feed]
-    articles: [Article]
   }
 `;

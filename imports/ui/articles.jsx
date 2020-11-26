@@ -27,7 +27,9 @@ export const ArticlesPage = () => {
   });
 
   // Schedule stopPolling to be called on component unmount.
-  useEffect(() => stopPolling, [])
+  useEffect(() => {
+    return stopPolling;
+  }, [])
 
   if (error) {
     console.log(error);

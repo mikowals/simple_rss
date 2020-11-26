@@ -6,11 +6,15 @@ import findWhere from 'lodash.findwhere';
 
 export const countLoader = new DataLoader(async (keys) => {
   countLoader.clearAll();
-  const articleCounts = await Articles.rawCollection().aggregate([
+  // findWhere() requies a falsy check to handle 0 counts.
+  let counts = keys.map(() => 0);
+  for await ({_id, count} of Articles.rawCollection().aggregate([
       { $match: {feed_id: {$in: keys}} },
       { $group: { _id: "$feed_id", count: { $sum: 1 } } }
-    ]).toArray();
-  return keys.map(_id => findWhere(articleCounts, {_id}).count );
+    ])) {
+      counts[keys.indexOf(_id)] = count;
+    }
+    return counts;
 }, {
   batchScheduleFn: callback => setTimeout(callback, 5)
 });
@@ -34,13 +38,17 @@ export const feedLoader = new DataLoader(async keys => {
 
 export const feedbyUserIdLoader = new DataLoader(async keys => {
   feedbyUserIdLoader.clearAll();
-  constFeedsByUserId = await Feeds.rawCollection().aggregate([
+  // findWhere() requires a falsy check if a user has no subscriptions.
+  let feedsResult = keys.map(() => []);
+  for await ({_id, feeds} of Feeds.rawCollection().aggregate([
     {$match: {subscribers: {$in: keys}}},
     {$project: {subscribers: 1, title: 1, url: 1, date: 1}},
     {$unwind: "$subscribers"},
     {$group: {_id: "$subscribers", feeds: {$push: "$$ROOT"}}},
-  ]).toArray()
-  return keys.map(_id => findWhere(constFeedsByUserId, {_id}).feeds);
+  ])) {
+    feedsResult[keys.indexOf(_id)] = feeds;
+  }
+  return feedsResult;
 });
 
 export const feedListLoader = new DataLoader(async keys => {
@@ -54,7 +62,8 @@ export const feedListLoader = new DataLoader(async keys => {
 
 export const articlesLoader = new DataLoader( async keys => {
   articlesLoader.clearAll();
-  const articles = await Meteor.users.rawCollection().aggregate([
+  let articlesResult = keys.map(() => []);
+  for await ({_id, articles} of Meteor.users.rawCollection().aggregate([
     {$match: {_id: {$in: keys}}},
     {$lookup: {
       from: "articles",
@@ -65,6 +74,8 @@ export const articlesLoader = new DataLoader( async keys => {
     {$unwind: "$articles"},
     {$sort: {"articles.date": -1, "articles.source": 1, "articles.title": 1}},
     {$group: {_id: "$_id", articles: {$push: "$articles"}}},
-    {$project:{articles:{$slice:["$articles", 40]}}}]).toArray();
-  return keys.map(_id => findWhere(articles, {_id}).articles);
+    {$project:{articles:{$slice:["$articles", 40]}}}])) {
+      articlesResult[keys.indexOf(_id)] = articles;
+    }
+  return articlesResult;
 })

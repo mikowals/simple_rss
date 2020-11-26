@@ -23,7 +23,11 @@ function makeHTTPOptions( feed ) {
 
 // Return a future from HTTP calls to allow multiple calls in parallel.
 const _getFeed = (feed) => {
-  const keepDate = new Date(feed.date) || subDays(new Date(), 2);
+  let keepDate = subDays(new Date(), 2);
+  let lastUpdate = feed.date && new Date(feed.date);
+  if (lastUpdate && lastUpdate > keepDate) {
+    keepDate = lastUpdate;
+  }
   let articles = [];
   let error = null;
   let future = new Future;

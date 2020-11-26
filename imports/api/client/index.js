@@ -27,6 +27,8 @@ export const renderRoutes = () => (
           <Route component={ArticlesPageWithStream} />
         </Switch>
       </ApolloProvider>
+      <Link to="/feeds" >Feeds</Link>
+      <Link to="/articles" >Articles</Link>
     </BrowserRouter>
 );
 
