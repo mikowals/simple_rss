@@ -23,7 +23,7 @@
     "lodash.unescape": "^4.0.1",
     "meteor-node-stubs": "^1.0.1",
     "prop-types": "^15.7.2",
-    "react": "0.0.0-experimental-4ead6b530",
+    "react": "0.14.0",
     "react-addons-create-fragment": "^15.6.2",
     "react-addons-linked-state-mixin": "^15.6.2",
     "react-addons-pure-render-mixin": "^15.6.2",
