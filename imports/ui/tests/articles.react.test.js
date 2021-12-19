@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import React from "react";
 import { Article, ArticlesPage } from "../articles";
 import { ARTICLES_QUERY } from "../../api/query";

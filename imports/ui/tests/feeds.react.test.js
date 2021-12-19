@@ -1,3 +1,6 @@
+/**
+ * @jest-environment jsdom
+ */
 import React from "react";
 import { cleanup, MockedProvider } from "@apollo/client/testing";
 import { render, act, fireEvent } from "@testing-library/react";
