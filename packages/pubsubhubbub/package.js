@@ -8,9 +8,9 @@ Npm.depends({
   "resumer": "0.0.0"
 });
 
-Package.on_use(function (api) {
+Package.onUse(function (api) {
   //api.versionsFrom('METEOR@1.0.3.2');
   api.use( ['ecmascript','webapp','random'], "server" );
-  api.add_files([ "pubsubhubbub.js"], "server");
+  api.addFiles([ "pubsubhubbub.js"], "server");
   api.export && api.export( [ "FeedSubscriber" ], "server");
 });

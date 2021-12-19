@@ -1,13 +1,11 @@
 import React from 'react';
-import { unstable_createRoot } from 'react-dom';
-import { BrowserRouter, Route, Switch, Link } from 'react-router-dom';
-import { createBrowserHistory } from 'history';
+import { hydrateRoot } from 'react-dom';
+import { BrowserRouter, Route, Routes, Link } from 'react-router-dom';
 import { Meteor } from 'meteor/meteor';
-import { ApolloClient, InMemoryCache, createHttpLink, ApolloProvider } from '@apollo/client';
+import { ApolloClient, InMemoryCache, ApolloProvider } from '@apollo/client';
 import { BatchHttpLink } from "@apollo/client/link/batch-http";
 import { FeedsPageWithContainer } from '/imports/ui/feeds';
 import { ArticlesPageWithStream } from '/imports/ui/articles';
-import { onPageLoad } from "meteor/server-render";
 
 export const client = new ApolloClient({
   cache: new InMemoryCache().restore(window.__APOLLO_STATE__),
@@ -21,11 +19,11 @@ export const client = new ApolloClient({
 export const renderRoutes = () => (
     <BrowserRouter>
       <ApolloProvider client={client}>
-        <Switch>
-          <Route exact path="/feeds" component={FeedsPageWithContainer} />
-          <Route exact path="/articles" component={ArticlesPageWithStream} />
-          <Route component={ArticlesPageWithStream} />
-        </Switch>
+        <Routes>
+          <Route exact path="/feeds" element={<FeedsPageWithContainer />} />
+          <Route exact path="/articles" element={<ArticlesPageWithStream />} />
+          <Route element={<ArticlesPageWithStream />} />
+        </Routes>
       </ApolloProvider>
       <Link to="/feeds" >Feeds</Link>
       <Link to="/articles" >Articles</Link>
@@ -34,8 +32,8 @@ export const renderRoutes = () => (
 
 
 Meteor.startup(() => {
-  unstable_createRoot(
+  hydrateRoot(
     document.getElementById('app'),
-    {hydrate: true}
-  ).render(renderRoutes())
+    renderRoutes()
+  )
 });

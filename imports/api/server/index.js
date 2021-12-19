@@ -6,7 +6,6 @@ import { renderToStaticMarkup, renderToNodeStream, renderToString } from 'react-
 import { ApolloClient, InMemoryCache, ApolloProvider, createHttpLink} from '@apollo/client';
 import { renderToStringWithData } from "@apollo/client/react/ssr";
 import fetch from 'isomorphic-fetch';
-import { ApolloApp } from '/imports/ui/app';
 import { FeedsPage } from '/imports/ui/feeds';
 import { ArticlesPage } from '/imports/ui/articles'
 import { ServerStyleSheet } from "styled-components";

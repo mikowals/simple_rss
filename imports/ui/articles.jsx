@@ -1,31 +1,28 @@
-import React, { useState, useEffect, memo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, memo } from 'react';
 import PropTypes from 'prop-types';
-import { Articles, initialArticleLimit} from '../api/simple_rss';
-import { withTimeText, useTimeAgoText, TimeAgo } from './timeAgo';
-import { useQuery, useLazyQuery} from '@apollo/client';
+import { useTimeAgoText, TimeAgo } from './timeAgo';
+import { ErrorBoundary } from './errorBoundary';
+import { useQuery } from '@apollo/client';
 import { ARTICLES_QUERY } from '../api/query';
-import orderBy from 'lodash.orderby';
 import sanitizeHtml from 'sanitize-html';
 
 //This stream div is important for CSS.
 // SSR needs a div to unsafely render text into so this needs to wrap ArticlesPage.
 export const ArticlesPageWithStream = () => (
-  <div id="stream"><ArticlesPage /></div>
+  <ErrorBoundary>
+    <div id="stream"><ArticlesPage /></div>
+  </ErrorBoundary>
 );
 
 // Spread the article object (...) to avoid new object causing rerender.
 const renderArticle = (article) => <Article {...article} key={article._id} />
-
 export const ArticlesPage = () => {
-
   const {loading, error, data, stopPolling} = useQuery(
     ARTICLES_QUERY, {
     variables: {userId: "nullUser"},
     fetchPolicy: "cache-and-network",
     pollInterval: 10 * 60 * 1000
   });
-
   // Schedule stopPolling to be called on component unmount.
   useEffect(() => {
     return stopPolling;
