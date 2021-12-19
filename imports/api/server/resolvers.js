@@ -35,17 +35,17 @@ const feedsFromUserId = (userId) => {
 
 export const resolvers = {
   Feed: {
-    count: ({_id}) => countLoader.load(_id)
+    count : async ({_id}) => countLoader.load(_id),
   },
 
   Mutation: {
-    removeFeed(parent, {id}, context, info) {
+    async removeFeed(parent, {id}, context, info) {
       // This probably is not able to get userId as method expects.
       Meteor.call('removeFeed', id, () =>{});
       return {_id: id};
     },
 
-    addFeed(parent, {_id, url}, context, info) {
+    async addFeed(parent, {_id, url}, context, info) {
       let feed = Meteor.call('addFeed', {_id, url});
       //feed.count = countLoader.load(feed._id)
       return feed;
@@ -53,7 +53,7 @@ export const resolvers = {
   },
 
   User: {
-    feedList: ({_id}) => feedListLoader.load(_id),
+    feedList: async ({_id}) => feedListLoader.load(_id),
     //feeds: ({_id}) => feedsFromUserId(_id),
     //feeds: ({feedList}) => feedLoader.loadMany(feedList),
     //articles: ({feedList}) => articlesFromFeedIds(feedList)
@@ -69,9 +69,9 @@ export const resolvers = {
       return articlesFromFeedIds(feedList);
     },
 
-    feedIds: (_, {userId}) => feedListLoader.load(userId),
-    feeds: (_, {userId}) => feedsFromUserId(userId),
+    feedIds: async (_, {userId}) => feedListLoader.load(userId),
+    feeds: async (_, {userId}) => feedsFromUserId(userId),
     //feeds: (_, {userId}) => feedLoader.load(userId),
-    user: (_, {userId}) =>  userLoader.load(userId)
+    user: async (_, {userId}) =>  userLoader.load(userId)
   },
 };
