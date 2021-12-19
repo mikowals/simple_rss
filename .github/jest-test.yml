@@ -1,0 +1,16 @@
+name: Test Package
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-node@v1
+        with:
+          node-version: 14.18.1
+      - run: curl https://install.meteor.com/ | sh
+      - run: meteor npm i -g yarn
+      - run: meteor yarn
+      - run: meteor yarn test
