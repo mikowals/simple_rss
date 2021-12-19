@@ -57,7 +57,10 @@ export const feedListLoader = new DataLoader(async keys => {
     {_id: {$in: keys}},
     {_id: 1, feedList: 1}
   ).toArray();
-  return keys.map(_id => findWhere(feedLists, {_id}).feedList);
+  return keys.map(_id => {
+    const result = findWhere(feedLists, {_id});
+    return result?.feedList || [];
+  });
 });
 
 export const articlesLoader = new DataLoader( async keys => {

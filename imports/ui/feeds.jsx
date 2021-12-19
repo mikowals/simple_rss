@@ -1,17 +1,19 @@
-import React, { useState, useEffect, memo } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, memo } from 'react';
 import PropTypes from 'prop-types';
-import { Feeds, initialArticleLimit } from '../api/simple_rss';
+import { Feeds } from '../api/simple_rss';
 import { TimeAgoContainer } from './timeAgo';
+import { ErrorBoundary } from './errorBoundary';
 import { useQuery, useMutation, gql, useLazyQuery } from '@apollo/client';
-import { USER_QUERY, FEEDS_QUERY } from '../api/query';
+import { FEEDS_QUERY } from '../api/query';
 import { ADD_FEED, REMOVE_FEED } from '../api/mutation';
 import orderBy from 'lodash.orderby';
 
 export const FeedsPageWithContainer = () => (
-  <div id="feed-container">
-    <FeedsPage />
-  </div>
+  <ErrorBoundary>
+      <div id="feed-container">
+        <FeedsPage />
+      </div>
+  </ErrorBoundary>
 );
 
 // Spread the feed object (...) to avoid rerendering
