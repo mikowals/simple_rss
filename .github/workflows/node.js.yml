@@ -12,5 +12,6 @@ jobs:
           node-version: 14.18.1
       - run: curl https://install.meteor.com/ | sh
       - run: meteor npm i -g yarn
+      - run: meteor yarn global add jest
       - run: meteor yarn
       - run: jest
