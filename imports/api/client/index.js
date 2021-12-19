@@ -20,9 +20,9 @@ export const renderRoutes = () => (
     <BrowserRouter>
       <ApolloProvider client={client}>
         <Routes>
-          <Route exact path="/feeds" element={<FeedsPageWithContainer />} />
-          <Route exact path="/articles" element={<ArticlesPageWithStream />} />
-          <Route element={<ArticlesPageWithStream />} />
+          <Route path="*" element={<ArticlesPageWithStream />} />
+          <Route path="/feeds" element={<FeedsPageWithContainer />} />
+          <Route path="/articles" element={<ArticlesPageWithStream />} />  
         </Routes>
       </ApolloProvider>
       <Link to="/feeds" >Feeds</Link>
