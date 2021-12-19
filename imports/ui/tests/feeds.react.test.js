@@ -247,14 +247,11 @@ it("can remove a feed", async () => {
   await act(wait);
   const listItems = container.querySelectorAll("li");
   expect(listItems).toHaveLength(2);
-
-  console.log("listItems[0].i: ", listItems[0].querySelector("i"));
   fireEvent.click(listItems[0].querySelector("i"));
   await act(wait);
   expect(mutationCalled).toBe(true);
   const listItems2 = container.querySelectorAll("li");
   expect(listItems2).toHaveLength(1);
-  console.log("listItem2: ", listItems2[0]);
   expect(listItems2[0].querySelector("span").textContent).toBe("4");
   await act(wait);
 });
