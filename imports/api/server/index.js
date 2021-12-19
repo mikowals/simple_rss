@@ -16,6 +16,20 @@ import { typeDefs } from '/imports/api/server/typeDefs';
 
 const server = new ApolloServer({typeDefs, resolvers});
 
+async function startApolloServer() {
+  await server.start();
+  server.applyMiddleware({
+    app: WebApp.connectHandlers,
+    path: '/graphql'
+  })
+}
+
+try {
+  startApolloServer().then();
+} catch(e) {
+  console.log('error starting apollo server: ', e);
+}
+
 BrowserPolicy.content.allowConnectOrigin("*.mak-play.com");
 BrowserPolicy.content.allowEval();
 
@@ -27,11 +41,6 @@ Articles._ensureIndex( { feed_id: 1, date: -1} );
 Meteor.users.deny({
   update: () => true
 });
-
-server.applyMiddleware({
-  app: WebApp.connectHandlers,
-  path: '/graphql'
-})
 
 BrowserPolicy.content.allowOriginForAll("https://fonts.googleapis.com");
 BrowserPolicy.content.allowOriginForAll("http://cdn.jsdelivr.net");
